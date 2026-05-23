@@ -1,0 +1,21 @@
+cff-version: 1.2.0
+message: "If you use this tool and its outputs, please cite it as below."
+title: "Ground Truth Strata"
+version: "0.1.0"
+url: "https://strata.mattmotyl.com"
+repository-code: "https://github.com/mattmotyl/ground-truth-strata/"
+date-released: "2026-05-23"
+license: MIT
+authors:
+  - family-names: Motyl
+    given-names: Matt
+    orcid: "https://orcid.org/0000-0002-7190-0802"
+preferred-citation: 
+    type: software
+    authors:
+    - family-names: Motyl
+      given-names: Matt
+      orcid: "https://orcid.org/0000-0002-7190-0802"
+    title: "Ground Truth Strata"
+    year: 2026
+    url: "https://strata.mattmotyl.com"
