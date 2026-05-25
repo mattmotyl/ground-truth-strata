@@ -1,0 +1,169 @@
+============================================================
+OVERALL STATUS
+============================================================
+# A tibble: 2 × 2
+  status              n
+  <chr>           <int>
+1 MATCH             118
+2 MISSING_IN_DATA    62
+
+--- MISMATCHES (documented != observed) ---
+# A tibble: 0 × 5
+# ℹ 5 variables: variable_name <chr>, documented <chr>, observed <chr>,
+#   status <chr>, domain <chr>
+
+--- MISSING_IN_DATA (documented waves_present, but column not in any CSV) ---
+# A tibble: 62 × 5
+   variable_name     documented  observed status          domain        
+   <chr>             <chr>       <chr>    <chr>           <chr>         
+ 1 us001_other       1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 2 us002             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 3 us003             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 4 us004             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 5 us004_other       1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 6 us005             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 7 us006             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 8 us007             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+ 9 us008             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+10 us008_other       1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+11 us009             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+12 us016             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+13 us017             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+14 us010             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+15 us011             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+16 us012             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+17 us013             1,2,3,4,5,6 ""       MISSING_IN_DATA PLATFORM_USE  
+18 us015             1           ""       MISSING_IN_DATA PLATFORM_USE  
+19 us018a            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+20 us018b            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+21 us018c            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+22 us018d            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+23 us018e            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+24 us018f            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+25 us018g            4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+26 us019_hours       4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+27 us019_minutes     4,5,6       ""       MISSING_IN_DATA PLATFORM_USE  
+28 us025             6           ""       MISSING_IN_DATA PLATFORM_USE  
+29 us026             6           ""       MISSING_IN_DATA PLATFORM_USE  
+30 gms001_other      6           ""       MISSING_IN_DATA PLATFORM_USE  
+31 ai_used_exp       1           ""       MISSING_IN_DATA AI_ATTITUDES  
+32 ai_other_concerns 1           ""       MISSING_IN_DATA AI_ATTITUDES  
+33 ai_ideas          1           ""       MISSING_IN_DATA AI_ATTITUDES  
+34 q_ai10_1          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+35 q_ai11_1          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+36 q_ai12_1          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+37 q_ai13_1          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+38 q_ai10_2          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+39 q_ai11_2          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+40 q_ai12_2          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+41 q_ai13_2          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+42 q_ai10_3          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+43 q_ai11_3          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+44 q_ai12_3          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+45 q_ai13_3          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+46 q_ai10_4          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+47 q_ai11_4          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+48 q_ai12_4          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+49 q_ai13_4          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+50 q_ai10_5          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+51 q_ai11_5          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+52 q_ai12_5          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+53 q_ai13_5          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+54 q_ai10_6          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+55 q_ai11_6          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+56 q_ai12_6          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+57 q_ai13_6          2,3         ""       MISSING_IN_DATA AI_ATTITUDES  
+58 q_ai10_7          2,3,4,5,6   ""       MISSING_IN_DATA AI_ATTITUDES  
+59 q_ai11_7          2,3,4,5,6   ""       MISSING_IN_DATA AI_ATTITUDES  
+60 q_ai12_7          2,3,4,5,6   ""       MISSING_IN_DATA AI_ATTITUDES  
+61 q_ai13_7          2,3,4,5,6   ""       MISSING_IN_DATA AI_ATTITUDES  
+62 cs_003            1,2,3,4,5,6 ""       MISSING_IN_DATA SURVEY_QUALITY
+
+============================================================
+DEEPER CHECKS
+============================================================
+
+[2a] party_affil / lean_affil presence per wave
+  W1 :   party_affil, lean_affil, preload_party_affil, preload_lean_affil 
+  W2 :   party_affil, lean_affil, preload_party_affil, preload_lean_affil 
+  W3 :   party_affil, lean_affil, preload_party_affil, preload_lean_affil 
+  W4 :    
+  W5 :    
+  W6 :    
+
+[2b] cs* (case-insensitive) columns per wave
+  W1 :   cs_001 
+  W2 :   cs_001 
+  W3 :   cs_001 
+  W4 :   cs_001 
+  W5 :   cs_001 
+  W6 :   cs_001 
+
+[2c] ai_concerned / ai_excited case per wave
+  W1 :   ai_concerned, ai_excited 
+  W2 :   ai_concerned, ai_excited 
+  W3 :   ai_concerned, ai_excited 
+  W4 :    
+  W5 :    
+  W6 :    
+
+[2d] scim_*_slid / scim_*_box presence per wave (case-insensitive)
+  W1 :    
+  W2 :    
+  W3 :    
+  W4 :    
+  W5 :    
+  W6 :    
+
+[2e] q_ai* columns per wave (count + first 10)
+ W1 (0): 
+ W2 (314): q_ai_order_1_, q_ai_order_2_, q_ai_order_3_, q_ai_order_4_, q_ai_order_5_, q_ai_order_6_, q_ai_order_7_, q_ai1, q_ai2, q_ai3, q_ai4, q_ai5
+ W3 (314): q_ai_order_1_, q_ai_order_2_, q_ai_order_3_, q_ai_order_4_, q_ai_order_5_, q_ai_order_6_, q_ai_order_7_, q_ai1, q_ai2, q_ai3, q_ai4, q_ai5
+ W4 (43): q_ai7, q_ai13, q_ai14, q_ai8a_7s1, q_ai8a_7s2, q_ai8a_7s3, q_ai8a_7s4, q_ai8a_7s5, q_ai8a_7s6, q_ai8a_7s7, q_ai8a_7s8, q_ai8a_7s9
+ W5 (43): q_ai7, q_ai8a_7s1, q_ai8a_7s2, q_ai8a_7s3, q_ai8a_7s4, q_ai8a_7s5, q_ai8a_7s6, q_ai8a_7s7, q_ai8a_7s8, q_ai8a_7s9, q_ai8a_7s10, q_ai8a_7s11
+ W6 (43): q_ai7, q_ai8a_7s1, q_ai8a_7s2, q_ai8a_7s3, q_ai8a_7s4, q_ai8a_7s5, q_ai8a_7s6, q_ai8a_7s7, q_ai8a_7s8, q_ai8a_7s9, q_ai8a_7s10, q_ai8a_7s11
+
+[2f] sc001* columns per wave (claimed W1-W2 only)
+  W1 :   sc001_order_1_, sc001_order_2_, sc001_order_3_, sc001_order_4_, sc001_order_5_, sc001_order_6_, sc001a, sc001b, sc001c, sc001d, sc001e, sc001f 
+  W2 :   sc001a, sc001b, sc001c, sc001d, sc001e, sc001f, sc001_order_1_, sc001_order_2_, sc001_order_3_, sc001_order_4_, sc001_order_5_, sc001_order_6_ 
+  W3 :    
+  W4 :    
+  W5 :    
+  W6 :    
+
+[2g] ex* columns per wave
+  W1 :    
+  W2 :   ex001, ex002a, ex002b, ex002c, ex003a, ex003b, ex003c 
+  W3 :    
+  W4 :    
+  W5 :   ex003a, ex003b, ex003c, ex004a, ex004b, ex004c 
+  W6 :   ex003a, ex003b, ex003c, ex004a, ex004b, ex004c, ex005a, ex005b, ex005c, ex005_order_1_, ex005_order_2_, ex005_order_3_, ex006a, ex006b, ex006c, ex006d, ex006_order_1_, ex006_order_2_, ex006_order_3_, ex006_order_4_ 
+
+[2h] gms*, vote2024, us025/us026 columns per wave
+  W1 :    
+  W2 :    
+  W3 :    
+  W4 :    
+  W5 :    
+  W6 :   vote2024, us025_1_s1, us025_1_s2, us025_1_s3, us025_1_s4, us025_1_s5, us025_1_s6, us025_1_, us025_2_s1, us025_2_s2, us025_2_s3, us025_2_s4 
+
+[2i] us018/us019/us020-024 columns per wave
+ W1 (0): 
+ W2 (0): 
+ W3 (0): 
+ W4 (187): us018_order_1_, us018_order_2_, us018_order_3_, us018_order_4_, us018_order_5_, us018_order_6_, us018_order_7_, us018a_1_, us018a_2_, us018a_3_
+ W5 (190): us018_order_1_, us018_order_2_, us018_order_3_, us018_order_4_, us018_order_5_, us018_order_6_, us018_order_7_, us018a_1_, us018a_2_, us018a_3_
+ W6 (159): us018a_1_, us018a_2_, us018a_3_, us018a_4_, us018a_5_, us018a_6_, us018a_7_, us018a_8_, us018a_9_, us018a_10_
+
+[2j] W1-only modules presence per wave
+ W1 (59): us014, ai_useds1, ai_useds2, ai_useds3, ai_useds4, ai_useds5, ai_used, ai_effect_order_1_, ai_effect_order_2_, ai_effect_order_3_, ai_effect_order_4_, ai_effect_order_5_
+ W2 (0): 
+ W3 (0): 
+ W4 (0): 
+ W5 (0): 
+ W6 (0): 
+
+[2k] Additional likely panel-preload demographics in W1 columns:
+   maritalstatus, primary_respondent, bornus, stateborn, language, dateofbirth_year, agerange 
+
+Done.
