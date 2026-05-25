@@ -52,6 +52,14 @@ transform_data <- function(which_wave) {
                          "us016","us010","us012","us014")) & !contains("order"),
       .fns  = transform_experience_qs
     )) %>%
+    mutate(across(  # LIKERT_3 — UCLA loneliness short scale (W2, W5, W6)
+      .cols = any_of(c("ex003a", "ex003b", "ex003c")),
+      .fns  = transform_likert3_loneliness
+    )) %>%
+    mutate(across(  # LIKERT_4 — DASS depression/anxiety scale (W1 only)
+      .cols = any_of(c("ds001a", "ds001b", "ds001c", "ds001d", "ds001e", "ds001f")),
+      .fns  = transform_likert4_dass
+    )) %>%
     mutate(  # derived / demographic / panel-preload columns
       gender             = if ("gender" %in% colnames(data))      transform_gender(gender)                          else NA_character_,
       age                = if ("age" %in% colnames(data))         transform_age(age)                                else NA_character_,
@@ -80,16 +88,16 @@ transform_data <- function(which_wave) {
       # in every wave per Phase 1 verification).
       refrained_from_posting       = if ("us014" %in% colnames(data))    recode_sentinels(us014)        else NA_character_,
       vote_2024_preference         = if ("vote2024" %in% colnames(data)) recode_sentinels(vote2024)     else NA_character_,
-      regulation_tech_companies    = if ("ex004a" %in% colnames(data))   recode_sentinels(ex004a)       else NA_character_,
-      regulation_elections         = if ("ex004b" %in% colnames(data))   recode_sentinels(ex004b)       else NA_character_,
-      regulation_protect_users     = if ("ex004c" %in% colnames(data))   recode_sentinels(ex004c)       else NA_character_,
-      # All string fields above route through recode_sentinels() so the
-      # UAS ".a"/".e"/"."/".c" missing-value sentinels become true NA
-      # rather than literal strings. Batch 0 (Phase 2) renamed the columns
-      # to match docs/data-dictionary.json clean_variable_name fields;
-      # Phase 2 batches 1-4 will convert the string pass-throughs above
-      # (refrained_from_posting, vote_2024_preference, regulation_*) into
-      # proper ordered factors based on the dictionary's response_type.
+      # ex004a is LIKERT_5 (regulation level); ex004b/c are LIKERT_3
+      # ("More" / "Keep doing" / "Less"). Phase 2 Batch 1 converts the
+      # LIKERT_3 pair to ordered factors via transform_likert3_more_less.
+      # ex004a stays a string pass-through here pending Batch 2 (LIKERT_5).
+      regulation_tech_companies    = if ("ex004a" %in% colnames(data))   recode_sentinels(ex004a)               else NA_character_,
+      regulation_elections         = if ("ex004b" %in% colnames(data))   transform_likert3_more_less(ex004b)    else factor(NA, levels = c("Less", "Keep doing what they are now", "More"), ordered = TRUE),
+      regulation_protect_users     = if ("ex004c" %in% colnames(data))   transform_likert3_more_less(ex004c)    else factor(NA, levels = c("Less", "Keep doing what they are now", "More"), ordered = TRUE),
+      # LIKERT_4 sm_wake_to_check (ex001) — W2 only. Returns ordered
+      # factor with low-to-high frequency levels.
+      sm_wake_to_check             = if ("ex001" %in% colnames(data))    transform_likert4_freq(ex001)          else factor(NA, levels = c("Rarely or never", "Some of the time", "Frequently", "Always or almost always"), ordered = TRUE),
     ) %>%
     select(uasid, wave, final_weight, gender, age, race, pol_incl_leaners,
            political_ideology_self,
@@ -98,6 +106,9 @@ transform_data <- function(which_wave) {
            education, hhincome, num_ai_used, num_sm_used,
            refrained_from_posting,
            starts_with("regulation_"), vote_2024_preference,
+           sm_wake_to_check,
+           any_of(c("ex003a", "ex003b", "ex003c")),
+           any_of(c("ds001a", "ds001b", "ds001c", "ds001d", "ds001e", "ds001f")),
            starts_with("us0") & !contains("order"),
            -us001,
            -(starts_with(c("us004", "us005", "us008", "us016")) & ends_with(c("_"))))

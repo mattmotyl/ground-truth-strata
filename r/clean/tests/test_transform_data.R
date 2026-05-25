@@ -68,6 +68,67 @@ run_wave_checks <- function(w) {
                   all(is.na(df$pol_incl_leaners)))                                                           && pass
   }
 
+  # Phase 2 Batch 1 — LIKERT_3 loneliness scale (W2, W5, W6 only)
+  if (w %in% c(2, 5, 6)) {
+    pass <- check("ex003a-c are ordered factors with the loneliness levels (W2,W5,W6)",
+                  all(c("ex003a", "ex003b", "ex003c") %in% colnames(df)) &&
+                  all(vapply(c("ex003a","ex003b","ex003c"), function(col)
+                    is.ordered(df[[col]]) &&
+                    identical(levels(df[[col]]), c("Hardly ever","Some of the time","Often")),
+                    logical(1))))                                                                            && pass
+    pass <- check("ex003a has at least some non-NA values (W2,W5,W6)",
+                  any(!is.na(df$ex003a)))                                                                    && pass
+  } else {
+    pass <- check("ex003a-c are absent in non-loneliness waves (W1,W3,W4)",
+                  !any(c("ex003a","ex003b","ex003c") %in% colnames(df)))                                     && pass
+  }
+
+  # Phase 2 Batch 1 — LIKERT_4 DASS depression/anxiety scale (W1 only)
+  if (w == 1) {
+    pass <- check("ds001a-f are ordered factors with the DASS levels (W1)",
+                  all(paste0("ds001", letters[1:6]) %in% colnames(df)) &&
+                  all(vapply(paste0("ds001", letters[1:6]), function(col)
+                    is.ordered(df[[col]]) &&
+                    identical(levels(df[[col]]), c("Never","Sometimes","Often","Almost always")),
+                    logical(1))))                                                                            && pass
+    pass <- check("ds001a has at least some non-NA values (W1)",
+                  any(!is.na(df$ds001a)))                                                                    && pass
+  } else {
+    pass <- check("ds001a-f are absent outside W1",
+                  !any(paste0("ds001", letters[1:6]) %in% colnames(df)))                                     && pass
+  }
+
+  # Phase 2 Batch 1 — LIKERT_4 sm_wake_to_check (ex001, W2 only)
+  if (w == 2) {
+    pass <- check("sm_wake_to_check is an ordered factor with expected levels (W2)",
+                  "sm_wake_to_check" %in% colnames(df) &&
+                  is.ordered(df$sm_wake_to_check) &&
+                  identical(levels(df$sm_wake_to_check),
+                            c("Rarely or never", "Some of the time", "Frequently", "Always or almost always")))  && pass
+    pass <- check("sm_wake_to_check has at least some non-NA values (W2)",
+                  any(!is.na(df$sm_wake_to_check)))                                                          && pass
+  } else {
+    pass <- check("sm_wake_to_check is all-NA outside W2",
+                  "sm_wake_to_check" %in% colnames(df) && all(is.na(df$sm_wake_to_check)))                   && pass
+  }
+
+  # Phase 2 Batch 1 — LIKERT_3 tech-regulation more/less (W5, W6 only)
+  if (w %in% c(5, 6)) {
+    pass <- check("regulation_elections is an ordered factor with more/less levels (W5,W6)",
+                  is.ordered(df$regulation_elections) &&
+                  identical(levels(df$regulation_elections),
+                            c("Less", "Keep doing what they are now", "More")))                              && pass
+    pass <- check("regulation_protect_users is an ordered factor with more/less levels (W5,W6)",
+                  is.ordered(df$regulation_protect_users) &&
+                  identical(levels(df$regulation_protect_users),
+                            c("Less", "Keep doing what they are now", "More")))                              && pass
+    pass <- check("regulation_elections has at least some non-NA values (W5,W6)",
+                  any(!is.na(df$regulation_elections)))                                                      && pass
+  } else {
+    pass <- check("regulation_elections is all-NA outside W5,W6",
+                  all(is.na(df$regulation_elections)))                                                       && pass
+  }
+
   pass
 }
 

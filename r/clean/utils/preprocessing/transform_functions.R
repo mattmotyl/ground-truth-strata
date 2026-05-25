@@ -162,3 +162,76 @@ transform_experience_qs <- function(x) {
   )
   return(x)
 }
+
+# ----------------------------------------------------------------------
+# Ordinal Likert-scale transformers (Phase 2)
+#
+# Every UAS scale variable arrives as a "N <label>" string (e.g.,
+# "1 Strongly disagree", "3 Often"). The transformers below strip the
+# leading "N " and return an ordered factor whose levels match the
+# response_options field in docs/data-dictionary.json for that scale.
+#
+# Common pattern (matching transform_freqs):
+#   1. recode_sentinels() — drop UAS missing-value sentinels (and any
+#      per-variable out-of-range codes like "5 No opinion") to NA
+#   2. case_when() — keep non-NA values, strip the "N " prefix
+#   3. factor(..., levels = ..., ordered = TRUE) — set the canonical
+#      ordering so scale composites can use as.integer() in Phase 3
+#
+# Reverse-coding and scale-composite scoring stay in Phase 3 precompute
+# (driven by the dictionary's is_reverse_coded field). These transformers
+# preserve raw codes in their natural direction.
+# ----------------------------------------------------------------------
+
+# Helper: strip the leading "N " from a UAS scale label.
+.strip_uas_code <- function(x) str_sub(x, 3, nchar(x))
+
+# LIKERT_3 — UCLA loneliness short scale (ex003a/b/c).
+# Levels: Hardly ever -> Some of the time -> Often.
+transform_likert3_loneliness <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Hardly ever", "Some of the time", "Often"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_3 — tech-regulation "more vs less" (ex004b/c).
+# Levels ordered low-to-high effort: Less -> Keep doing what they are now
+# -> More. The dictionary lists raw codes as 1=More, 2=Less, 3=Keep
+# doing what they are now — those codes are NOT monotonic with respect
+# to the effort construct, so the factor explicitly imposes a high-score-
+# means-more-regulation ordering, matching standard survey research
+# convention (higher score = more of the construct).
+transform_likert3_more_less <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Less", "Keep doing what they are now", "More"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_4 — DASS depression/anxiety severity (ds001a-f).
+# Levels: Never -> Sometimes -> Often -> Almost always.
+transform_likert4_dass <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Never", "Sometimes", "Often", "Almost always"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_4 — frequency scale used by ex001 ("wake up to check social media").
+# Levels ordered low-to-high frequency.
+transform_likert4_freq <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Rarely or never", "Some of the time", "Frequently",
+                "Always or almost always"),
+    ordered = TRUE
+  )
+}

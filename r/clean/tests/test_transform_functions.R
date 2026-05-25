@@ -88,6 +88,55 @@ check("'.a' -> NA",         is.na(exp_q(".a")))
 check("'.e' -> NA",         is.na(exp_q(".e")))
 check("'.m' -> NA (new)",   is.na(exp_q(".m")))
 
+cat("\n=== transform_likert3_loneliness (Phase 2 Batch 1) ===\n")
+lon <- transform_likert3_loneliness
+check("'1 Hardly ever' -> 'Hardly ever'",   as.character(lon("1 Hardly ever")) == "Hardly ever")
+check("'2 Some of the time' -> 'Some of the time'", as.character(lon("2 Some of the time")) == "Some of the time")
+check("'3 Often' -> 'Often'",               as.character(lon("3 Often")) == "Often")
+check("'.a' -> NA",                          is.na(lon(".a")))
+check("'.e' -> NA",                          is.na(lon(".e")))
+check("returns ordered factor",              is.ordered(lon(c("1 Hardly ever", "3 Often"))))
+check("levels are Hardly ever < Some of the time < Often",
+      identical(levels(lon("1 Hardly ever")), c("Hardly ever", "Some of the time", "Often")))
+check("'Often' > 'Hardly ever' (ordering check)",
+      lon("3 Often") > lon("1 Hardly ever"))
+
+cat("\n=== transform_likert3_more_less (Phase 2 Batch 1) ===\n")
+ml <- transform_likert3_more_less
+check("'1 More' -> 'More'",                  as.character(ml("1 More")) == "More")
+check("'2 Less' -> 'Less'",                  as.character(ml("2 Less")) == "Less")
+check("'3 Keep doing what they are now' -> 'Keep doing what they are now'",
+      as.character(ml("3 Keep doing what they are now")) == "Keep doing what they are now")
+check("'.a' -> NA",                          is.na(ml(".a")))
+check("levels ordered low-to-high effort: Less < Keep doing < More",
+      identical(levels(ml("1 More")), c("Less", "Keep doing what they are now", "More")))
+check("'More' > 'Less' (higher score = more regulation effort)",
+      ml("1 More") > ml("2 Less"))
+
+cat("\n=== transform_likert4_dass (Phase 2 Batch 1) ===\n")
+dass <- transform_likert4_dass
+check("'1 Never' -> 'Never'",                as.character(dass("1 Never")) == "Never")
+check("'4 Almost always' -> 'Almost always'", as.character(dass("4 Almost always")) == "Almost always")
+check("'.a' -> NA",                          is.na(dass(".a")))
+check("returns ordered factor",              is.ordered(dass(c("1 Never", "4 Almost always"))))
+check("levels are Never < Sometimes < Often < Almost always",
+      identical(levels(dass("1 Never")), c("Never", "Sometimes", "Often", "Almost always")))
+check("'Almost always' > 'Never'",
+      dass("4 Almost always") > dass("1 Never"))
+
+cat("\n=== transform_likert4_freq (Phase 2 Batch 1) ===\n")
+fr4 <- transform_likert4_freq
+check("'1 Always or almost always' -> 'Always or almost always'",
+      as.character(fr4("1 Always or almost always")) == "Always or almost always")
+check("'4 Rarely or never' -> 'Rarely or never'",
+      as.character(fr4("4 Rarely or never")) == "Rarely or never")
+check("'.a' -> NA",                          is.na(fr4(".a")))
+check("levels ordered low-to-high frequency",
+      identical(levels(fr4("1 Always or almost always")),
+                c("Rarely or never", "Some of the time", "Frequently", "Always or almost always")))
+check("'Always or almost always' > 'Rarely or never'",
+      fr4("1 Always or almost always") > fr4("4 Rarely or never"))
+
 cat("\n")
 if (pass) {
   cat("All transform_functions.R unit tests PASSED.\n")
