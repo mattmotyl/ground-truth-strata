@@ -1,0 +1,107 @@
+# Unit + integration tests for rename_variables().
+# Runs against synthetic single-wave fixtures + real cleaned output for
+# every wave. Invoke from the repo root:
+#   Rscript r/clean/tests/test_rename_variables.R
+
+suppressPackageStartupMessages({
+  library(dplyr); library(here)
+})
+
+# Source the function defs that rename_variables depends on
+source(here("r", "clean", "utils", "platform_map.R"))
+source(here("r", "clean", "utils", "preprocessing", "rename_variables.R"))
+
+pass <- TRUE
+check <- function(label, ok) {
+  if (isTRUE(ok)) {
+    cat(sprintf("  [PASS] %s\n", label)); invisible(TRUE)
+  } else {
+    cat(sprintf("  [FAIL] %s\n", label)); pass <<- FALSE; invisible(FALSE)
+  }
+}
+
+# Helper: rename a one-row data frame with the given columns.
+ren <- function(cols, wave = 1, add_demo = FALSE) {
+  df <- as.data.frame(setNames(rep(list(NA), length(cols)), cols))
+  df$wave <- wave
+  out <- rename_variables(df, add_suffix_to_demographics = add_demo)
+  colnames(out)
+}
+
+cat("=== us001sN -> uses_<platform>_w<wave> ===\n")
+check("us001s1 -> uses_Facebook_w1",     "uses_Facebook_w1"     %in% ren(c("us001s1")))
+check("us001s23 W6 -> uses_Bluesky_w6",  "uses_Bluesky_w6"      %in% ren(c("us001s23"), wave = 6))
+check("us001s22 W2 -> uses_Threads_w2",  "uses_Threads_w2"      %in% ren(c("us001s22"), wave = 2))
+
+cat("\n=== us<digits>_<plat>_<follow?> (path 2) ===\n")
+check("us002_1_ -> freq_Facebook_w1",                 "freq_Facebook_w1"           %in% ren(c("us002_1_")))
+check("us003_3_ -> nux_Instagram_w2",                 "nux_Instagram_w2"           %in% ren(c("us003_3_"), wave = 2))
+check("us004_1_s1 -> nuximpact_Facebook_s1_w1",       "nuximpact_Facebook_s1_w1"   %in% ren(c("us004_1_s1")))
+check("us010_3_ -> mcxn_Instagram_w1",                "mcxn_Instagram_w1"          %in% ren(c("us010_3_")))
+check("us025_1_s1 W6 -> mcxntopic_Facebook_s1_w6 (was NAFacebook_s1_w6)",
+      "mcxntopic_Facebook_s1_w6" %in% ren(c("us025_1_s1"), wave = 6))
+check("us026_3_s5 W6 -> usefultopic_Instagram_s5_w6 (was NAInstagram_s5_w6)",
+      "usefultopic_Instagram_s5_w6" %in% ren(c("us026_3_s5"), wave = 6))
+
+cat("\n=== us<digits><letter>_<plat>_ (path 3, W4+ habit scale) ===\n")
+check("us018a_1_ W4 -> habit_auto_Facebook_w4",      "habit_auto_Facebook_w4"     %in% ren(c("us018a_1_"), wave = 4))
+check("us018b_2_ W5 -> habit_think_X (Twitter)_w5",  "habit_think_X (Twitter)_w5" %in% ren(c("us018b_2_"), wave = 5))
+check("us018c_3_ W4 -> habit_pos_Instagram_w4",      "habit_pos_Instagram_w4"     %in% ren(c("us018c_3_"), wave = 4))
+check("us018d_4_ W4 -> habit_neg_TikTok_w4",         "habit_neg_TikTok_w4"        %in% ren(c("us018d_4_"), wave = 4))
+check("us018e_5_ W4 -> habit_time_Snapchat_w4",      "habit_time_Snapchat_w4"     %in% ren(c("us018e_5_"), wave = 4))
+check("us018f_6_ W4 -> habit_learn_YouTube_w4",      "habit_learn_YouTube_w4"     %in% ren(c("us018f_6_"), wave = 4))
+check("us018g_22_ W5 -> habit_rel_Threads_w5",       "habit_rel_Threads_w5"       %in% ren(c("us018g_22_"), wave = 5))
+check("us018g_23_ W6 -> habit_rel_Bluesky_w6",       "habit_rel_Bluesky_w6"       %in% ren(c("us018g_23_"), wave = 6))
+
+cat("\n=== us<digits>_<word>_<plat>_ (path 4, W4+ time-spent) ===\n")
+check("us019_hours_1_ W4 -> time_hrs_Facebook_w4",     "time_hrs_Facebook_w4"     %in% ren(c("us019_hours_1_"), wave = 4))
+check("us019_minutes_3_ W4 -> time_min_Instagram_w4",  "time_min_Instagram_w4"    %in% ren(c("us019_minutes_3_"), wave = 4))
+
+cat("\n=== add_suffix_to_demographics ===\n")
+check("default leaves conservatism unchanged",
+      "conservatism" %in% ren(c("conservatism"), wave = 3))
+check("add_demo=TRUE -> conservatism_w3",
+      "conservatism_w3" %in% ren(c("conservatism"), wave = 3, add_demo = TRUE))
+check("warmth_friend_lib also gets suffixed (was missing from old list)",
+      "warmth_friend_lib_w4" %in% ren(c("warmth_friend_lib"), wave = 4, add_demo = TRUE))
+check("atts_gov_reg_tech also gets suffixed",
+      "atts_gov_reg_tech_w5" %in% ren(c("atts_gov_reg_tech"), wave = 5, add_demo = TRUE))
+
+cat("\n=== invariants ===\n")
+check("non-platform-indexed columns pass through unchanged",
+      "uasid"        %in% ren(c("uasid")) &&
+      "final_weight" %in% ren(c("final_weight")) &&
+      "gender"       %in% ren(c("gender")))
+check("multi-wave data raises an error",
+      tryCatch({
+        df <- data.frame(wave = c(1, 2))
+        rename_variables(df)
+        FALSE
+      }, error = function(e) grepl("[Mm]ultiple|wave", conditionMessage(e))))
+
+# Full pipeline run on each wave: cleanest renames, no NA-prepended
+# names, no duplicate column names.
+cat("\n=== full pipeline (each wave) ===\n")
+source(here("r", "clean", "run_script.R"))
+for (w in 1:6) {
+  cleaned <- suppressWarnings(transform_data(w))
+  ok <- tryCatch({
+    renamed <- rename_variables(cleaned)
+    after <- colnames(renamed)
+    no_na  <- !any(grepl("^NA[A-Z]|_NA_|NA_w\\d", after))
+    no_dup <- anyDuplicated(after) == 0
+    no_na && no_dup
+  }, error = function(e) {
+    cat(sprintf("    error: %s\n", conditionMessage(e))); FALSE
+  })
+  check(sprintf("wave %d renames cleanly (no NA-names, no duplicates)", w), ok)
+}
+
+cat("\n")
+if (pass) {
+  cat("All rename_variables tests PASSED.\n")
+  quit(status = 0)
+} else {
+  cat("rename_variables tests FAILED.\n")
+  quit(status = 1)
+}
