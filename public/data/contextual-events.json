@@ -1,0 +1,293 @@
+{
+  "_meta": {
+    "description": "Contextual event annotations and external benchmarks for Ground Truth Strata visualizations",
+    "purpose": "Event annotations appear as reference lines on time series charts. External benchmarks provide contextual comparison points. Survey wave dates establish the time axis.",
+    "note_on_benchmarks": "External benchmark values are for contextual reference only. The primary national average used in Strata is computed from the full survey sample, not from these external sources. Instrument comparability varies — see comparability_note on each benchmark.",
+    "last_updated": "2026-05-24",
+    "survey_date_ranges": {
+      "wave_1": {"uas": "UAS514", "start": "2023-03-02", "end": "2023-05-07", "label": "Wave 1 (Mar–May 2023)"},
+      "wave_2": {"uas": "UAS515", "start": "2023-08-07", "end": "2023-09-17", "label": "Wave 2 (Aug–Sep 2023)"},
+      "wave_3": {"uas": "UAS516", "start": "2023-10-01", "end": "2023-11-30", "label": "Wave 3 (Oct–Nov 2023)"},
+      "wave_4": {"uas": "UAS517", "start": "2024-01-01", "end": "2024-03-31", "label": "Wave 4 (Jan–Mar 2024)"},
+      "wave_5": {"uas": "UAS518", "start": "2024-07-01", "end": "2024-09-30", "label": "Wave 5 (Jul–Sep 2024)"},
+      "wave_6": {"uas": "UAS519", "start": "2025-01-01", "end": "2025-03-31", "label": "Wave 6 (Jan–Mar 2025)"}
+    }
+  },
+
+  "event_annotations": [
+
+    {
+      "id": "twitter_musk_acquisition",
+      "date": "2022-10-27",
+      "label": "Musk acquires Twitter",
+      "short_label": "Musk/Twitter",
+      "category": "platform_change",
+      "platforms": ["twitter_x"],
+      "description": "Elon Musk completes $44 billion acquisition of Twitter, immediately fires top executives",
+      "relevance": "Context for Wave 1 data — survey began ~4 months after acquisition",
+      "source": "Reuters",
+      "source_url": "https://www.reuters.com/technology/twitter-inc-has-told-some-employees-that-musk-deal-will-close-thursday-2022-10-27/"
+    },
+
+    {
+      "id": "twitter_rebrand_x",
+      "date": "2023-07-23",
+      "label": "Twitter rebrands to X",
+      "short_label": "Twitter → X",
+      "category": "platform_change",
+      "platforms": ["twitter_x"],
+      "description": "Twitter officially rebranded to X, bird logo replaced with X logo",
+      "relevance": "Falls between Wave 1 and Wave 2 data collection",
+      "source": "The Verge",
+      "source_url": "https://www.theverge.com/2023/7/23/23804629/twitter-x-rebrand-logo"
+    },
+
+    {
+      "id": "threads_launch",
+      "date": "2023-07-05",
+      "label": "Threads launches",
+      "short_label": "Threads launches",
+      "category": "platform_launch",
+      "platforms": ["threads"],
+      "description": "Meta launches Threads, a Twitter/X competitor, reaching 100 million users in first week",
+      "relevance": "Threads added to survey platform list in Wave 2 (UAS515); Wave 1 predates launch",
+      "source": "Meta",
+      "source_url": "https://about.fb.com/news/2023/07/introducing-threads-new-app-text-sharing/"
+    },
+
+    {
+      "id": "surgeon_general_loneliness",
+      "date": "2023-05-02",
+      "label": "Surgeon General declares loneliness epidemic",
+      "short_label": "SG: Loneliness epidemic",
+      "category": "policy_health",
+      "platforms": null,
+      "description": "U.S. Surgeon General Vivek Murthy releases advisory 'Our Epidemic of Loneliness and Isolation,' calling loneliness a public health crisis with health risks comparable to smoking 15 cigarettes a day",
+      "relevance": "Falls during Wave 1 data collection; directly relevant to loneliness variables in survey",
+      "source": "U.S. Department of Health and Human Services",
+      "source_url": "https://www.hhs.gov/sites/default/files/surgeon-general-social-connection-advisory.pdf"
+    },
+
+    {
+      "id": "meta_threads_eu",
+      "date": "2023-12-14",
+      "label": "Threads launches in EU",
+      "short_label": "Threads in EU",
+      "category": "platform_change",
+      "platforms": ["threads"],
+      "description": "Threads finally launches in the European Union after regulatory delay",
+      "relevance": "Falls between Wave 2 and Wave 3",
+      "source": "Meta",
+      "source_url": "https://about.fb.com/news/2023/12/threads-launches-in-the-european-union/"
+    },
+
+    {
+      "id": "tiktok_ban_law_signed",
+      "date": "2024-04-24",
+      "label": "Biden signs TikTok divestiture law",
+      "short_label": "TikTok ban law signed",
+      "category": "policy_regulation",
+      "platforms": ["tiktok"],
+      "description": "President Biden signs law requiring ByteDance to divest TikTok's U.S. business by January 19, 2025 or face a ban",
+      "relevance": "Falls between Wave 4 and Wave 5; likely affects Wave 5 TikTok usage and attitudes data",
+      "source": "AP News",
+      "source_url": "https://apnews.com/article/tiktok-ban-biden-signs-law-bytedance-china-7d01e65975b98b47a5cddcf9af5e9879"
+    },
+
+    {
+      "id": "paris_olympics",
+      "date": "2024-07-26",
+      "label": "Paris Olympics begin",
+      "short_label": "Paris Olympics",
+      "category": "pop_culture",
+      "platforms": null,
+      "description": "2024 Summer Olympics open in Paris; widely credited as a moment of global positive sentiment and social media positivity",
+      "relevance": "Overlaps with Wave 5 data collection (Jul–Sep 2024); may influence wellbeing and social media sentiment variables",
+      "source": "IOC",
+      "source_url": "https://olympics.com/en/paris-2024"
+    },
+
+    {
+      "id": "us_election_2024",
+      "date": "2024-11-05",
+      "label": "U.S. Presidential Election",
+      "short_label": "2024 Election",
+      "category": "political",
+      "platforms": null,
+      "description": "Donald Trump defeats Kamala Harris in U.S. presidential election",
+      "relevance": "Falls between Wave 5 and Wave 6; Wave 6 includes vote_2024 preference variable; may affect political attitudes and wellbeing",
+      "source": "AP News",
+      "source_url": "https://apnews.com/projects/election-results-2024/"
+    },
+
+    {
+      "id": "tiktok_brief_ban",
+      "date": "2025-01-19",
+      "label": "TikTok briefly goes dark in U.S.",
+      "short_label": "TikTok goes dark",
+      "category": "platform_change",
+      "platforms": ["tiktok"],
+      "description": "TikTok goes offline for approximately 12 hours in the U.S. as divestiture deadline passes without a sale; restored after Trump signals 90-day extension",
+      "relevance": "Falls at the start of Wave 6 data collection (Jan–Mar 2025); directly relevant to TikTok usage data in Wave 6",
+      "source": "The Verge",
+      "source_url": "https://www.theverge.com/2025/1/19/24346946/tiktok-ban-goes-into-effect-us"
+    },
+
+    {
+      "id": "trump_inauguration_2025",
+      "date": "2025-01-20",
+      "label": "Trump inaugurated (second term)",
+      "short_label": "Trump inaugurated",
+      "category": "political",
+      "platforms": null,
+      "description": "Donald Trump inaugurated for second presidential term; announces TikTok 90-day extension same day",
+      "relevance": "Falls at the start of Wave 6; relevant to political attitudes and tech regulation variables",
+      "source": "AP News",
+      "source_url": "https://apnews.com/article/trump-inauguration-2025"
+    },
+
+    {
+      "id": "meta_content_moderation_rollback",
+      "date": "2025-01-07",
+      "label": "Meta ends third-party fact-checking",
+      "short_label": "Meta ends fact-checking",
+      "category": "platform_change",
+      "platforms": ["facebook", "instagram", "threads"],
+      "description": "Mark Zuckerberg announces Meta will end third-party fact-checking programs on Facebook and Instagram, replace with community notes system similar to X",
+      "relevance": "Falls just before Wave 6; relevant to 'bad for the world' experience variables and tech regulation attitudes",
+      "source": "Meta",
+      "source_url": "https://about.fb.com/news/2025/01/meta-more-speech-fewer-mistakes/"
+    },
+
+    {
+      "id": "bluesky_growth_surge",
+      "date": "2024-11-13",
+      "label": "Bluesky surges to 20M users",
+      "short_label": "Bluesky surges",
+      "category": "platform_change",
+      "platforms": ["bluesky"],
+      "description": "Bluesky reaches 20 million users in weeks following 2024 U.S. election, as users migrate from X; added to survey platform list in Wave 6",
+      "relevance": "Wave 6 is the first wave to include Bluesky as a survey option",
+      "source": "TechCrunch",
+      "source_url": "https://techcrunch.com/2024/11/14/bluesky-hits-20-million-users-amid-post-election-x-exodus/"
+    },
+
+    {
+      "id": "surgeon_general_social_media_warning",
+      "date": "2023-06-06",
+      "label": "Surgeon General warns on social media & youth",
+      "short_label": "SG: Social media warning",
+      "category": "policy_health",
+      "platforms": null,
+      "description": "Surgeon General Murthy issues advisory warning that social media poses a 'profound risk of harm' to children and adolescents' mental health",
+      "relevance": "Falls during Wave 1–2 gap; relevant to social media attitudes and wellbeing variables",
+      "source": "U.S. Surgeon General",
+      "source_url": "https://www.hhs.gov/surgeongeneral/priorities/youth-mental-health/social-media/index.html"
+    },
+
+    {
+      "id": "covid_emergency_ends",
+      "date": "2023-05-11",
+      "label": "U.S. COVID-19 emergency ends",
+      "short_label": "COVID emergency ends",
+      "category": "public_health",
+      "platforms": null,
+      "description": "The Biden administration ends the COVID-19 public health emergency, formally concluding the national emergency declaration first issued in March 2020",
+      "relevance": "Falls during Wave 1; marks formal end of pandemic-era social context that shaped loneliness and social media use patterns",
+      "source": "HHS",
+      "source_url": "https://www.hhs.gov/about/news/2023/05/09/hhs-secretary-xavier-becerra-statement-end-covid-19-public-health-emergency.html"
+    },
+
+    {
+      "id": "chatgpt_mainstream",
+      "date": "2023-03-14",
+      "label": "GPT-4 released",
+      "short_label": "GPT-4 released",
+      "category": "technology",
+      "platforms": null,
+      "description": "OpenAI releases GPT-4, marking mainstream breakthrough of generative AI; ChatGPT reaches 100M users by this point",
+      "relevance": "Context for AI attitudes and usage variables in survey; AI questions were most extensive in Wave 1 and 2",
+      "source": "OpenAI",
+      "source_url": "https://openai.com/research/gpt-4"
+    },
+
+    {
+      "id": "taylor_swift_eras_tour",
+      "date": "2023-03-17",
+      "label": "Taylor Swift Eras Tour begins",
+      "short_label": "Eras Tour begins",
+      "category": "pop_culture",
+      "platforms": null,
+      "description": "Taylor Swift begins the Eras Tour, which becomes the highest-grossing concert tour in history and a dominant cultural and social media phenomenon throughout 2023–2024",
+      "relevance": "Runs throughout Wave 1–5; associated with significant positive social media sentiment and community formation, relevant to meaningful connection variables",
+      "source": "Billboard",
+      "source_url": "https://www.billboard.com/music/tour-news/taylor-swift-eras-tour-box-office-records-1235301944/"
+    },
+
+    {
+      "id": "israel_hamas_war",
+      "date": "2023-10-07",
+      "label": "Hamas attacks Israel; Israel-Gaza war begins",
+      "short_label": "Israel-Gaza war begins",
+      "category": "world_events",
+      "platforms": null,
+      "description": "Hamas launches large-scale attack on Israel; Israel begins military campaign in Gaza. Generates massive polarizing content on social media throughout Wave 3 and beyond",
+      "relevance": "Falls during Wave 3 data collection; likely affects 'bad for the world' experience variables, political content exposure, and wellbeing",
+      "source": "AP News",
+      "source_url": "https://apnews.com/article/israel-palestinians-gaza-war-hamas-october-2023"
+    },
+
+    {
+      "id": "reddit_api_protests",
+      "date": "2023-06-12",
+      "label": "Reddit API protests / blackout",
+      "short_label": "Reddit blackout",
+      "category": "platform_change",
+      "platforms": ["reddit"],
+      "description": "Thousands of Reddit communities go dark in protest of Reddit's API pricing changes; largest platform protest in social media history",
+      "relevance": "Falls between Wave 1 and Wave 2; may affect Reddit usage and sentiment data in Wave 2",
+      "source": "The Verge",
+      "source_url": "https://www.theverge.com/2023/6/12/23758264/reddit-blackout-api-protest-over-explain"
+    }
+
+  ],
+
+  "external_benchmarks": [
+    {
+      "id": "gallup_loneliness_2023",
+      "metric": "loneliness_daily",
+      "value": 0.17,
+      "value_label": "17% report daily loneliness",
+      "date_range": "2023",
+      "source": "Gallup National Health and Well-Being Index",
+      "source_url": "https://news.gallup.com/poll/651881/daily-loneliness-afflicts-one-five.aspx",
+      "comparability_note": "Gallup measures 'felt lonely a lot of the day yesterday'; survey uses UCLA-3 (Hardly ever / Some of the time / Often). Different instruments — treat as approximate context only.",
+      "use_in_strata": false,
+      "use_note": "Do not display as benchmark; reference in annotation text only if relevant"
+    },
+    {
+      "id": "cigna_loneliness_2023",
+      "metric": "loneliness_prevalence",
+      "value": 0.50,
+      "value_label": "~50% report loneliness",
+      "date_range": "2023",
+      "source": "Cigna Loneliness Index 2023",
+      "source_url": "https://newsroom.cigna.com/loneliness-in-america",
+      "comparability_note": "Cigna uses UCLA-20 item scale, different threshold. Survey uses UCLA-3. Not directly comparable.",
+      "use_in_strata": false,
+      "use_note": "Do not display as benchmark; context only"
+    }
+  ],
+
+  "category_definitions": {
+    "platform_change": "Changes to platform features, ownership, policy, or availability",
+    "platform_launch": "Launch of a new platform or major new feature",
+    "policy_regulation": "Government legislation or regulatory actions affecting platforms",
+    "policy_health": "Public health advisories or policy statements relevant to wellbeing/social media",
+    "political": "Major U.S. or global political events",
+    "public_health": "Public health events affecting the general population",
+    "technology": "Major technology releases or developments",
+    "pop_culture": "Cultural moments with significant social media relevance",
+    "world_events": "Major geopolitical or world events with social media/wellbeing relevance"
+  }
+}
