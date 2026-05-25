@@ -90,6 +90,22 @@ transform_data <- function(which_wave) {
       .cols = any_of(c("ex005a", "ex005b", "ex005c")),
       .fns  = transform_likert5_support
     )) %>%
+    # ----- Phase 2 Batch 3: LIKERT_6_NOMID + LIKERT_7 batteries -----
+    mutate(across(  # tech identity (te001a-e) — W1 only, LIKERT_6_NOMID (no midpoint)
+      .cols = any_of(paste0("te001", letters[1:5])),
+      .fns  = transform_likert6_nomid_agree
+    )) %>%
+    mutate(across(  # life satisfaction (ls002a-l) — all 6 waves, LIKERT_7
+      .cols = any_of(paste0("ls002", letters[1:12])),
+      .fns  = transform_likert7_agree
+    )) %>%
+    mutate(across(  # per-platform habit/attitude scale (us018<letter>_<plat>_) — W4-W6, LIKERT_7
+      # Matches us018a_1_, us018a_2_, ..., us018g_23_ across all platforms.
+      # NOT a global starts_with("us018") because future variables might
+      # collide; anchor on the trailing _<digits>_ shape.
+      .cols = matches("^us018[a-g]_\\d+_$"),
+      .fns  = transform_likert7_agree
+    )) %>%
     mutate(  # derived / demographic / panel-preload columns
       gender             = if ("gender" %in% colnames(data))      transform_gender(gender)                          else NA_character_,
       age                = if ("age" %in% colnames(data))         transform_age(age)                                else NA_character_,
@@ -154,6 +170,11 @@ transform_data <- function(which_wave) {
            any_of(paste0("ai_effect_", letters[1:7])),
            # Phase 2 Batch 2: LIKERT_5 singletons
            ai_concern, ai_excitement, ai_xr_excitement, ai_xr_concern, survey_interest,
+           # Phase 2 Batch 3: LIKERT_6_NOMID + LIKERT_7 batteries
+           any_of(paste0("te001", letters[1:5])),
+           any_of(paste0("ls002", letters[1:12])),
+           # us018 platform-indexed habit/attitude items captured by the
+           # later starts_with("us0") selector below.
            starts_with("us0") & !contains("order"),
            -us001,
            -(starts_with(c("us004", "us005", "us008", "us016")) & ends_with(c("_"))))

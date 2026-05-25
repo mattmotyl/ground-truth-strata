@@ -420,3 +420,39 @@ transform_likert5_interesting <- function(x) {
     ordered = TRUE
   )
 }
+
+# ----------------------------------------------------------------------
+# LIKERT_6_NOMID + LIKERT_7 transformers (Phase 2 Batch 3)
+# ----------------------------------------------------------------------
+
+# LIKERT_6_NOMID — Strongly disagree -> Strongly agree, NO neutral
+# midpoint (forced choice). Codes 1-3 are disagree variants, codes 4-6
+# are agree variants. Used by tech identity items (te001a-e, W1 only).
+transform_likert6_nomid_agree <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Strongly disagree", "Disagree", "Somewhat disagree",
+                "Somewhat agree", "Agree", "Strongly agree"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_7 — Strongly disagree -> Strongly agree with both "Somewhat"
+# and bare disagree/agree variants AND a neutral midpoint.
+# Used by:
+#   - Life satisfaction battery (ls002a-l, all 6 waves; note ls002i is
+#     dictionary-flagged as is_reverse_coded — Phase 3 precompute flips
+#     it before computing scale composites)
+#   - Per-platform habit/attitude scale (us018a-g, W4-W6, indexed by
+#     platform — raw column names are us018<letter>_<plat>_)
+transform_likert7_agree <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Strongly disagree", "Disagree", "Somewhat disagree",
+                "Neither agree nor disagree",
+                "Somewhat agree", "Agree", "Strongly agree"),
+    ordered = TRUE
+  )
+}

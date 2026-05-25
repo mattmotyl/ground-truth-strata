@@ -205,6 +205,61 @@ run_wave_checks <- function(w) {
                   !any(paste0("ai_effect_", letters[1:7]) %in% colnames(df)))                                && pass
   }
 
+  # Phase 2 Batch 3 — LIKERT_6_NOMID tech identity (te001a-e, W1 only)
+  if (w == 1) {
+    pass <- check("te001a-e are ordered factors with 6 no-midpoint levels (W1)",
+                  all(paste0("te001", letters[1:5]) %in% colnames(df)) &&
+                  is.ordered(df$te001a) &&
+                  identical(levels(df$te001a),
+                            c("Strongly disagree", "Disagree", "Somewhat disagree",
+                              "Somewhat agree", "Agree", "Strongly agree")))                                 && pass
+    pass <- check("te001 levels do NOT include a neutral midpoint",
+                  !any(grepl("Neither", levels(df$te001a))))                                                 && pass
+  } else {
+    pass <- check("te001a-e absent outside W1",
+                  !any(paste0("te001", letters[1:5]) %in% colnames(df)))                                     && pass
+  }
+
+  # Phase 2 Batch 3 — LIKERT_7 life satisfaction (ls002a-l, all 6 waves;
+  # ls002a/b/e/f have PDF truncation flag for W5/W6 — column may exist
+  # but be all-NA in those waves)
+  pass <- check("ls002a-l are ordered factors with 7-point agree levels",
+                all(paste0("ls002", letters[1:12]) %in% colnames(df)) &&
+                is.ordered(df$ls002a) &&
+                identical(levels(df$ls002a),
+                          c("Strongly disagree", "Disagree", "Somewhat disagree",
+                            "Neither agree nor disagree",
+                            "Somewhat agree", "Agree", "Strongly agree")))                                   && pass
+  # ls002i (reverse-coded per dictionary) should still parse correctly
+  pass <- check("ls002i (reverse-coded item) has same levels as the rest of the scale",
+                identical(levels(df$ls002i), levels(df$ls002a)))                                             && pass
+  # W6 truncation: ls002a/b/e/f should be all-NA in W6 per PDF
+  if (w == 6) {
+    pass <- check("ls002a is all-NA in W6 (PDF truncation flag confirmed)",
+                  all(is.na(df$ls002a)))                                                                     && pass
+  }
+
+  # Phase 2 Batch 3 — LIKERT_7 per-platform habit/attitude scale
+  # (us018<letter>_<plat>_, W4-W6). Column shape: us018a_1_, us018a_2_,
+  # ..., us018g_23_. Hundreds of columns per wave — spot-check one.
+  if (w %in% 4:6) {
+    pass <- check("us018a_1_ is an ordered LIKERT_7 factor in W4-W6",
+                  "us018a_1_" %in% colnames(df) &&
+                  is.ordered(df[["us018a_1_"]]) &&
+                  identical(levels(df[["us018a_1_"]]),
+                            c("Strongly disagree", "Disagree", "Somewhat disagree",
+                              "Neither agree nor disagree",
+                              "Somewhat agree", "Agree", "Strongly agree")))                                 && pass
+    # Count of us018 columns present in this wave (should be many)
+    us018_cols <- grep("^us018[a-g]_\\d+_$", colnames(df), value = TRUE)
+    pass <- check(sprintf("us018 family has multiple platform-indexed columns in W%d (found %d)",
+                          w, length(us018_cols)),
+                  length(us018_cols) > 50)                                                                   && pass
+  } else {
+    pass <- check("us018 platform-indexed columns absent outside W4-W6",
+                  length(grep("^us018[a-g]_\\d+_$", colnames(df))) == 0)                                     && pass
+  }
+
   pass
 }
 

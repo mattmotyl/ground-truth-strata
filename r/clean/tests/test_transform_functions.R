@@ -211,6 +211,32 @@ check("interesting: '1 Very interesting' is at level 1 (raw direction preserved)
 check("interesting: 5 levels total",
       length(levels(intg("1 Very interesting"))) == 5)
 
+cat("\n=== Phase 2 Batch 3: LIKERT_6_NOMID + LIKERT_7 ===\n")
+
+nm <- transform_likert6_nomid_agree
+check("likert6_nomid: '1 Strongly disagree' -> 'Strongly disagree'",
+      as.character(nm("1 Strongly disagree")) == "Strongly disagree")
+check("likert6_nomid: '6 Strongly agree' is highest",
+      nm("6 Strongly agree") > nm("1 Strongly disagree"))
+check("likert6_nomid: 6 levels total",
+      length(levels(nm("1 Strongly disagree"))) == 6)
+check("likert6_nomid: NO neutral midpoint",
+      !any(grepl("Neither", levels(nm("1 Strongly disagree")))))
+check("likert6_nomid: '.a' -> NA",                is.na(nm(".a")))
+
+l7 <- transform_likert7_agree
+check("likert7: '1 Strongly disagree' -> 'Strongly disagree'",
+      as.character(l7("1 Strongly disagree")) == "Strongly disagree")
+check("likert7: '4 Neither agree nor disagree' is the midpoint",
+      as.character(l7("4 Neither agree nor disagree")) == "Neither agree nor disagree")
+check("likert7: '7 Strongly agree' is highest",
+      l7("7 Strongly agree") > l7("1 Strongly disagree"))
+check("likert7: 7 levels total",
+      length(levels(l7("1 Strongly disagree"))) == 7)
+check("likert7: HAS a neutral midpoint",
+      "Neither agree nor disagree" %in% levels(l7("1 Strongly disagree")))
+check("likert7: '.a' -> NA",                      is.na(l7(".a")))
+
 cat("\n")
 if (pass) {
   cat("All transform_functions.R unit tests PASSED.\n")
