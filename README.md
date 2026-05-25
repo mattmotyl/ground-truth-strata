@@ -80,16 +80,30 @@ capabilities, see [Contributing](#contributing).
 
 ```
 ground-truth-strata/
-├── r/                  # R scripts: cleaning, preprocessing, JSON output
-│   ├── clean/          # Variable-specific cleaning functions
-│   ├── precompute/     # Correlation, comparison, and trend pipelines
-│   └── output/         # Generated JSON (also copied to /public/data)
+├── r/
+│   ├── clean/                       # Type-aware cleaning of UAS waves
+│   │   ├── run_script.R             # Sources all utilities (library entry)
+│   │   ├── clean_all_waves.R        # Driver: produces canonical long .rds
+│   │   ├── utils/                   # Cleaning helpers (transforms, MoE, platform map)
+│   │   └── tests/                   # Regression suite for the cleaning layer
+│   ├── precompute/                  # Phase 3 precomputation pipeline
+│   │   ├── build_all.R              # Top-level driver (~2 min end-to-end)
+│   │   ├── build_meta.R             # public/data/meta.json
+│   │   ├── build_trends.R           # public/data/trends.json
+│   │   ├── build_platform_rates.R   # public/data/platform_rates.json
+│   │   ├── build_group_comparisons.R# public/data/group_comparisons.json
+│   │   ├── build_correlations.R     # public/data/correlations.json
+│   │   ├── utils/                   # Shared helpers (cell_filter, weighting, moe, coercion)
+│   │   ├── tests/                   # Unit tests for utils
+│   │   └── README.md                # Phase 3 architecture and conventions
+│   ├── data/                        # Raw UAS CSVs (gitignored, see The Data)
+│   └── output/cleaned/              # Canonical cleaned .rds (gitignored)
 ├── public/
-│   └── data/           # Pre-computed JSON files served by the app
-├── src/                # Next.js application
-│   ├── components/     # React components
-│   └── pages/          # App pages and routing
-├── citation.cff        # Machine-readable citation metadata
+│   └── data/                        # Pre-computed JSON files served by the app
+├── docs/
+│   └── data-dictionary.{csv,json}   # 180-variable canonical dictionary
+├── src/                             # Next.js application (forthcoming)
+├── citation.cff
 └── README.md
 ```
 
@@ -114,9 +128,30 @@ npm install
 
 **3. Run the preprocessing pipeline**
 
-Open R and run the scripts in `/r/precompute/` in order. Output JSON files
-will be written to `/public/data/`. You will need the cleaned UAS data files
-locally — see [The Data](#the-data) for access information.
+With the raw UAS CSVs in `r/data/uas51{4..9}.csv`, run:
+
+```powershell
+Rscript r/precompute/build_all.R
+```
+
+This sources the cleaning layer, produces the canonical
+`r/output/cleaned/all_waves_long.rds` (gitignored), and emits five JSON
+artifacts to `public/data/`:
+
+| File | Contents | Approx size |
+|---|---|---|
+| `meta.json` | wave / platform / variable manifest | ~115 KB |
+| `trends.json` | per (variable × wave) means and rates | ~65 KB |
+| `platform_rates.json` | per (platform × wave × metric) rates | ~263 KB |
+| `group_comparisons.json` | per (outcome × group × wave) estimates | ~5 MB |
+| `correlations.json` | pairwise Spearman correlations per wave | ~8 MB |
+
+End-to-end runs in roughly 2 minutes. See [`r/precompute/README.md`](r/precompute/README.md)
+for the architecture, conventions, and how to add a new precomputed
+artifact.
+
+You'll need the cleaned UAS data files locally — see
+[The Data](#the-data) for access information.
 
 **4. Run the development server**
 

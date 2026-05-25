@@ -9,24 +9,16 @@
 #   - is_reverse_coded items (currently only ls002i, LIKERT_7) are
 #     flipped via (max_code + 1) - as.integer(factor) BEFORE correlating.
 #
-# Scope (this pass):
+# Scope (after 2026-05-25 expansion pass):
 #   - All in_cleaned_csv non-platform-indexed vars with renderable
 #     response_type (LIKERT_*, RANGE_NUMERIC, SCALE_*, BINARY_YESNO).
-#     ~90 variables.
+#     ~90 dict scalar vars + 14 battery means (q_ai11_<N>_mean,
+#     q_ai13_<N>_mean) = ~104 inputs.
 #   - All 23 platform_user_<slug> binaries (derived per (respondent x
-#     wave) from uses_<slug>_w<wave>). This honors Matt's MULTISELECT
-#     ask via the us001 platform multiselect.
-#
-# DEFERRED to a follow-up commit (requires extending clean_all_waves.R
-# to pull additional raw columns):
-#   - ai_used        -> ai_useds<opt>     (W1)
-#   - q_ai8a_<N>     -> q_ai8a_<N>s<opt>  (per AI tool MULTISELECT, W2-3)
-#   - gms00<N>       -> gms00<N>s<opt>    (W6 context MULTISELECTs)
-#   - q_ai11_<N>     -> q_ai11_<N>[a-n]   (per AI tool LIKERT_5 battery)
-#   - q_ai13_<N>     -> q_ai13_<N>[a-m]   (per AI tool LIKERT_5 battery)
-#   Per Phase 1 followup #10 "battery-expansion-pattern". These live as
-#   exploded children in the raw CSV that transform_data does not pull.
-#   See public/data/meta.json `_meta.data_availability_legend`.
+#     wave) from uses_<slug>_w<wave>).
+#   - All MULTISELECT option binaries from in_cleaned_csv_exploded vars
+#     (ai_useds<opt>, q_ai8a_<N>s<opt>, gms00<N>s<opt>) — each option
+#     becomes its own binary correlation input.
 #
 # Invoke:
 #   Rscript r/precompute/build_correlations.R
@@ -92,11 +84,33 @@ tryCatch({
                      "SCALE_0_10", "SCALE_0_100")
   INPUT_BINARY  <- c("BINARY_YESNO")
 
+  # Scalar dict vars (one input each) — covers regular dict scalars AND
+  # the aggregated q_ai11_<N>_mean / q_ai13_<N>_mean battery means since
+  # those have data_availability="in_cleaned_csv" with cleaned_column
+  # pointing at the _mean column.
   dict_inputs <- Filter(function(v) {
     identical(v$data_availability, "in_cleaned_csv") &&
       !isTRUE(v$is_platform_indexed) &&
       v$response_type %in% c(INPUT_NUMERIC, INPUT_BINARY)
   }, meta$variables)
+
+  # MULTISELECT exploded vars — one input per expansion_column.
+  multiselect_parents <- Filter(function(v) {
+    identical(v$data_availability, "in_cleaned_csv_exploded")
+  }, meta$variables)
+  multiselect_inputs <- unlist(lapply(multiselect_parents, function(v) {
+    children <- unlist(v$expansion_columns)
+    lapply(children, function(child) {
+      list(
+        variable_name       = child,
+        response_type       = "BINARY_DERIVED",
+        is_reverse_coded    = FALSE,
+        cleaned_column      = child,
+        is_platform_indexed = FALSE,
+        parent_variable     = v$variable_name
+      )
+    })
+  }), recursive = FALSE)
 
   # ---- Derive platform_user_<slug> binary columns ----
   for (p in meta$platforms) {
@@ -110,7 +124,6 @@ tryCatch({
     }
   }
 
-  # Build platform_user input records that mirror the dict-var shape.
   platform_user_inputs <- lapply(meta$platforms, function(p) {
     list(
       variable_name       = paste0("platform_user_", p$slug),
@@ -121,9 +134,10 @@ tryCatch({
     )
   })
 
-  inputs <- c(dict_inputs, platform_user_inputs)
-  cat(sprintf("Inputs: %d (%d dict + %d platform_user)\n",
-              length(inputs), length(dict_inputs), length(platform_user_inputs)))
+  inputs <- c(dict_inputs, multiselect_inputs, platform_user_inputs)
+  cat(sprintf("Inputs: %d (%d dict scalars + %d multiselect options + %d platform_user)\n",
+              length(inputs), length(dict_inputs),
+              length(multiselect_inputs), length(platform_user_inputs)))
 
   # ---- Precompute per-wave matrices ----
   cat("Building per-wave numeric matrices...\n")
@@ -138,7 +152,7 @@ tryCatch({
     for (i in seq_along(inputs)) {
       v <- inputs[[i]]
       col <- v$cleaned_column
-      if (is.na(col) || !col %in% colnames(cleaned)) next
+      if (is.null(col) || is.na(col) || !col %in% colnames(cleaned)) next
       x_raw <- cleaned[[col]][mask]
       is_bin <- v$response_type %in% c(INPUT_BINARY, "BINARY_DERIVED")
       x_coe <- if (is_bin) coerce_binary01(x_raw) else coerce_numeric(x_raw)

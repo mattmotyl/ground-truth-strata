@@ -114,44 +114,59 @@ tryCatch({
     )
   }
 
-  compute_waves_present <- function(var_rec) {
+  # Compute waves_present given a vector of cleaned-tibble column names.
+  # A wave is present if ANY of those columns has >=1 non-NA in that wave.
+  waves_present_for_cols <- function(cols) {
+    cols <- cols[cols %in% all_cols]
+    if (length(cols) == 0) return(integer(0))
+    waves <- integer(0)
+    for (w in all_waves) {
+      mask <- wave_masks[[as.character(w)]]
+      sub  <- cleaned[mask, cols, drop = FALSE]
+      if (any(vapply(sub, function(x) any(!is.na(x)), logical(1)))) {
+        waves <- c(waves, w)
+      }
+    }
+    sort(waves)
+  }
+
+  compute_waves_present <- function(var_rec, exp_class = NULL) {
+    if (!is.null(exp_class)) {
+      target_cols <- if (!is.null(exp_class$expansion_columns) &&
+                         length(exp_class$expansion_columns) > 0) {
+        exp_class$expansion_columns
+      } else if (!is.na(exp_class$cleaned_column)) {
+        exp_class$cleaned_column
+      } else {
+        character(0)
+      }
+      return(waves_present_for_cols(target_cols))
+    }
     if (is_data_platform_indexed(var_rec$variable_name)) {
       pc <- find_platform_columns(var_rec$variable_name)
-      if (nrow(pc) == 0) return(integer(0))
-      waves <- integer(0)
-      for (w in all_waves) {
-        cols_w <- pc$column[pc$wave == w]
-        if (length(cols_w) == 0) next
-        mask <- wave_masks[[as.character(w)]]
-        sub  <- cleaned[mask, cols_w, drop = FALSE]
-        if (any(vapply(sub, function(x) any(!is.na(x)), logical(1)))) {
-          waves <- c(waves, w)
-        }
-      }
-      sort(waves)
-    } else {
-      col <- find_cleaned_column(var_rec$variable_name, var_rec$clean_variable_name)
-      if (is.na(col)) return(integer(0))
-      waves <- integer(0)
-      for (w in all_waves) {
-        x <- cleaned[[col]][wave_masks[[as.character(w)]]]
-        if (any(!is.na(x))) waves <- c(waves, w)
-      }
-      sort(waves)
+      return(waves_present_for_cols(pc$column))
     }
+    col <- find_cleaned_column(var_rec$variable_name, var_rec$clean_variable_name)
+    if (is.na(col)) return(integer(0))
+    waves_present_for_cols(col)
   }
 
   # Variables whose values live in EXPLODED CHILD columns in the raw CSV
-  # and are NOT pulled through transform_data's final select() — Phase 3
-  # must either re-cleane them or read the raw CSV directly. Per Phase 1
-  # followup #10 "battery-expansion-pattern". The dictionary records each
-  # of these as ONE logical variable; the raw CSV stores them as multiple
-  # children:
-  #   ai_used        -> ai_useds1..s14 (W1 MULTISELECT)
-  #   q_ai8a_<N>     -> q_ai8a_<N>s1..s14 (per AI tool MULTISELECT)
-  #   q_ai11_<N>     -> q_ai11_<N>a..n   (per AI tool LIKERT_5 battery)
-  #   q_ai13_<N>     -> q_ai13_<N>a..m   (per AI tool LIKERT_5 battery)
-  #   gms00<N>       -> gms00<N>s1..sX   (W6 context MULTISELECTs)
+  # — clean_all_waves.R now pulls these (per Phase 3 expansion decision
+  # 2026-05-25, Option B):
+  #
+  #   MULTISELECTs kept as binary option children in the cleaned tibble:
+  #     ai_used        -> ai_useds<opt>     (W1)
+  #     q_ai8a_<N>     -> q_ai8a_<N>s<opt>  (per AI tool MULTISELECT, W2-3)
+  #     gms00<N>       -> gms00<N>s<opt>    (W6 context MULTISELECTs)
+  #
+  #   LIKERT_5 batteries aggregated to per-AI-tool means:
+  #     q_ai11_<N>     -> q_ai11_<N>_mean   (usefulness, W2-3)
+  #     q_ai13_<N>     -> q_ai13_<N>_mean   (harmfulness, W2-3)
+  #
+  # The list below remains useful for documentation. classify_expansion()
+  # detects which expansion has actually landed in the cleaned tibble and
+  # produces the right data_availability / cleaned_column / expansion_columns.
   NEEDS_EXPANSION_FROM_RAW <- c(
     "ai_used",
     paste0("q_ai8a_", 1:7),
@@ -159,6 +174,49 @@ tryCatch({
     paste0("q_ai13_", 1:7),
     paste0("gms00",  1:5)
   )
+
+  # Detect MULTISELECT exploded children or aggregated battery means in
+  # the cleaned tibble. Returns NULL if not an expansion variable; else
+  # a list with $data_availability + $cleaned_column + $expansion_columns.
+  classify_expansion <- function(var_rec) {
+    vn <- var_rec$variable_name
+    if (vn == "ai_used") {
+      kids <- grep("^ai_useds\\d+$", all_cols, value = TRUE)
+      if (length(kids) > 0) {
+        return(list(data_availability = "in_cleaned_csv_exploded",
+                    cleaned_column    = NA_character_,
+                    expansion_columns = kids))
+      }
+    }
+    if (grepl("^q_ai8a_\\d+$", vn)) {
+      n <- sub("^q_ai8a_(\\d+)$", "\\1", vn)
+      kids <- grep(paste0("^q_ai8a_", n, "s\\d+$"), all_cols, value = TRUE)
+      if (length(kids) > 0) {
+        return(list(data_availability = "in_cleaned_csv_exploded",
+                    cleaned_column    = NA_character_,
+                    expansion_columns = kids))
+      }
+    }
+    if (grepl("^gms00\\d+$", vn)) {
+      n <- sub("^gms00(\\d+)$", "\\1", vn)
+      kids <- grep(paste0("^gms00", n, "s\\d+$"), all_cols, value = TRUE)
+      if (length(kids) > 0) {
+        return(list(data_availability = "in_cleaned_csv_exploded",
+                    cleaned_column    = NA_character_,
+                    expansion_columns = kids))
+      }
+    }
+    if (grepl("^q_ai1[13]_\\d+$", vn)) {
+      mean_col <- paste0(vn, "_mean")
+      if (mean_col %in% all_cols) {
+        return(list(data_availability = "in_cleaned_csv",
+                    cleaned_column    = mean_col,
+                    expansion_columns = NULL,
+                    aggregation_note  = "per-AI-tool rowMeans across LIKERT_5 sub-items a..n (raw children dropped)"))
+      }
+    }
+    NULL
+  }
 
   # Categorize each variable for downstream consumers and for triaging
   # discrepancy noise. STRING_OPEN lives in separate PII-scrubbed text
@@ -209,15 +267,25 @@ tryCatch({
   variables_out <- lapply(dict$variables, function(v) {
     waves_dict <- if (is.null(v$waves_present)) integer(0)
                   else as.integer(unlist(v$waves_present))
-    waves_data <- compute_waves_present(v)
 
-    cleaned_column <- if (is_data_platform_indexed(v$variable_name)) {
+    # Expansion path first — if children landed in the cleaned tibble,
+    # use those to populate cleaned_column / expansion_columns / waves_data.
+    exp_class <- classify_expansion(v)
+    waves_data <- compute_waves_present(v, exp_class)
+
+    cleaned_column <- if (!is.null(exp_class)) {
+      exp_class$cleaned_column
+    } else if (is_data_platform_indexed(v$variable_name)) {
       paste0(PLATFORM_PREFIX_MAP[v$variable_name], "_<platform_slug>_w<wave>")
     } else {
       find_cleaned_column(v$variable_name, v$clean_variable_name)
     }
 
-    data_availability <- classify_data_availability(v, waves_data, cleaned_column)
+    data_availability <- if (!is.null(exp_class)) {
+      exp_class$data_availability
+    } else {
+      classify_data_availability(v, waves_data, cleaned_column)
+    }
 
     # Only flag a discrepancy for variables that are EXPECTED to be in the
     # cleaned CSV. STRING_OPEN (external text files) and needs_runtime_expansion
@@ -246,6 +314,13 @@ tryCatch({
       variable_name             = v$variable_name,
       clean_variable_name       = v$clean_variable_name,
       cleaned_column            = cleaned_column,
+      expansion_columns         = if (!is.null(exp_class) &&
+                                       !is.null(exp_class$expansion_columns))
+                                    I(exp_class$expansion_columns)
+                                  else NULL,
+      aggregation_note          = if (!is.null(exp_class))
+                                    exp_class$aggregation_note
+                                  else NULL,
       construct                 = v$construct,
       domain                    = v$domain,
       response_type             = v$response_type,
@@ -306,17 +381,10 @@ tryCatch({
       cell_floor         = 30L,
       suppression_policy = "Cells with n < cell_floor are emitted with NA values and suppressed:true (not omitted).",
       data_availability_legend = list(
-        in_cleaned_csv          = "Variable's cleaned column(s) exist in the .rds and have data — ready for build_*.R.",
+        in_cleaned_csv          = "Variable's cleaned_column exists in the .rds with data. Build scripts use cleaned_column directly.",
+        in_cleaned_csv_exploded = "Variable is a MULTISELECT whose option binaries landed in the cleaned .rds as expansion_columns (one per option). Build scripts should iterate expansion_columns and treat each as a binary input.",
         external_text_files     = "STRING_OPEN free-response item stored in separate PII-scrubbed per-question files outside the main CSV. Out of scope for numeric/categorical precompute.",
-        needs_expansion_from_raw = paste(
-          "Logical variable in dict whose values live as EXPLODED CHILD columns",
-          "(q_ai*_<N>[a-z], q_ai8a_<N>s<opt>, gms00<N>s<opt>, ai_useds<opt>)",
-          "in the raw CSV. transform_data does NOT pull these children, so they",
-          "are absent from the cleaned .rds. Phase 3 builders that need these",
-          "(correlations for MULTISELECT options) will have to either re-cleane",
-          "from raw or extend r/clean/clean_all_waves.R to keep them. Tracked",
-          "by Phase 1 followup #10 'battery-expansion-pattern'."
-        ),
+        needs_expansion_from_raw = "Logical variable in dict whose values live as EXPLODED CHILD columns in the raw CSV that the cleaning pipeline does not pull. As of the 2026-05-25 expansion pass these should all be reclassified as in_cleaned_csv or in_cleaned_csv_exploded; any remaining entries here would indicate a regression.",
         needs_runtime_expansion = "Variable dict-marked is_platform_indexed=TRUE but not in the cleaning layer's prefix_map — non-standard naming requiring runtime expansion.",
         missing                 = "Variable expected in cleaned .rds but no matching column found. Indicates a real cleaning-layer gap to investigate."
       )
