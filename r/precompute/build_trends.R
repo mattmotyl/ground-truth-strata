@@ -19,6 +19,7 @@ suppressPackageStartupMessages({
 
 source(here("r", "precompute", "utils", "cell_filter.R"))
 source(here("r", "precompute", "utils", "weighting.R"))
+source(here("r", "precompute", "utils", "coercion.R"))
 
 # ---- Sink diagnostic log ----
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
@@ -57,43 +58,6 @@ tryCatch({
 
   cat(sprintf("Variables in scope for trends: %d (of %d total in meta)\n",
               length(vars_for_trends), length(meta$variables)))
-
-  # ---- Coercion helpers ----
-  # For ordered factors, as.integer maps level 1 -> 1 .. level N -> N which
-  # is the analytic direction per project_phase3_conventions (cleaning
-  # preserves raw code order; is_reverse_coded items are flipped only for
-  # composites/correlations, NOT for standalone trends).
-  coerce_numeric <- function(x) {
-    if (is.factor(x))   return(as.integer(x))
-    if (is.numeric(x))  return(x)
-    suppressWarnings(as.numeric(x))
-  }
-
-  # Coerce a binary variable to numeric 0/1.
-  #   factor (2-level): as.integer-1 maps level 1 -> 0, level 2 -> 1.
-  #   character "Yes"/"No" (case-insensitive): Yes -> 1, No -> 0.
-  #   character "<digit> <label>" (e.g., "1 Primary respondent" /
-  #     "0 Added member" — labelled() metadata coerced to character by
-  #     Phase 2 cleaning): leading digit wins.
-  coerce_binary01 <- function(x) {
-    if (is.factor(x)) {
-      if (nlevels(x) != 2) return(rep(NA_real_, length(x)))
-      return(as.integer(x) - 1L)
-    }
-    if (is.character(x)) {
-      out <- rep(NA_real_, length(x))
-      xl  <- tolower(x)
-      out[xl == "yes" | xl == "true"]  <- 1
-      out[xl == "no"  | xl == "false"] <- 0
-      # Fallback for code-prefixed labels ("1 Primary respondent", "0 Added member").
-      leading <- substr(x, 1, 1)
-      out[is.na(out) & leading == "1"] <- 1
-      out[is.na(out) & leading == "0"] <- 0
-      return(out)
-    }
-    if (is.numeric(x)) return(as.numeric(x))
-    rep(NA_real_, length(x))
-  }
 
   # ---- Build rows ----
   cat("Computing per-(variable x wave) estimates...\n")
