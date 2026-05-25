@@ -129,6 +129,82 @@ run_wave_checks <- function(w) {
                   all(is.na(df$regulation_elections)))                                                       && pass
   }
 
+  # Phase 2 Batch 2 — LIKERT_5 spot checks
+  # regulation_tech_companies (ex004a, W5-W6 only)
+  if (w %in% c(5, 6)) {
+    pass <- check("regulation_tech_companies is ordered factor with 5 amount levels (W5,W6)",
+                  is.ordered(df$regulation_tech_companies) &&
+                  length(levels(df$regulation_tech_companies)) == 5 &&
+                  "Much more than they are now" %in% levels(df$regulation_tech_companies))                   && pass
+  } else {
+    pass <- check("regulation_tech_companies is all-NA outside W5,W6",
+                  all(is.na(df$regulation_tech_companies)))                                                  && pass
+  }
+
+  # ins001a-h institutional trust (W1 only)
+  if (w == 1) {
+    pass <- check("ins001a-h are ordered factors with None..A great deal (W1)",
+                  all(paste0("ins001", letters[1:8]) %in% colnames(df)) &&
+                  is.ordered(df$ins001a) &&
+                  identical(levels(df$ins001a),
+                            c("None", "Very little", "Some", "Quite a lot", "A great deal")))                && pass
+  } else {
+    pass <- check("ins001a-h are absent outside W1",
+                  !any(paste0("ins001", letters[1:8]) %in% colnames(df)))                                    && pass
+  }
+
+  # sc001a-f social media beliefs (W1, W2 only per dictionary —
+  # the handoff doc's "all waves" claim turned out to be wrong; the raw
+  # CSVs don't carry sc001* in W3-W6)
+  if (w %in% 1:2) {
+    pass <- check("sc001a is ordered factor with agree_dnd levels (W1,W2)",
+                  "sc001a" %in% colnames(df) &&
+                  is.ordered(df$sc001a) &&
+                  identical(levels(df$sc001a),
+                            c("Strongly disagree", "Disagree",
+                              "Neither agree nor disagree", "Agree",
+                              "Strongly agree")))                                                            && pass
+  } else {
+    pass <- check("sc001a-f absent outside W1,W2",
+                  !any(paste0("sc001", letters[1:6]) %in% colnames(df)))                                     && pass
+  }
+
+  # ai_concern / ai_excitement (LIKERT_5 with OOR=5) — singletons, always present
+  pass <- check("ai_concern is ordered factor with 4 levels (OOR dropped)",
+                is.ordered(df$ai_concern) &&
+                length(levels(df$ai_concern)) == 4)                                                          && pass
+  pass <- check("ai_excitement is ordered factor with 4 levels (OOR dropped)",
+                is.ordered(df$ai_excitement) &&
+                length(levels(df$ai_excitement)) == 4)                                                       && pass
+
+  # AI XR (q_ai13/q_ai14) — singletons, always present (NA outside waves
+  # where the question was asked)
+  pass <- check("ai_xr_excitement is ordered factor with 5 levels",
+                is.ordered(df$ai_xr_excitement) &&
+                length(levels(df$ai_xr_excitement)) == 5)                                                    && pass
+  pass <- check("ai_xr_concern is ordered factor with 5 levels",
+                is.ordered(df$ai_xr_concern) &&
+                length(levels(df$ai_xr_concern)) == 5)                                                       && pass
+
+  # survey_interest (cs_001) — always present
+  pass <- check("survey_interest is ordered factor with 5 levels",
+                is.ordered(df$survey_interest) &&
+                length(levels(df$survey_interest)) == 5)                                                     && pass
+
+  # ai_effect_a-g (W1 only, OOR=6)
+  if (w == 1) {
+    pass <- check("ai_effect_a-g are ordered factors with concern_excite levels (W1)",
+                  all(paste0("ai_effect_", letters[1:7]) %in% colnames(df)) &&
+                  is.ordered(df$ai_effect_a) &&
+                  identical(levels(df$ai_effect_a),
+                            c("Very concerned", "Somewhat concerned",
+                              "Equally concerned and excited",
+                              "Somewhat excited", "Very excited")))                                          && pass
+  } else {
+    pass <- check("ai_effect_a-g absent outside W1",
+                  !any(paste0("ai_effect_", letters[1:7]) %in% colnames(df)))                                && pass
+  }
+
   pass
 }
 

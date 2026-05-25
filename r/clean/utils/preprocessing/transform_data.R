@@ -60,6 +60,36 @@ transform_data <- function(which_wave) {
       .cols = any_of(c("ds001a", "ds001b", "ds001c", "ds001d", "ds001e", "ds001f")),
       .fns  = transform_likert4_dass
     )) %>%
+    # ----- Phase 2 Batch 2: LIKERT_5 batteries (variable per wave) -----
+    mutate(across(  # social media beliefs (sc001a-f) + usage patterns (ex002a-c)
+      .cols = any_of(c("sc001a", "sc001b", "sc001c", "sc001d", "sc001e", "sc001f",
+                       "ex002a", "ex002b", "ex002c")),
+      .fns  = transform_likert5_agree_dnd
+    )) %>%
+    mutate(across(  # AI governance agreement (ex006a-d) — W6
+      .cols = any_of(c("ex006a", "ex006b", "ex006c", "ex006d")),
+      .fns  = transform_likert5_agree_somewhat
+    )) %>%
+    mutate(across(  # institutional trust (ins001a-h) — W1
+      .cols = any_of(paste0("ins001", letters[1:8])),
+      .fns  = transform_likert5_amount
+    )) %>%
+    mutate(across(  # perceived harm of AI tools (q_ai13_1..7)
+      .cols = any_of(paste0("q_ai13_", 1:7)),
+      .fns  = transform_likert5_harm
+    )) %>%
+    mutate(across(  # perceived usefulness of AI tools (q_ai11_1..7)
+      .cols = any_of(paste0("q_ai11_", 1:7)),
+      .fns  = transform_likert5_useful
+    )) %>%
+    mutate(across(  # AI effect concern<->excited (ai_effect_a..g) — W1; "No opinion" OOR
+      .cols = any_of(paste0("ai_effect_", letters[1:7])),
+      .fns  = transform_likert5_concern_excite
+    )) %>%
+    mutate(across(  # AI governance support (ex005a-c) — W6
+      .cols = any_of(c("ex005a", "ex005b", "ex005c")),
+      .fns  = transform_likert5_support
+    )) %>%
     mutate(  # derived / demographic / panel-preload columns
       gender             = if ("gender" %in% colnames(data))      transform_gender(gender)                          else NA_character_,
       age                = if ("age" %in% colnames(data))         transform_age(age)                                else NA_character_,
@@ -88,16 +118,19 @@ transform_data <- function(which_wave) {
       # in every wave per Phase 1 verification).
       refrained_from_posting       = if ("us014" %in% colnames(data))    recode_sentinels(us014)        else NA_character_,
       vote_2024_preference         = if ("vote2024" %in% colnames(data)) recode_sentinels(vote2024)     else NA_character_,
-      # ex004a is LIKERT_5 (regulation level); ex004b/c are LIKERT_3
-      # ("More" / "Keep doing" / "Less"). Phase 2 Batch 1 converts the
-      # LIKERT_3 pair to ordered factors via transform_likert3_more_less.
-      # ex004a stays a string pass-through here pending Batch 2 (LIKERT_5).
-      regulation_tech_companies    = if ("ex004a" %in% colnames(data))   recode_sentinels(ex004a)               else NA_character_,
+      # Phase 2 Batch 1 converted ex004b/c (LIKERT_3 more/less). Batch 2
+      # converts ex004a (LIKERT_5 amount-of-regulation).
+      regulation_tech_companies    = if ("ex004a" %in% colnames(data))   transform_likert5_more_less_amount(ex004a) else factor(NA, levels = c("Much less than they are now","A little less than they are now","The same as they are now","A little more than they are now","Much more than they are now"), ordered = TRUE),
       regulation_elections         = if ("ex004b" %in% colnames(data))   transform_likert3_more_less(ex004b)    else factor(NA, levels = c("Less", "Keep doing what they are now", "More"), ordered = TRUE),
       regulation_protect_users     = if ("ex004c" %in% colnames(data))   transform_likert3_more_less(ex004c)    else factor(NA, levels = c("Less", "Keep doing what they are now", "More"), ordered = TRUE),
-      # LIKERT_4 sm_wake_to_check (ex001) — W2 only. Returns ordered
-      # factor with low-to-high frequency levels.
+      # LIKERT_4 sm_wake_to_check (ex001) — W2 only.
       sm_wake_to_check             = if ("ex001" %in% colnames(data))    transform_likert4_freq(ex001)          else factor(NA, levels = c("Rarely or never", "Some of the time", "Frequently", "Always or almost always"), ordered = TRUE),
+      # Phase 2 Batch 2: LIKERT_5 singletons (names per dictionary).
+      ai_concern                   = if ("ai_concerned" %in% colnames(data)) transform_likert5_concerned_no_opinion(ai_concerned) else factor(NA, levels = c("Very concerned","Somewhat concerned","Not very concerned","Not at all concerned"), ordered = TRUE),
+      ai_excitement                = if ("ai_excited"   %in% colnames(data)) transform_likert5_excited_no_opinion(ai_excited)     else factor(NA, levels = c("Very excited","Somewhat excited","Not very excited","Not at all excited"), ordered = TRUE),
+      ai_xr_excitement             = if ("q_ai13"       %in% colnames(data)) transform_likert5_excite_only(q_ai13)                 else factor(NA, levels = c("Not at all excited","Not very excited","Somewhat excited","Very excited","Extremely excited"), ordered = TRUE),
+      ai_xr_concern                = if ("q_ai14"       %in% colnames(data)) transform_likert5_concern_only(q_ai14)                else factor(NA, levels = c("Not at all concerned","Not very concerned","Somewhat concerned","Very concerned","Extremely concerned"), ordered = TRUE),
+      survey_interest              = if ("cs_001"       %in% colnames(data)) transform_likert5_interesting(cs_001)                 else factor(NA, levels = c("Very interesting","Interesting","Neither interesting nor uninteresting","Uninteresting","Very uninteresting"), ordered = TRUE),
     ) %>%
     select(uasid, wave, final_weight, gender, age, race, pol_incl_leaners,
            political_ideology_self,
@@ -107,8 +140,20 @@ transform_data <- function(which_wave) {
            refrained_from_posting,
            starts_with("regulation_"), vote_2024_preference,
            sm_wake_to_check,
+           # Phase 2 Batch 1: LIKERT_3/4 batteries
            any_of(c("ex003a", "ex003b", "ex003c")),
            any_of(c("ds001a", "ds001b", "ds001c", "ds001d", "ds001e", "ds001f")),
+           # Phase 2 Batch 2: LIKERT_5 batteries
+           any_of(c("sc001a","sc001b","sc001c","sc001d","sc001e","sc001f",
+                    "ex002a","ex002b","ex002c",
+                    "ex006a","ex006b","ex006c","ex006d",
+                    "ex005a","ex005b","ex005c")),
+           any_of(paste0("ins001", letters[1:8])),
+           any_of(paste0("q_ai11_", 1:7)),
+           any_of(paste0("q_ai13_", 1:7)),
+           any_of(paste0("ai_effect_", letters[1:7])),
+           # Phase 2 Batch 2: LIKERT_5 singletons
+           ai_concern, ai_excitement, ai_xr_excitement, ai_xr_concern, survey_interest,
            starts_with("us0") & !contains("order"),
            -us001,
            -(starts_with(c("us004", "us005", "us008", "us016")) & ends_with(c("_"))))

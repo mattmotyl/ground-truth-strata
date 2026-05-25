@@ -137,6 +137,80 @@ check("levels ordered low-to-high frequency",
 check("'Always or almost always' > 'Rarely or never'",
       fr4("1 Always or almost always") > fr4("4 Rarely or never"))
 
+cat("\n=== Phase 2 Batch 2: LIKERT_5 transformers ===\n")
+
+ad <- transform_likert5_agree_dnd
+check("agree_dnd: '1 Strongly disagree' -> 'Strongly disagree'",
+      as.character(ad("1 Strongly disagree")) == "Strongly disagree")
+check("agree_dnd: '5 Strongly agree' is the highest level",
+      ad("5 Strongly agree") > ad("1 Strongly disagree"))
+check("agree_dnd: '.a' -> NA",                is.na(ad(".a")))
+
+asw <- transform_likert5_agree_somewhat
+check("agree_somewhat: '2 Somewhat disagree' -> 'Somewhat disagree'",
+      as.character(asw("2 Somewhat disagree")) == "Somewhat disagree")
+check("agree_somewhat: levels include 'Somewhat'",
+      "Somewhat disagree" %in% levels(asw("1 Strongly disagree")) &&
+      "Somewhat agree"    %in% levels(asw("1 Strongly disagree")))
+
+am <- transform_likert5_amount
+check("amount: '1 None' -> 'None'",          as.character(am("1 None")) == "None")
+check("amount: '5 A great deal' > '1 None'", am("5 A great deal") > am("1 None"))
+
+harm <- transform_likert5_harm
+check("harm: '5 Extremely harmful' is highest",
+      harm("5 Extremely harmful") > harm("1 Not at all harmful"))
+
+uf <- transform_likert5_useful
+check("useful: '5 Extremely useful' is highest",
+      uf("5 Extremely useful") > uf("1 Not at all useful"))
+
+ce <- transform_likert5_concern_excite
+check("concern_excite: '1 Very concerned' -> 'Very concerned'",
+      as.character(ce("1 Very concerned")) == "Very concerned")
+check("concern_excite: '5 Very excited' is highest",
+      ce("5 Very excited") > ce("1 Very concerned"))
+check("concern_excite: '6 No opinion' -> NA (OOR)",
+      is.na(ce("6 No opinion")))
+
+sp <- transform_likert5_support
+check("support: '5 Strongly support' > '1 Strongly oppose'",
+      sp("5 Strongly support") > sp("1 Strongly oppose"))
+
+mla <- transform_likert5_more_less_amount
+check("more_less_amount: '5 Much more...' > '1 Much less...'",
+      mla("5 Much more than they are now") > mla("1 Much less than they are now"))
+
+co <- transform_likert5_concern_only
+check("concern_only: '5 Extremely concerned' > '1 Not at all concerned'",
+      co("5 Extremely concerned") > co("1 Not at all concerned"))
+
+eo <- transform_likert5_excite_only
+check("excite_only: '5 Extremely excited' > '1 Not at all excited'",
+      eo("5 Extremely excited") > eo("1 Not at all excited"))
+
+cno <- transform_likert5_concerned_no_opinion
+check("concerned_no_opinion: '1 Very concerned' -> 'Very concerned'",
+      as.character(cno("1 Very concerned")) == "Very concerned")
+check("concerned_no_opinion: '5 No opinion' -> NA (OOR)",
+      is.na(cno("5 No opinion")))
+check("concerned_no_opinion: only 4 real levels (No opinion is NA, not a level)",
+      length(levels(cno("1 Very concerned"))) == 4)
+check("concerned_no_opinion: preserves raw direction (Very concerned = level 1)",
+      as.integer(cno("1 Very concerned")) == 1)
+
+eno <- transform_likert5_excited_no_opinion
+check("excited_no_opinion: '5 No opinion' -> NA (OOR)",
+      is.na(eno("5 No opinion")))
+check("excited_no_opinion: only 4 real levels",
+      length(levels(eno("1 Very excited"))) == 4)
+
+intg <- transform_likert5_interesting
+check("interesting: '1 Very interesting' is at level 1 (raw direction preserved)",
+      as.integer(intg("1 Very interesting")) == 1)
+check("interesting: 5 levels total",
+      length(levels(intg("1 Very interesting"))) == 5)
+
 cat("\n")
 if (pass) {
   cat("All transform_functions.R unit tests PASSED.\n")

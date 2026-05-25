@@ -235,3 +235,188 @@ transform_likert4_freq <- function(x) {
     ordered = TRUE
   )
 }
+
+# ----------------------------------------------------------------------
+# LIKERT_5 transformers (Phase 2 Batch 2)
+#
+# Direction convention: preserve raw code direction in factor levels
+# (code 1 = level 1, code 5 = level 5). For multi-item scales the
+# dictionary's is_reverse_coded field marks items that need flipping
+# at Phase 3 precompute time; standalone items keep their natural
+# survey direction.
+#
+# Exceptions (where raw codes are NOT monotonic with the construct,
+# so the transformer imposes a deliberate ordering): documented in
+# the function's leading comment.
+# ----------------------------------------------------------------------
+
+# LIKERT_5 — Strongly disagree -> Strongly agree (no "Somewhat" variants).
+# Used by social media beliefs (sc001a-f) and usage patterns (ex002a-c).
+transform_likert5_agree_dnd <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Strongly disagree", "Disagree", "Neither agree nor disagree",
+                "Agree", "Strongly agree"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Strongly disagree -> Strongly agree (with "Somewhat" variants).
+# Used by AI governance attitudes (ex006a-d).
+transform_likert5_agree_somewhat <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Strongly disagree", "Somewhat disagree",
+                "Neither agree nor disagree",
+                "Somewhat agree", "Strongly agree"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — None -> A great deal. Used by institutional trust (ins001a-h).
+transform_likert5_amount <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("None", "Very little", "Some", "Quite a lot", "A great deal"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Not at all harmful -> Extremely harmful.
+# Used by AI tool perceived-harm ratings (q_ai13_1..7).
+transform_likert5_harm <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Not at all harmful", "Not very harmful", "Somewhat harmful",
+                "Very harmful", "Extremely harmful"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Not at all useful -> Extremely useful.
+# Used by AI tool perceived-usefulness ratings (q_ai11_1..7).
+transform_likert5_useful <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Not at all useful", "Not very useful", "Somewhat useful",
+                "Very useful", "Extremely useful"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — concerned -> excited bipolar scale with "No opinion" OOR.
+# Used by ai_effect_a..g (perceived effect of AI on outcomes). Raw codes:
+# 1=Very concerned, 5=Very excited, 6=No opinion (OOR per dictionary —
+# mapped to NA before factor coercion).
+transform_likert5_concern_excite <- function(x) {
+  x <- recode_sentinels(x, additional = "6 No opinion")
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Very concerned", "Somewhat concerned",
+                "Equally concerned and excited",
+                "Somewhat excited", "Very excited"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Strongly oppose -> Strongly support.
+# Used by AI governance support items (ex005a-c).
+transform_likert5_support <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Strongly oppose", "Somewhat oppose",
+                "Neither support nor oppose",
+                "Somewhat support", "Strongly support"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Much less -> Much more. Used by regulation_tech_companies (ex004a).
+# Raw codes are monotonic (1=Much less, 5=Much more) — preserves natural
+# direction. Higher score = wants more regulation.
+transform_likert5_more_less_amount <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Much less than they are now",
+                "A little less than they are now",
+                "The same as they are now",
+                "A little more than they are now",
+                "Much more than they are now"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Not at all concerned -> Extremely concerned.
+# Used by q_ai14 (AR/VR-headset concern). Single-item, no OOR.
+transform_likert5_concern_only <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Not at all concerned", "Not very concerned",
+                "Somewhat concerned", "Very concerned",
+                "Extremely concerned"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Not at all excited -> Extremely excited.
+# Used by q_ai13 (AR/VR-headset excitement). Single-item, no OOR.
+transform_likert5_excite_only <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Not at all excited", "Not very excited",
+                "Somewhat excited", "Very excited",
+                "Extremely excited"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 with OOR=5 ("No opinion"). ai_concerned (general AI concern).
+# Raw codes: 1=Very concerned, 4=Not at all concerned, 5=No opinion (OOR
+# per dictionary — mapped to NA before factor coercion). After NA-recode,
+# 4 real levels remain. Preserves raw direction: higher score = LESS
+# concerned (the survey ordering). Phase 3 may flip via is_reverse_coded
+# if needed for scale composites.
+transform_likert5_concerned_no_opinion <- function(x) {
+  x <- recode_sentinels(x, additional = "5 No opinion")
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Very concerned", "Somewhat concerned",
+                "Not very concerned", "Not at all concerned"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 with OOR=5 ("No opinion"). ai_excited (general AI excitement).
+# Same structure as ai_concerned (4 real levels after NA-recode).
+transform_likert5_excited_no_opinion <- function(x) {
+  x <- recode_sentinels(x, additional = "5 No opinion")
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Very excited", "Somewhat excited",
+                "Not very excited", "Not at all excited"),
+    ordered = TRUE
+  )
+}
+
+# LIKERT_5 — Very interesting -> Very uninteresting. Survey-quality
+# item (cs_001 — was the survey interesting). Preserves raw direction:
+# higher score = LESS interesting. Phase 3 may flip if needed.
+transform_likert5_interesting <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Very interesting", "Interesting",
+                "Neither interesting nor uninteresting",
+                "Uninteresting", "Very uninteresting"),
+    ordered = TRUE
+  )
+}
