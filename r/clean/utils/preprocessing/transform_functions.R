@@ -1,5 +1,23 @@
 # Define transformation functions
 
+# Recode UAS missing-value sentinels to NA. Per the UAS panel documentation
+# (https://uasdata.usc.edu), value codes that should never be treated as
+# real responses:
+#   ".e" -> respondent saw the question but did not answer it
+#   "."  -> respondent never saw the question (skipped, broke off, or dirty data)
+#   ".a" -> additional missing-value sentinel observed in legacy waves
+#   ".c" -> placeholder used in end_date variables when the survey is incomplete
+# Also handles empty strings and literal "NA" / "N/A" strings so that any
+# field cleaned by this function is safe to treat as ordinary character data.
+# Returns a character vector with sentinels replaced by NA_character_.
+recode_sentinels <- function(x) {
+  if (is.factor(x))    x <- as.character(x)
+  if (!is.character(x)) x <- as.character(x)
+  na_idx <- x %in% c(".a", ".e", ".c", ".", "", "NA", "N/A")
+  x[na_idx] <- NA_character_
+  x
+}
+
 transform_gender <- function(x) ifelse(grepl("Female", x), "Women", "Men")
 
 transform_age <- function(x) cut(as.numeric(x), breaks = c(0, 30, 45, 59, Inf), 

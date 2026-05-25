@@ -1,16 +1,37 @@
-# Function to source all R files in a given directory
+# Source all R files in the cleaning utilities tree.
+#
+# This script DEFINES the cleaning functions (transform_data, rename_variables,
+# the transform_* helpers, the platform_map lookup, the summary helpers). It
+# does NOT invoke the pipeline — callers (e.g., an analysis script, or a
+# future r/clean/clean_all_waves.R driver) source this file and then call
+# transform_data(N) themselves.
+#
+# Paths are resolved via here::here(), so this script works regardless of
+# the caller's working directory.
+
 source_all_files_in_directory <- function(directory) {
-  files <- list.files(directory, pattern = "\\.R$", full.names = TRUE)
+  files <- list.files(directory, pattern = "\\.R$", ignore.case = TRUE,
+                      full.names = TRUE)
   for (file in files) {
-    source(file)
+    tryCatch(
+      source(file),
+      error = function(e) {
+        message("[run_script.R] Failed to source ", file, ": ",
+                conditionMessage(e))
+      }
+    )
   }
 }
 
-# Source all preprocessing scripts
-source_all_files_in_directory("utils/preprocessing")
+# Source the preprocessing helpers first (transform_*, rename_variables,
+# process_text_data) so any later utility files can rely on them.
+source_all_files_in_directory(here::here("r", "clean", "utils", "preprocessing"))
 
-# Source all utility scripts
-source_all_files_in_directory("utils")
+# Then the top-level utility files (color, get_moe, platform_map,
+# load_packages, etc.). list.files() is non-recursive by default so this
+# does NOT re-source the preprocessing files.
+source_all_files_in_directory(here::here("r", "clean", "utils"))
 
-# Source all summarization scripts
-source_all_files_in_directory("summary")
+# The historical "summary/" directory holding analysis-output scripts from
+# the SMI project is intentionally NOT sourced here — those scripts belong
+# to a separate workflow that's out of scope for the Strata pipeline.

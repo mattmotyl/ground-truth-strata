@@ -12,9 +12,26 @@
 *.xlsx
 *.xls
 
+# Exceptions: the dictionary outputs ARE part of the public repo.
+!docs/data-dictionary.csv
+!docs/data-dictionary.json
+
 # PDFs — survey flow docs stay local, not in the public repo
 /r/docs/
 *.pdf
+
+# Audit artifacts — annotated scripts, audit reports, runtime captures,
+# and phase-N verification harnesses all live in M:\MM\Websites\strata-local\audit\
+# (Matt's local-only working notes). Belt-and-suspenders patterns here so they
+# can't accidentally creep back into the public repo.
+docs/audit/
+docs/AUDIT_REPORT.md
+docs/PHASE*_VERIFICATION*.txt
+docs/PHASE*_TEST_*.txt
+docs/PHASE*_READER_*.txt
+scripts/phase*_verify*.R
+scripts/phase*_test_*.R
+scripts/phase*_recheck_*.R
 
 # Node
 node_modules/
