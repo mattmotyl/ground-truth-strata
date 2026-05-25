@@ -33,6 +33,10 @@ scripts/phase*_verify*.R
 scripts/phase*_test_*.R
 scripts/phase*_recheck_*.R
 
+# Claude Code local override file (per-user, never commit). The shared
+# .claude/settings.json IS committed.
+.claude/settings.local.json
+
 # Node
 node_modules/
 .next/
