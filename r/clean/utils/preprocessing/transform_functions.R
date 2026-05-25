@@ -183,8 +183,11 @@ transform_experience_qs <- function(x) {
 # preserve raw codes in their natural direction.
 # ----------------------------------------------------------------------
 
-# Helper: strip the leading "N " from a UAS scale label.
-.strip_uas_code <- function(x) str_sub(x, 3, nchar(x))
+# Helper: strip the leading numeric code + whitespace from a UAS label.
+# Works for both single-digit ("1 Strongly disagree" -> "Strongly disagree")
+# and multi-digit codes ("12 Florida" -> "Florida", "23 Bluesky" -> "Bluesky"
+# — needed for SINGLE_SELECT_CATEGORICAL variables like statereside).
+.strip_uas_code <- function(x) sub("^\\d+\\s+", "", x)
 
 # LIKERT_3 — UCLA loneliness short scale (ex003a/b/c).
 # Levels: Hardly ever -> Some of the time -> Often.
@@ -455,4 +458,48 @@ transform_likert7_agree <- function(x) {
                 "Somewhat agree", "Agree", "Strongly agree"),
     ordered = TRUE
   )
+}
+
+# ----------------------------------------------------------------------
+# Batch 4 — RANGE_NUMERIC, LIKERT_6 (in-person), and categorical helpers
+# ----------------------------------------------------------------------
+
+# RANGE_NUMERIC — sentinel-aware numeric coercion. Used by per-platform
+# time-spent items (us019_hours_<plat>_, us019_minutes_<plat>_, W4-W6)
+# and year-of-birth. NA-coerces UAS sentinels via recode_sentinels()
+# BEFORE as.numeric() so we don't see the "NAs introduced by coercion"
+# warning that the original transform_age helper used to throw.
+transform_numeric_safe <- function(x) {
+  x <- recode_sentinels(x)
+  suppressWarnings(as.numeric(x))
+}
+
+# LIKERT_6 — in-person interaction frequency. Used by us020 (W5-W6).
+# Note: level 6 = "I did not have any in-person social interactions in
+# the past 4 weeks" is a domain-specific non-frequency sentinel rather
+# than a true "0-frequency" point on the scale. Mapping it to NA loses
+# information (a respondent who reported no in-person interactions IS
+# providing data); keeping it as a 6th factor level lets Phase 3 decide
+# how to treat it. Higher levels = LESS frequent (raw direction).
+transform_likert6_freq_inperson <- function(x) {
+  x <- recode_sentinels(x)
+  factor(
+    case_when(!is.na(x) ~ .strip_uas_code(x)),
+    levels  = c("Multiple times per day", "About once a day",
+                "A few times per week", "About once a week",
+                "Less than once a week",
+                "I did not have any in-person social interactions in the past 4 weeks"),
+    ordered = TRUE
+  )
+}
+
+# Generic "N <label>" categorical -> unordered factor with the raw
+# labels (N stripped). Useful for SINGLE_SELECT_CATEGORICAL variables
+# where no inherent ordering exists (state of residence, marital status,
+# party affiliation, etc.). The returned factor's levels are whatever
+# appears in the input — Phase 3 can re-order or relabel for display.
+transform_categorical_label <- function(x) {
+  x <- recode_sentinels(x)
+  out <- case_when(!is.na(x) ~ .strip_uas_code(x))
+  factor(out)
 }

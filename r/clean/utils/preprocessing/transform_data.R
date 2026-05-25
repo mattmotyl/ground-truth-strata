@@ -47,10 +47,25 @@ transform_data <- function(which_wave) {
       .cols = contains("us002"),
       .fns  = transform_freqs
     )) %>%
-    mutate(across(  # experience yes/no questions (per-platform)
-      .cols = contains(c("us001s","us003","us004","us005","us007","us008",
-                         "us016","us010","us012","us014")) & !contains("order"),
+    mutate(across(  # experience yes/no questions (per-platform + in-person + W6 topics + AI-tool-use)
+      # Original (per-platform Yes/No, all 6 waves):
+      #   us001s, us003-008, us010, us012, us014, us016
+      # Phase 2 Batch 4 added:
+      #   us021..us024 — in-person Yes/No counterparts (W5-W6)
+      #   us025, us026 — W6 topic follow-ups (platform-indexed binary flags per topic)
+      #   q_ai1..q_ai7 — individual "did you use this AI tool?" Yes/No items (W2-3, q_ai7 W2-6)
+      .cols = (
+        contains(c("us001s","us003","us004","us005","us007","us008",
+                   "us016","us010","us012","us014",
+                   "us021","us022","us023","us024",
+                   "us025","us026")) &
+        !contains("order")
+      ) | any_of(paste0("q_ai", 1:7)),
       .fns  = transform_experience_qs
+    )) %>%
+    mutate(across(  # per-platform time-spent (us019_hours_<plat>_, us019_minutes_<plat>_, W4-W6)
+      .cols = matches("^us019_(hours|minutes)_\\d+_$"),
+      .fns  = transform_numeric_safe
     )) %>%
     mutate(across(  # LIKERT_3 — UCLA loneliness short scale (W2, W5, W6)
       .cols = any_of(c("ex003a", "ex003b", "ex003c")),
@@ -107,6 +122,32 @@ transform_data <- function(which_wave) {
       .fns  = transform_likert7_agree
     )) %>%
     mutate(  # derived / demographic / panel-preload columns
+      # Phase 2 Batch 4: LIKERT_6 in-person interaction frequency (us020, W5-W6).
+      inperson_frequency = if ("us020" %in% colnames(data))  transform_likert6_freq_inperson(us020)
+                           else factor(NA,
+                                       levels = c("Multiple times per day", "About once a day",
+                                                  "A few times per week", "About once a week",
+                                                  "Less than once a week",
+                                                  "I did not have any in-person social interactions in the past 4 weeks"),
+                                       ordered = TRUE),
+      # Phase 2 Batch 4: BINARY demographic items (sentinel-aware Yes/No).
+      is_us_citizen        = if ("citizenus" %in% colnames(data))         transform_experience_qs(citizenus)         else NA_character_,
+      is_born_us           = if ("bornus" %in% colnames(data))            transform_experience_qs(bornus)            else NA_character_,
+      hispanic_latino      = if ("hisplatino" %in% colnames(data))        transform_experience_qs(hisplatino)        else NA_character_,
+      primary_respondent   = if ("primary_respondent" %in% colnames(data)) transform_experience_qs(primary_respondent) else NA_character_,
+      # Phase 2 Batch 4: SINGLE_SELECT_CATEGORICAL demographic items
+      # (sentinel-aware, returns unordered factor with N-stripped labels).
+      state_of_residence   = if ("statereside" %in% colnames(data))       transform_categorical_label(statereside)   else factor(NA_character_),
+      state_of_birth       = if ("stateborn" %in% colnames(data))         transform_categorical_label(stateborn)     else factor(NA_character_),
+      marital_status       = if ("maritalstatus" %in% colnames(data))     transform_categorical_label(maritalstatus) else factor(NA_character_),
+      age_range            = if ("agerange" %in% colnames(data))          transform_categorical_label(agerange)      else factor(NA_character_),
+      survey_language      = if ("language" %in% colnames(data))          transform_categorical_label(language)      else factor(NA_character_),
+      voter_registered     = if ("regis" %in% colnames(data))             transform_categorical_label(regis)         else factor(NA_character_),
+      party_registration   = if ("partyreg" %in% colnames(data))          transform_categorical_label(partyreg)      else factor(NA_character_),
+      party_affiliation    = if ("party_affil" %in% colnames(data))       transform_categorical_label(party_affil)   else factor(NA_character_),
+      party_lean           = if ("lean_affil" %in% colnames(data))        transform_categorical_label(lean_affil)    else factor(NA_character_),
+      # Phase 2 Batch 4: RANGE_NUMERIC year-of-birth (always present).
+      year_of_birth        = if ("dateofbirth_year" %in% colnames(data))  transform_numeric_safe(dateofbirth_year)   else NA_real_,
       gender             = if ("gender" %in% colnames(data))      transform_gender(gender)                          else NA_character_,
       age                = if ("age" %in% colnames(data))         transform_age(age)                                else NA_character_,
       race               = if (all(c("race", "hisplatino") %in% colnames(data))) transform_race(race, hisplatino)   else NA_character_,
@@ -132,8 +173,11 @@ transform_data <- function(which_wave) {
       # actually use (was previously gated on scim_therm_lib/con — a copy-
       # paste bug that was latent only because all four SCIM columns coexist
       # in every wave per Phase 1 verification).
-      refrained_from_posting       = if ("us014" %in% colnames(data))    recode_sentinels(us014)        else NA_character_,
-      vote_2024_preference         = if ("vote2024" %in% colnames(data)) recode_sentinels(vote2024)     else NA_character_,
+      # Phase 2 Batch 4: refrained_from_posting (us014) is BINARY_YESNO,
+      # vote_2024_preference (vote2024) is SINGLE_SELECT_CATEGORICAL —
+      # both upgraded from sentinel-recoded strings to proper typed columns.
+      refrained_from_posting       = if ("us014" %in% colnames(data))    transform_experience_qs(us014)         else NA_character_,
+      vote_2024_preference         = if ("vote2024" %in% colnames(data)) transform_categorical_label(vote2024)  else factor(NA_character_),
       # Phase 2 Batch 1 converted ex004b/c (LIKERT_3 more/less). Batch 2
       # converts ex004a (LIKERT_5 amount-of-regulation).
       regulation_tech_companies    = if ("ex004a" %in% colnames(data))   transform_likert5_more_less_amount(ex004a) else factor(NA, levels = c("Much less than they are now","A little less than they are now","The same as they are now","A little more than they are now","Much more than they are now"), ordered = TRUE),
@@ -175,6 +219,13 @@ transform_data <- function(which_wave) {
            any_of(paste0("ls002", letters[1:12])),
            # us018 platform-indexed habit/attitude items captured by the
            # later starts_with("us0") selector below.
+           # Phase 2 Batch 4: in-person, demographic, AI tools, year of birth
+           inperson_frequency,
+           is_us_citizen, is_born_us, hispanic_latino, primary_respondent,
+           state_of_residence, state_of_birth, marital_status, age_range,
+           survey_language, voter_registered, party_registration,
+           party_affiliation, party_lean, year_of_birth,
+           any_of(paste0("q_ai", 1:7)),
            starts_with("us0") & !contains("order"),
            -us001,
            -(starts_with(c("us004", "us005", "us008", "us016")) & ends_with(c("_"))))

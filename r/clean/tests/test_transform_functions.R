@@ -237,6 +237,40 @@ check("likert7: HAS a neutral midpoint",
       "Neither agree nor disagree" %in% levels(l7("1 Strongly disagree")))
 check("likert7: '.a' -> NA",                      is.na(l7(".a")))
 
+cat("\n=== Phase 2 Batch 4: RANGE_NUMERIC + LIKERT_6 + categorical helpers ===\n")
+
+ns <- transform_numeric_safe
+check("numeric_safe: '5' -> 5",                  identical(ns("5"), 5))
+check("numeric_safe: '12.5' -> 12.5",            identical(ns("12.5"), 12.5))
+check("numeric_safe: '.a' -> NA",                is.na(ns(".a")))
+check("numeric_safe: '.e' -> NA",                is.na(ns(".e")))
+check("numeric_safe: '' -> NA",                  is.na(ns("")))
+check("numeric_safe: non-numeric input -> NA (no warning)",
+      is.na(ns("not a number")))
+check("numeric_safe: vector preserves order",
+      identical(ns(c("3", ".a", "7", ".e")),
+                c(3, NA_real_, 7, NA_real_)))
+
+l6fi <- transform_likert6_freq_inperson
+check("likert6_freq_inperson: '1 Multiple times per day' -> 'Multiple times per day'",
+      as.character(l6fi("1 Multiple times per day")) == "Multiple times per day")
+check("likert6_freq_inperson: 6 levels, preserves the 'no in-person interactions' level",
+      length(levels(l6fi("1 Multiple times per day"))) == 6 &&
+      tail(levels(l6fi("1 Multiple times per day")), 1) ==
+        "I did not have any in-person social interactions in the past 4 weeks")
+check("likert6_freq_inperson: 'Less than once a week' < 'Multiple times per day' (raw direction)",
+      l6fi("5 Less than once a week") > l6fi("1 Multiple times per day"))
+check("likert6_freq_inperson: '.a' -> NA",        is.na(l6fi(".a")))
+
+cl <- transform_categorical_label
+check("categorical_label: '1 Alabama' -> 'Alabama'",
+      as.character(cl("1 Alabama")) == "Alabama")
+check("categorical_label: '12 Florida' -> 'Florida' (multi-digit code)",
+      as.character(cl("12 Florida")) == "Florida")
+check("categorical_label: '.a' -> NA",            is.na(cl(".a")))
+check("categorical_label: returns an UNORDERED factor (not ordered)",
+      !is.ordered(cl("1 Alabama")) && is.factor(cl("1 Alabama")))
+
 cat("\n")
 if (pass) {
   cat("All transform_functions.R unit tests PASSED.\n")

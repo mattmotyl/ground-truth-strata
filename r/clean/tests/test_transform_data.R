@@ -260,6 +260,70 @@ run_wave_checks <- function(w) {
                   length(grep("^us018[a-g]_\\d+_$", colnames(df))) == 0)                                     && pass
   }
 
+  # Phase 2 Batch 4 — in-person frequency LIKERT_6 (us020, W5-W6)
+  if (w %in% c(5, 6)) {
+    pass <- check("inperson_frequency is ordered factor with 6 levels (W5,W6)",
+                  is.ordered(df$inperson_frequency) &&
+                  length(levels(df$inperson_frequency)) == 6)                                                && pass
+    pass <- check("inperson_frequency includes 'no in-person interactions' as the 6th level",
+                  tail(levels(df$inperson_frequency), 1) ==
+                    "I did not have any in-person social interactions in the past 4 weeks")                  && pass
+  } else {
+    pass <- check("inperson_frequency is all-NA outside W5,W6",
+                  all(is.na(df$inperson_frequency)))                                                         && pass
+  }
+
+  # Phase 2 Batch 4 — per-platform time-spent (us019_hours_<plat>_,
+  # us019_minutes_<plat>_). DATA REALITY: dictionary claims W4-W6 but raw
+  # UAS519 (W6) does not export these columns. Verified at runtime
+  # 2026-05-24: 40 cols in W4, 38 in W5, 0 in W6. Flagged for Phase 0
+  # follow-up (dictionary waves_present field for us019_* should drop W6).
+  if (w %in% 4:5) {
+    hrs_cols <- grep("^us019_hours_\\d+_$", colnames(df), value = TRUE)
+    min_cols <- grep("^us019_minutes_\\d+_$", colnames(df), value = TRUE)
+    pass <- check(sprintf("us019_hours has multiple platform-indexed numeric cols in W%d (found %d)",
+                          w, length(hrs_cols)),
+                  length(hrs_cols) > 10 && is.numeric(df[[hrs_cols[1]]]))                                    && pass
+    pass <- check(sprintf("us019_minutes has multiple platform-indexed numeric cols in W%d (found %d)",
+                          w, length(min_cols)),
+                  length(min_cols) > 10 && is.numeric(df[[min_cols[1]]]))                                    && pass
+  } else {
+    pass <- check("us019_hours / us019_minutes absent outside W4-W5",
+                  length(grep("^us019_(hours|minutes)_\\d+_$", colnames(df))) == 0)                          && pass
+  }
+
+  # Phase 2 Batch 4 — demographic categoricals (always present)
+  pass <- check("state_of_residence is an unordered factor",
+                is.factor(df$state_of_residence) && !is.ordered(df$state_of_residence))                      && pass
+  pass <- check("marital_status is an unordered factor",
+                is.factor(df$marital_status) && !is.ordered(df$marital_status))                              && pass
+  pass <- check("party_affiliation is a factor (W1-W3 only; NA elsewhere)",
+                is.factor(df$party_affiliation))                                                             && pass
+
+  # Phase 2 Batch 4 — refrained_from_posting (us014, W1) is now Yes/No, not "1 Yes"/"2 No"
+  if (w == 1) {
+    pass <- check("refrained_from_posting values are 'Yes'/'No' (or NA), not raw '1 Yes'/'2 No'",
+                  all(is.na(df$refrained_from_posting) |
+                      df$refrained_from_posting %in% c("Yes", "No")))                                        && pass
+  }
+
+  # Phase 2 Batch 4 — vote_2024_preference is now a factor with stripped labels
+  if (w == 6) {
+    pass <- check("vote_2024_preference is a factor in W6",
+                  is.factor(df$vote_2024_preference))                                                        && pass
+    pass <- check("vote_2024_preference levels do NOT contain raw 'N ' prefixes",
+                  !any(grepl("^\\d+ ", levels(df$vote_2024_preference))))                                    && pass
+  }
+
+  # Phase 2 Batch 4 — q_ai1..q_ai7 binary tool use (W2-W3 for 1-6, W2-W6 for q_ai7)
+  if (w %in% 2:3) {
+    pass <- check("q_ai1..q_ai7 are Yes/No (or NA) — not raw '1 Yes'/'2 No' (W2-W3)",
+                  all(vapply(paste0("q_ai", 1:7), function(col) {
+                    if (!col %in% colnames(df)) return(TRUE)  # treat absence as pass for this check
+                    all(is.na(df[[col]]) | df[[col]] %in% c("Yes", "No"))
+                  }, logical(1))))                                                                            && pass
+  }
+
   pass
 }
 
