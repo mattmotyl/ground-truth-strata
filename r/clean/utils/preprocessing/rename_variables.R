@@ -48,13 +48,16 @@ rename_variables <- function(data, add_suffix_to_demographics = FALSE) {
   )
 
   # Demographic columns that vary across waves and should optionally get
-  # a _w<N> suffix for cross-wave column-binding.
+  # a _w<N> suffix for cross-wave column-binding. Names match the
+  # clean_variable_name fields in docs/data-dictionary.json (renamed in
+  # Phase 2 Batch 0).
   wave_varying_demographics <- c(
-    "pol_incl_leaners", "conservatism",
-    "warmth_lib", "warmth_con", "warmth_friend_lib", "warmth_friend_con",
+    "pol_incl_leaners", "political_ideology_self",
+    "feeling_therm_liberals", "feeling_therm_conservatives",
+    "comfort_liberal_friends", "comfort_conservative_friends",
     "num_ai_used", "num_sm_used",
-    "felt_silenced", "vote",
-    "atts_gov_reg_tech", "atts_tech_election", "atts_tech_harm"
+    "refrained_from_posting", "vote_2024_preference",
+    "regulation_tech_companies", "regulation_elections", "regulation_protect_users"
   )
 
   wave_numbers <- unique(data$wave)

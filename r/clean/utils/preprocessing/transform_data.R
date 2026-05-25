@@ -65,32 +65,39 @@ transform_data <- function(which_wave) {
       # correct behavior given the data limitation; the followup is to
       # consider carrying earlier-wave party_affil forward via uasid join
       # in the Phase 3 precompute.
-      edu_bucket         = if ("education" %in% colnames(data))   transform_edu(education)                           else NA_character_,
-      income             = if ("hhincome" %in% colnames(data))    transform_income(hhincome)                         else NA_character_,
-      num_ai_used        = transform_ai_used(data, which_wave),
-      num_sm_used        = if ("us001" %in% colnames(data))       transform_sm_used(data)                            else NA_integer_,
-      conservatism       = if ("rate_self" %in% colnames(data))   as.numeric(rate_self)                              else NA_real_,
-      warmth_lib         = if ("scim_therm_lib" %in% colnames(data))   as.numeric(scim_therm_lib)                    else NA_real_,
-      warmth_con         = if ("scim_therm_con" %in% colnames(data))   as.numeric(scim_therm_con)                    else NA_real_,
-      warmth_friend_lib  = if ("scim_friends_lib" %in% colnames(data)) as.numeric(scim_friends_lib)                  else NA_real_,
-      warmth_friend_con  = if ("scim_friends_con" %in% colnames(data)) as.numeric(scim_friends_con)                  else NA_real_,
-      # warmth_friend_* now check the SCIM friends column they actually
-      # use (was previously gated on scim_therm_lib/con — a copy-paste bug
-      # that was latent only because all four SCIM columns coexist in
-      # every wave per Phase 1 verification).
-      felt_silenced      = if ("us014" %in% colnames(data))   recode_sentinels(us014)            else NA_character_,
-      vote               = if ("vote2024" %in% colnames(data)) recode_sentinels(vote2024)        else NA_character_,
-      atts_gov_reg_tech  = if ("ex004a" %in% colnames(data))  recode_sentinels(ex004a)           else NA_character_,
-      atts_tech_election = if ("ex004b" %in% colnames(data))  recode_sentinels(ex004b)           else NA_character_,
-      atts_tech_harm     = if ("ex004c" %in% colnames(data))  recode_sentinels(ex004c)           else NA_character_,
+      education                    = if ("education" %in% colnames(data))      transform_edu(education)                       else NA_character_,
+      hhincome                     = if ("hhincome" %in% colnames(data))       transform_income(hhincome)                     else NA_character_,
+      num_ai_used                  = transform_ai_used(data, which_wave),
+      num_sm_used                  = if ("us001" %in% colnames(data))          transform_sm_used(data)                        else NA_integer_,
+      political_ideology_self      = if ("rate_self" %in% colnames(data))      as.numeric(rate_self)                          else NA_real_,
+      feeling_therm_liberals       = if ("scim_therm_lib" %in% colnames(data))   as.numeric(scim_therm_lib)                   else NA_real_,
+      feeling_therm_conservatives  = if ("scim_therm_con" %in% colnames(data))   as.numeric(scim_therm_con)                   else NA_real_,
+      comfort_liberal_friends      = if ("scim_friends_lib" %in% colnames(data)) as.numeric(scim_friends_lib)                 else NA_real_,
+      comfort_conservative_friends = if ("scim_friends_con" %in% colnames(data)) as.numeric(scim_friends_con)                 else NA_real_,
+      # The comfort_*_friends columns now check the SCIM friends column they
+      # actually use (was previously gated on scim_therm_lib/con — a copy-
+      # paste bug that was latent only because all four SCIM columns coexist
+      # in every wave per Phase 1 verification).
+      refrained_from_posting       = if ("us014" %in% colnames(data))    recode_sentinels(us014)        else NA_character_,
+      vote_2024_preference         = if ("vote2024" %in% colnames(data)) recode_sentinels(vote2024)     else NA_character_,
+      regulation_tech_companies    = if ("ex004a" %in% colnames(data))   recode_sentinels(ex004a)       else NA_character_,
+      regulation_elections         = if ("ex004b" %in% colnames(data))   recode_sentinels(ex004b)       else NA_character_,
+      regulation_protect_users     = if ("ex004c" %in% colnames(data))   recode_sentinels(ex004c)       else NA_character_,
       # All string fields above route through recode_sentinels() so the
       # UAS ".a"/".e"/"."/".c" missing-value sentinels become true NA
-      # rather than literal strings.
+      # rather than literal strings. Batch 0 (Phase 2) renamed the columns
+      # to match docs/data-dictionary.json clean_variable_name fields;
+      # Phase 2 batches 1-4 will convert the string pass-throughs above
+      # (refrained_from_posting, vote_2024_preference, regulation_*) into
+      # proper ordered factors based on the dictionary's response_type.
     ) %>%
-    select(uasid, wave, final_weight, gender, age, race, pol_incl_leaners, conservatism,
-           warmth_lib, warmth_con, warmth_friend_lib, warmth_friend_con,
-           edu_bucket, income, num_ai_used, num_sm_used, felt_silenced,
-           starts_with("atts_"), vote,
+    select(uasid, wave, final_weight, gender, age, race, pol_incl_leaners,
+           political_ideology_self,
+           feeling_therm_liberals, feeling_therm_conservatives,
+           comfort_liberal_friends, comfort_conservative_friends,
+           education, hhincome, num_ai_used, num_sm_used,
+           refrained_from_posting,
+           starts_with("regulation_"), vote_2024_preference,
            starts_with("us0") & !contains("order"),
            -us001,
            -(starts_with(c("us004", "us005", "us008", "us016")) & ends_with(c("_"))))

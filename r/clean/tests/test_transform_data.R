@@ -50,11 +50,13 @@ run_wave_checks <- function(w) {
   pass <- check("`uasid` is non-empty and has no NAs",          length(df$uasid) > 0 && !any(is.na(df$uasid))) && pass
   pass <- check("`final_weight` is numeric and has no NAs",     is.numeric(df$final_weight) && !any(is.na(df$final_weight))) && pass
   pass <- check("no literal '.a' / '.e' / '.c' / '.' sentinel strings remain in cleaned fields",
-                all(vapply(c("vote", "atts_gov_reg_tech", "atts_tech_election", "atts_tech_harm", "felt_silenced"),
+                all(vapply(c("vote_2024_preference", "regulation_tech_companies",
+                             "regulation_elections", "regulation_protect_users",
+                             "refrained_from_posting"),
                            function(col) !any(df[[col]] %in% c(".a", ".e", ".c", ".")),
                            logical(1))))                                                                     && pass
-  pass <- check("warmth_friend_lib & warmth_friend_con are numeric",
-                is.numeric(df$warmth_friend_lib) && is.numeric(df$warmth_friend_con))                       && pass
+  pass <- check("comfort_liberal_friends & comfort_conservative_friends are numeric",
+                is.numeric(df$comfort_liberal_friends) && is.numeric(df$comfort_conservative_friends))      && pass
   pass <- check("num_sm_used is in [0, 23]",
                 all(is.na(df$num_sm_used) | (df$num_sm_used >= 0 & df$num_sm_used <= 23)))                  && pass
 

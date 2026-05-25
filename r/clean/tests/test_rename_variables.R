@@ -64,14 +64,14 @@ check("us002_15_ -> freq_text_messaging_w1",         "freq_text_messaging_w1"   
 check("us002_20_ -> freq_something_else_w1",         "freq_something_else_w1"     %in% ren(c("us002_20_")))
 
 cat("\n=== add_suffix_to_demographics ===\n")
-check("default leaves conservatism unchanged",
-      "conservatism" %in% ren(c("conservatism"), wave = 3))
-check("add_demo=TRUE -> conservatism_w3",
-      "conservatism_w3" %in% ren(c("conservatism"), wave = 3, add_demo = TRUE))
-check("warmth_friend_lib also gets suffixed (was missing from old list)",
-      "warmth_friend_lib_w4" %in% ren(c("warmth_friend_lib"), wave = 4, add_demo = TRUE))
-check("atts_gov_reg_tech also gets suffixed",
-      "atts_gov_reg_tech_w5" %in% ren(c("atts_gov_reg_tech"), wave = 5, add_demo = TRUE))
+check("default leaves political_ideology_self unchanged",
+      "political_ideology_self" %in% ren(c("political_ideology_self"), wave = 3))
+check("add_demo=TRUE -> political_ideology_self_w3",
+      "political_ideology_self_w3" %in% ren(c("political_ideology_self"), wave = 3, add_demo = TRUE))
+check("comfort_liberal_friends also gets suffixed",
+      "comfort_liberal_friends_w4" %in% ren(c("comfort_liberal_friends"), wave = 4, add_demo = TRUE))
+check("regulation_tech_companies also gets suffixed",
+      "regulation_tech_companies_w5" %in% ren(c("regulation_tech_companies"), wave = 5, add_demo = TRUE))
 
 cat("\n=== invariants ===\n")
 check("non-platform-indexed columns pass through unchanged",
