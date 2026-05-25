@@ -1,56 +1,92 @@
 # Define transformation functions
 
 # Recode UAS missing-value sentinels to NA. Per the UAS panel documentation
-# (https://uasdata.usc.edu), value codes that should never be treated as
-# real responses:
+# (https://uasdata.usc.edu) and Phase 1 audit of all 6 raw CSVs, the
+# complete set of sentinel string codes is:
 #   ".e" -> respondent saw the question but did not answer it
 #   "."  -> respondent never saw the question (skipped, broke off, or dirty data)
-#   ".a" -> additional missing-value sentinel observed in legacy waves
-#   ".c" -> placeholder used in end_date variables when the survey is incomplete
-# Also handles empty strings and literal "NA" / "N/A" strings so that any
-# field cleaned by this function is safe to treat as ordinary character data.
+#   ".a" -> additional missing-value sentinel (observed in legacy waves)
+#   ".c" -> placeholder for end_date variables when the survey is incomplete
+#   ".m" -> household / panel meta sentinel (e.g., "no Nth household member")
+#   ".n" -> additional UAS sentinel observed in survhhid metadata
+# Also handles empty strings and literal "NA" / "N/A" strings.
+#
+# Optional `additional` parameter accepts per-variable out-of-range codes
+# (see docs/data-dictionary.json out_of_range_codes column) — e.g., pass
+# additional = "5" for ai_concerned so the numeric "No opinion" code is
+# also mapped to NA. These are domain-specific sentinels distinct from the
+# universal string sentinels above.
+#
 # Returns a character vector with sentinels replaced by NA_character_.
-recode_sentinels <- function(x) {
-  if (is.factor(x))    x <- as.character(x)
+recode_sentinels <- function(x, additional = NULL) {
+  if (is.factor(x))     x <- as.character(x)
   if (!is.character(x)) x <- as.character(x)
-  na_idx <- x %in% c(".a", ".e", ".c", ".", "", "NA", "N/A")
+  base_sentinels <- c(".a", ".e", ".c", ".m", ".n", ".", "", "NA", "N/A")
+  all_na <- c(base_sentinels, as.character(additional))
+  na_idx <- x %in% all_na
   x[na_idx] <- NA_character_
   x
 }
 
-transform_gender <- function(x) ifelse(grepl("Female", x), "Women", "Men")
+transform_gender <- function(x) {
+  x <- recode_sentinels(x)
+  # case_when (not ifelse) so NA propagates instead of falling into "Men".
+  # In R, grepl("Female", NA) returns FALSE — so a naive
+  # ifelse(grepl("Female", x), "Women", "Men") would silently miscode UAS
+  # sentinel respondents as "Men".
+  case_when(
+    is.na(x)            ~ NA_character_,
+    grepl("Female", x)  ~ "Women",
+    TRUE                ~ "Men"
+  )
+}
 
-transform_age <- function(x) cut(as.numeric(x), breaks = c(0, 30, 45, 59, Inf), 
-                                 labels = c('18-29', '30-44', '45-59', '60+'), 
-                                 include.lowest = TRUE)
+# Bucket age into research-conventional bands. The `right = FALSE` and
+# breaks at 30/45/60 ensure age 30 is the FIRST age in the "30-44" band
+# (not the last age in "18-29"), and age 45 is the first in "45-59". A
+# prior version used right = TRUE with breaks at 30/45/59 which silently
+# misclassified ages 30 and 45 into the lower bucket.
+#
+# `recode_sentinels(x)` converts UAS ".e" / ".a" age strings to NA before
+# numeric coercion, eliminating the "NAs introduced by coercion" warnings
+# without changing the output (those respondents end up with NA age_bucket
+# either way; this just makes the intent explicit and silences the noise).
+transform_age <- function(x) {
+  x <- recode_sentinels(x)
+  cut(as.numeric(x),
+      breaks         = c(0, 30, 45, 60, Inf),
+      labels         = c('18-29', '30-44', '45-59', '60+'),
+      right          = FALSE,
+      include.lowest = TRUE)
+}
 
 transform_race <- function(x, y) factor(case_when(
   grepl("White Only", x) & grepl("No", y) ~ 'White, non-Hispanic',
   grepl("Black Only", x) & grepl("No", y) ~ 'Black, non-Hispanic',
   grepl("Asian Only", x) & grepl("No", y) ~ 'Asian, non-Hispanic',
-  grepl("American Indian or Alaska Native Only|Hawaiian/Pacific Islander Only|Mixed", x) & 
+  grepl("American Indian or Alaska Native Only|Hawaiian/Pacific Islander Only|Mixed", x) &
     grepl("No", y) ~ 'Other/Multiple races, non-Hispanic',
   grepl("Yes", y) ~ 'Hispanic',
   TRUE ~ NA_character_
-),levels = c("White, non-Hispanic", "Black, non-Hispanic", "Asian, non-Hispanic", 
+),levels = c("White, non-Hispanic", "Black, non-Hispanic", "Asian, non-Hispanic",
              "Hispanic", "Other/Multiple races, non-Hispanic"))
 
-transform_pol <- function(x,y) factor(case_when( 
-  # create a combined politics variable to different "independents" based on leaning; combine 3rd parties into single 'other' group
+transform_pol <- function(x,y) factor(case_when(
+  # create a combined politics variable to distinguish "independents" based on leaning; combine 3rd parties into single 'other' group
   grepl("Democrats",x) ~ "Democrats, including leaners",
   grepl("Republicans",x) ~ "Republicans, including leaners",
-  grepl("Independents|Not aligned with any political party",x) & 
+  grepl("Independents|Not aligned with any political party",x) &
     grepl("Do not lean",y) ~ "Independents, excluding leaners",
-  grepl("Independents|Not aligned with any political party",x) & 
+  grepl("Independents|Not aligned with any political party",x) &
     grepl("Lean toward affiliating with Democrats",y) ~ "Democrats, including leaners",
-  grepl("Independents|Not aligned with any political party",x) & 
+  grepl("Independents|Not aligned with any political party",x) &
     grepl("Lean toward affiliating with Republicans",y) ~ "Republicans, including leaners",
   grepl('Libertarians|Green party|Some other party',x) ~ 'Other parties',
   TRUE~NA_character_ ),
-  levels=c("Democrats, including leaners", "Independents, excluding leaners", 
+  levels=c("Democrats, including leaners", "Independents, excluding leaners",
            "Republicans, including leaners","Other parties"))
 
-transform_edu <- function(x) factor(case_when( 
+transform_edu <- function(x) factor(case_when(
   # create education buckets; following American National Election Study & Pew
   grepl("Less than 1st grade|7th or 8th grade|9th grade|10th grade|11th grade|12th grade-no diploma",x) ~ 'Grade School / Some High School',
   grepl("High school graduate or GED",x) ~ 'High School Diploma',
@@ -59,56 +95,70 @@ transform_edu <- function(x) factor(case_when(
   TRUE~NA_character_ ),
   levels=c("Grade School / Some High School","High School Diploma","Some College","College Degree / Post-grad"))
 
+# NOTE on the income pattern: the previous version had two regex bugs that
+# silently misclassified the lowest two income brackets as NA:
+#   1) "Less than $" — the `$` was treated as regex end-of-line anchor
+#      instead of a literal dollar sign. Fixed by escaping as "\\$".
+#   2) "12,500 to 14,\n        999" — the multi-line string literal in R
+#      embedded a literal newline + 8 spaces in the regex pattern, between
+#      "14," and "999". Fixed by writing the alternatives across multiple
+#      grepl() calls so no string literal needs to wrap.
+# Both bugs were silent: respondents in "Less than $5,000" and
+# "12,500 to 14,999" were dropped from the "<30,000" bucket.
 transform_income <- function(x) factor(case_when(
-  grepl("Less than $|5,000 to 7,499|7,500 to 9,999|10,000 to 12,499|12,500 to 14,
-        999|15,000 to 19,999|20,000 to 24,999|25,000 to 29,999",x)~"<30,000",
-  grepl("30,000 to 34,999|35,000 to 39,999|40,000 to 49,999|50,000 to 59,999",x)~"30,000-59,999",
-  grepl("60,000 to 74,999|75,000 to 99,999",x)~"60,000-99,999",
-  grepl("100,000 to 149,999",x)~"100,000-149,999",
-  grepl("150,000 or more",x)~">150,000",
-  TRUE~NA_character_),
-  levels=c("<30,000","30,000-59,999","60,000-99,999","100,000-149,999",">150,000"))
+  grepl("Less than \\$|5,000 to 7,499|7,500 to 9,999|10,000 to 12,499", x) ~ "<30,000",
+  grepl("12,500 to 14,999|15,000 to 19,999|20,000 to 24,999|25,000 to 29,999", x) ~ "<30,000",
+  grepl("30,000 to 34,999|35,000 to 39,999|40,000 to 49,999|50,000 to 59,999", x) ~ "30,000-59,999",
+  grepl("60,000 to 74,999|75,000 to 99,999", x) ~ "60,000-99,999",
+  grepl("100,000 to 149,999", x) ~ "100,000-149,999",
+  grepl("150,000 or more", x) ~ ">150,000",
+  TRUE ~ NA_character_),
+  levels = c("<30,000","30,000-59,999","60,000-99,999","100,000-149,999",">150,000"))
 
 transform_ai_used <- function(data, which_wave) {
   if (which_wave == 1) {
-    num_ai_used <- sapply(strsplit(as.character(data$ai_used), "-"), 
+    num_ai_used <- sapply(strsplit(as.character(data$ai_used), "-"),
                           function(matches) sum(as.numeric(matches) %in% c(1, 2, 3, 4))) # exclude 5 because 5 = none of the above
   } else {
     if (which_wave == 2 | which_wave == 3) {
       q_ai_cols <- c("q_ai1","q_ai2","q_ai4","q_ai5","q_ai6") # exclude q_ai3 because that is a search engine
       num_ai_used <- rowSums(data[, q_ai_cols] == "1 Yes", na.rm = TRUE) # count total number of AI tools user said yes they used
-    } else { 
+    } else {
       num_ai_used <- rep(NA, nrow(data)) # waves > 3 do not include AI used questions
     }
   }
   return(num_ai_used) # return total number of AI tools used
 }
 
-# take us001 variable which is a concatenated string of numbers seperated by dashes
+# take us001 variable which is a concatenated string of numbers separated by dashes
 # each number corresponds to a different social media platform, except for 21, which = "None"
-transform_sm_used<-function(x) sapply(strsplit(as.character(x$us001), "-"), function(matches) 
+transform_sm_used<-function(x) sapply(strsplit(as.character(x$us001), "-"), function(matches)
   # count total number of valid platforms selected
   sum(as.numeric(matches) %in% c(1, 2, 3, 4, 5, 6,7,8,9,10,11,12,13,14,15,16,
                                  17,18,19,20,22,23))) # exclude 21 bc = "None"
 
+# Map the UAS "N <label>" frequency response to its label, with .a/.e/.c/.m/.n
+# sentinels and the "I did not use" non-response option folded to NA.
+# Uses recode_sentinels for the sentinel set rather than inline string equality
+# so the helper stays the single source of truth for what counts as missing.
 transform_freqs <- function(x) {
-  x<-factor(case_when(
-    x==".a" | x==".e"  ~ NA_character_,
-    grepl("I did not use",x) ~ NA_character_,
-    !is.na(x) ~ str_sub(x,3,nchar(x))
-  ),levels=c("Less than once a week","About once a week","A few times per week",
-             "About once a day","Multiple times per day"))
+  x <- recode_sentinels(x)
+  x <- factor(case_when(
+    grepl("I did not use", x) ~ NA_character_,
+    !is.na(x) ~ str_sub(x, 3, nchar(x))
+  ), levels = c("Less than once a week", "About once a week", "A few times per week",
+                "About once a day", "Multiple times per day"))
   return(x)
 }
 
+# Normalize the UAS "N Yes" / "N No" experience questions to plain Yes / No
+# strings, with UAS sentinels mapped to NA via recode_sentinels.
 transform_experience_qs <- function(x) {
-  x<-case_when(
-    x==".a" ~ NA_character_,
-    x==".e" ~ NA_character_,
-    grepl("Yes",as.character(x)) ~ "Yes",
-    grepl("No",as.character(x)) ~ "No",
-    TRUE~as.character(x)
+  x <- recode_sentinels(x)
+  x <- case_when(
+    grepl("Yes", x) ~ "Yes",
+    grepl("No",  x) ~ "No",
+    TRUE ~ x
   )
   return(x)
 }
-
