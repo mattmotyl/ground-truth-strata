@@ -1,13 +1,25 @@
 # Source all R files in the cleaning utilities tree.
 #
 # This script DEFINES the cleaning functions (transform_data, rename_variables,
-# the transform_* helpers, the platform_map lookup, the summary helpers). It
-# does NOT invoke the pipeline — callers (e.g., an analysis script, or a
-# future r/clean/clean_all_waves.R driver) source this file and then call
+# the transform_* helpers, the platform_slug/platform_label lookups). It does
+# NOT invoke the pipeline — callers (an analysis script or a future
+# r/clean/clean_all_waves.R driver) source this file and then call
 # transform_data(N) themselves.
 #
 # Paths are resolved via here::here(), so this script works regardless of
 # the caller's working directory.
+
+# Load packages explicitly here, so any consumer that sources this file
+# inherits a ready-to-use environment. This used to happen implicitly via
+# top-level library() calls inside load_packages.R; the File 6 cleanup
+# removed those (they would source-fail on any machine missing a package
+# and silently break the rest of the pipeline). The set below mirrors the
+# trimmed list in load_packages.R::check_packages_and_load().
+suppressPackageStartupMessages({
+  library(tidyverse)
+  library(here)
+  library(jsonlite)
+})
 
 source_all_files_in_directory <- function(directory) {
   files <- list.files(directory, pattern = "\\.R$", ignore.case = TRUE,

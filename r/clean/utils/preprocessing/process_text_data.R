@@ -71,9 +71,10 @@ load_and_clean_text_data <- function(which_wave, which_question) {
   wave_number <- wave_numbers[1]
 
   # Rename us<N>_<platform_id>_<follow> columns to <prefix><platform>_<follow>_w<wave>.
-  # Depends on the global `platform_map` from r/clean/utils/platform_map.R.
-  # The File 6 audit will replace `platform_map` with snake_case `platform_slug`
-  # — this lookup will need to switch to platform_slug then.
+  # Uses snake_case `platform_slug` from r/clean/utils/platform_map.R so
+  # renamed columns are bare-name-safe (e.g., `nuxtxt_twitter_x_w2`).
+  # Pair with `platform_label` from the same file when a human-readable
+  # name is needed for display.
   names(data) <- lapply(names(data), function(variable_name) {
     if (grepl("^us\\d+_\\d+_", variable_name)) {
       parts       <- unlist(strsplit(variable_name, "_"))
@@ -86,7 +87,7 @@ load_and_clean_text_data <- function(which_wave, which_question) {
                 "' — column ", variable_name, " will be renamed to NA-prefixed string")
       }
 
-      platform_key      <- as.character(platform_map[platform_id])
+      platform_key      <- as.character(platform_slug[platform_id])
       wave_suffix       <- paste0("_w", wave_number)
       new_variable_name <- paste0(prefix_map[prefix_key], platform_key, wave_suffix)
       return(new_variable_name)

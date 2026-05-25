@@ -1,65 +1,38 @@
-# Load necessary packages ----
-library(tidyverse)
-library(kableExtra) # to create tables
-library(ggrepel) # to reduce overlapping labels on plots
-library(webshot) # to enable save_kable
-library(webshot2) # to enable save_kable
-library(magick) # to improve save_kable
-library(scales) # for comma() function to improve readability of giant numbers
-library(extrafont)
-library(extrafontdb)
-library(showtext) # to allow installing of the USC OpenType Font -- Open Sans
-library(showtextdb) # must add font to database
+# Package loader for the Strata cleaning pipeline.
+#
+# IMPORTANT: this file MUST NOT have any top-level side effects.
+# run_script.R sources every .R file in utils/ at startup; any
+# top-level library() / font_add() / file-read would source-fail on a
+# fresh checkout and silently break the rest of the pipeline (see
+# File 1 + File 6 audit). All loading is done explicitly via
+# check_packages_and_load() — call it from your driver script.
 
-# first time you run the script, you'll have to run this
-font_add("Open Sans",regular="utils/fonts/OpenSans-VariableFont_wdth,wght.ttf",
-         italic="utils/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf",
-         bold = "utils/fonts/OpenSans-Bold.ttf")
-showtext_auto()
+check_packages_and_load <- function() {
+  # Trimmed to packages the Strata cleaning pipeline actually uses.
+  # The dropped packages (kableExtra, webshot/webshot2, magick,
+  # extrafont/extrafontdb, showtext/showtextdb) were only needed for
+  # the legacy USC-branded HTML report production
+  # (create_pretty_table_showing_change_over_time.R). The Phase 3
+  # precompute writes JSON; the Next.js UI will use system / web
+  # fonts; neither needs the typesetting stack.
+  packages <- c(
+    "tidyverse",  # data manipulation
+    "here",       # CWD-independent paths
+    "jsonlite",   # data dictionary + Phase 3 precompute artifacts
+    "ggrepel",    # plot label de-overlap (kept for any future built-in plots)
+    "scales"      # comma() for log messages
+  )
 
-# function to check whether necessary packages are installed, if not then install, if so make sure they are loaded ----
-check_packages_and_load<-function() {
-  # Declare packages
-  packages <- c("tidyverse", # for all that is good in the world
-                "kableExtra", # to create tables
-                "ggrepel", # to reduce overlapping labels on plots
-                "webshot", # to enable save_kable
-                "webshot2", # to enable save_kable
-                "magick", # to improve save_kable
-                "scales", # for comma() function to improve readability of giant numbers
-                "extrafont",
-                "extrafontdb",
-                "showtext", # allows installing of USC font -- Open Sans
-                "showtextdb") # must add font to database
-  
-  # Loop through each package
+  installed <- rownames(installed.packages())
+  loaded    <- .packages()
+
   for (package in packages) {
-    # Install package
-    # Note: `installed.packages()` returns a vector of all the installed packages
-    if (!package %in% installed.packages()) {
-      print(paste("Package ", package, "not found. Installing Package!"))
-      # Install it
-      install.packages(
-        package,
-        dependencies = TRUE
-      )
+    if (!package %in% installed) {
+      message(sprintf("Package '%s' not found. Installing...", package))
+      install.packages(package, dependencies = TRUE)
     }
-    # Load package
-    # Note: `.packages()` returns a vector of all the loaded packages
-    if (!package %in% .packages()) {
-      print(paste("Package", package, "found. Loading Package!"))
-      # Load it
-      library(
-        package,
-        character.only = TRUE
-      )
-    }
-    if(package %in% .packages()) {
-      print(paste("Package", package, "found and is already loaded."))
+    if (!package %in% loaded) {
+      library(package, character.only = TRUE)
     }
   }
-  font_add("Open Sans",regular="utils/fonts//OpenSans-VariableFont_wdth,wght.ttf",
-           italic="utils/fonts/OpenSans-Italic-VariableFont_wdth,wght.ttf",
-           bold = "utils/fonts/OpenSans-Bold.ttf") # first time you run the script, you'll have to run this
-  showtext_auto()
 }

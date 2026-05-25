@@ -83,7 +83,7 @@ rename_variables <- function(data, add_suffix_to_demographics = FALSE) {
     if (grepl("^us001s\\d+$", variable_name)) {
       platform_id <- sub("^us001s(\\d+)$", "\\1", variable_name)
       return(paste0(resolve_prefix("us001_"),
-                    as.character(platform_map[platform_id]),
+                    as.character(platform_slug[platform_id]),
                     wave_suffix))
     }
 
@@ -94,7 +94,7 @@ rename_variables <- function(data, add_suffix_to_demographics = FALSE) {
       prefix_key  <- paste0(m[2], "_")
       platform_id <- m[3]
       return(paste0(resolve_prefix(prefix_key),
-                    as.character(platform_map[platform_id]),
+                    as.character(platform_slug[platform_id]),
                     wave_suffix))
     }
 
@@ -105,7 +105,7 @@ rename_variables <- function(data, add_suffix_to_demographics = FALSE) {
       prefix_key  <- paste0(m[2], "_")
       platform_id <- m[3]
       return(paste0(resolve_prefix(prefix_key),
-                    as.character(platform_map[platform_id]),
+                    as.character(platform_slug[platform_id]),
                     wave_suffix))
     }
 
@@ -118,7 +118,7 @@ rename_variables <- function(data, add_suffix_to_demographics = FALSE) {
       prefix_key  <- paste0(prefix, "_")
       follow_key  <- if (!is.na(follow) && nchar(follow) > 0) paste0("_", follow) else ""
       return(paste0(resolve_prefix(prefix_key),
-                    as.character(platform_map[platform_id]),
+                    as.character(platform_slug[platform_id]),
                     follow_key, wave_suffix))
     }
 
