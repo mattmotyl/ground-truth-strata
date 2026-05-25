@@ -134,10 +134,36 @@ tryCatch({
     )
   })
 
-  inputs <- c(dict_inputs, multiselect_inputs, platform_user_inputs)
-  cat(sprintf("Inputs: %d (%d dict scalars + %d multiselect options + %d platform_user)\n",
+  # ---- Derive time_per_day_min_<slug> per-platform numeric columns ----
+  # Mirrors the platform_user pattern: collapse the per-wave columns
+  # (time_min_total_<slug>_w<N>) into a single per-respondent column
+  # populated from whichever wave row each respondent is in. W4-W5 only.
+  for (p in meta$platforms) {
+    col_name <- paste0("time_per_day_min_", p$slug)
+    cleaned[[col_name]] <- NA_real_
+    for (w in 4:5) {
+      src_col <- paste0("time_min_total_", p$slug, "_w", w)
+      if (!src_col %in% colnames(cleaned)) next
+      mask <- cleaned$wave == w
+      cleaned[[col_name]][mask] <- as.numeric(cleaned[[src_col]][mask])
+    }
+  }
+
+  time_per_day_inputs <- lapply(meta$platforms, function(p) {
+    list(
+      variable_name       = paste0("time_per_day_min_", p$slug),
+      response_type       = "RANGE_NUMERIC_DERIVED",
+      is_reverse_coded    = FALSE,
+      cleaned_column      = paste0("time_per_day_min_", p$slug),
+      is_platform_indexed = FALSE
+    )
+  })
+
+  inputs <- c(dict_inputs, multiselect_inputs, platform_user_inputs, time_per_day_inputs)
+  cat(sprintf("Inputs: %d (%d dict scalars + %d multiselect options + %d platform_user + %d time_per_day)\n",
               length(inputs), length(dict_inputs),
-              length(multiselect_inputs), length(platform_user_inputs)))
+              length(multiselect_inputs), length(platform_user_inputs),
+              length(time_per_day_inputs)))
 
   # ---- Precompute per-wave matrices ----
   cat("Building per-wave numeric matrices...\n")

@@ -66,8 +66,9 @@ tryCatch({
     "us018e"        = "habit_time",
     "us018f"        = "habit_learn",
     "us018g"        = "habit_rel",
-    "us019_hours"   = "time_hrs",
-    "us019_minutes" = "time_min",
+    "us019_hours"    = "time_hrs",
+    "us019_minutes"  = "time_min",
+    "us019_time_min" = "time_min_total",
     "us025"         = "mcxntopic",
     "us026"         = "usefultopic"
   )

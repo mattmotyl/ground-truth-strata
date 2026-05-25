@@ -633,10 +633,12 @@ variables.append(var(
         "Phase 2 cleaning probe (2026-05-25): the us019_(hours|minutes)_<N>_ "
         "columns do not exist at all in the W6 raw CSV (uas519.csv). Present "
         "in W4 (40 cols) and W5 (38 cols) only. Originally documented as W4-W6; "
-        "corrected to [4,5]."
+        "corrected to [4,5]. Combined with us019_minutes into the derived "
+        "us019_time_min variable at cleaning time — see that entry for the "
+        "analytic per-day quantity."
     ),
-    clean_variable_name="time_per_day_hours",
-    notes="Integer 0-24. Asked only when us002 in {1,2} (daily or near-daily users). Pair with us019_minutes for total minutes.",
+    clean_variable_name="time_per_day_hours_part",
+    notes="Integer 0-24. Asked only when us002 in {1,2} (daily or near-daily users). The analytically useful value is the combined us019_time_min (total minutes per day) which is what Phase 3 builds use; this raw split is preserved for provenance.",
 ))
 variables.append(var(
     "us019_minutes", "Time Per Day on Platform — Minutes",
@@ -648,10 +650,34 @@ variables.append(var(
     platform_codes_applicable="ALL_PLATFORMS_BY_WAVE",
     change_notes=(
         "Phase 2 cleaning probe (2026-05-25): the us019_(hours|minutes)_<N>_ "
-        "columns do not exist in the W6 raw CSV (uas519.csv). Corrected to [4,5]."
+        "columns do not exist in the W6 raw CSV (uas519.csv). Corrected to [4,5]. "
+        "Combined with us019_hours into the derived us019_time_min variable at "
+        "cleaning time — see that entry for the analytic per-day quantity."
+    ),
+    clean_variable_name="time_per_day_minutes_part",
+    notes="Integer 0-60. Same conditional as us019_hours. The analytically useful value is the combined us019_time_min (total minutes per day) which is what Phase 3 builds use; this raw split is preserved for provenance.",
+))
+variables.append(var(
+    "us019_time_min", "Time Per Day on Platform — Total Minutes (derived)",
+    "PLATFORM_USE",
+    "Total minutes per day spent on the platform, derived from us019_hours * 60 + us019_minutes.",
+    "RANGE_NUMERIC",
+    waves_present=[4, 5],
+    is_platform_indexed=True,
+    platform_codes_applicable="ALL_PLATFORMS_BY_WAVE",
+    change_notes=(
+        "Derived in r/clean/clean_all_waves.R (Phase 3 followup, 2026-05-25): "
+        "time_min_total_<slug>_w<N> = time_hrs_<slug>_w<N> * 60 + "
+        "time_min_<slug>_w<N>. NA when either part is NA. The raw split "
+        "(us019_hours, us019_minutes) is kept in the cleaned tibble for provenance, "
+        "but Phase 3 platform_rates / correlations consume only this derived total."
     ),
     clean_variable_name="time_per_day_minutes",
-    notes="Integer 0-60. Same conditional as us019_hours.",
+    notes=(
+        "Range 0 - approximately 24*60=1440 minutes. Asked only when us002 in "
+        "{1,2} (daily or near-daily users), so NA for non-frequent platform users. "
+        "DERIVED VARIABLE — does not exist as a column in the raw UAS CSV."
+    ),
 ))
 
 # In-person interactions (W5, W6)

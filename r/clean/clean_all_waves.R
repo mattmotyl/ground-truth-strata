@@ -162,6 +162,26 @@ tryCatch({
   cat(sprintf("  total_rows=%d  total_cols=%d  elapsed=%.1fs\n",
               nrow(cleaned_long), ncol(cleaned_long), dt))
 
+  # ---- Derive combined time-per-day in minutes (us019_hours * 60 + us019_minutes) ----
+  # Original `time_hrs_<slug>_w<N>` and `time_min_<slug>_w<N>` columns are
+  # kept for provenance; downstream Phase 3 builds consume the derived
+  # `time_min_total_<slug>_w<N>` column. NA when either part is NA.
+  hrs_cols <- grep("^time_hrs_(.+)_w(\\d+)$", colnames(cleaned_long), value = TRUE)
+  n_derived <- 0L
+  for (hcol in hrs_cols) {
+    m         <- regmatches(hcol, regexec("^time_hrs_(.+)_w(\\d+)$", hcol))[[1]]
+    slug      <- m[2]
+    wave_num  <- m[3]
+    mcol      <- paste0("time_min_", slug, "_w", wave_num)
+    totalcol  <- paste0("time_min_total_", slug, "_w", wave_num)
+    if (!mcol %in% colnames(cleaned_long)) next
+    h_num     <- suppressWarnings(as.numeric(cleaned_long[[hcol]]))
+    m_num     <- suppressWarnings(as.numeric(cleaned_long[[mcol]]))
+    cleaned_long[[totalcol]] <- h_num * 60 + m_num
+    n_derived <- n_derived + 1L
+  }
+  cat(sprintf("  derived %d time_min_total_<slug>_w<N> columns\n", n_derived))
+
   cat("\n--- Sanity checks ---\n")
   cat(sprintf("  unique uasid: %d\n", length(unique(cleaned_long$uasid))))
   cat("  rows per wave:\n")

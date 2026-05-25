@@ -1,5 +1,5 @@
 # Build public/data/platform_rates.json — per (platform x wave x metric)
-# estimates. Six metrics:
+# estimates. Seven metrics:
 #   usage_rate       % of respondents who used the platform in the past
 #                    4 weeks (binary from us001 multiselect, stored as
 #                    `uses_<slug>_w<N>`).
@@ -14,6 +14,11 @@
 #                    stored as `mcxn_<slug>_w<N>`).
 #   useful_rate      % reporting learned-something-useful (us012,
 #                    stored as `useful_<slug>_w<N>`).
+#   time_per_day_minutes  mean minutes per day spent on the platform
+#                    (us019_time_min, derived in clean_all_waves.R as
+#                    us019_hours * 60 + us019_minutes, stored as
+#                    `time_min_total_<slug>_w<N>`). W4-W5 only;
+#                    conditional on daily/near-daily use per us002.
 #
 # Weighted and unweighted side-by-side via the survey package. Cells
 # with n<30 emitted with NA values and suppressed:true. Rows are emitted
@@ -58,18 +63,20 @@ tryCatch({
 
   # ---- Metric definitions ----
   PLATFORM_METRICS <- list(
-    list(metric = "usage_rate",      prefix = "uses",   type = "rate",
+    list(metric = "usage_rate",            prefix = "uses",           type = "rate",
          source_variable = "us001"),
-    list(metric = "frequency_mean",  prefix = "freq",   type = "mean",
+    list(metric = "frequency_mean",        prefix = "freq",           type = "mean",
          source_variable = "us002"),
-    list(metric = "nux_rate",        prefix = "nux",    type = "rate",
+    list(metric = "nux_rate",              prefix = "nux",            type = "rate",
          source_variable = "us003"),
-    list(metric = "bftw_rate",       prefix = "bftw",   type = "rate",
+    list(metric = "bftw_rate",             prefix = "bftw",           type = "rate",
          source_variable = "us007"),
-    list(metric = "mcxn_rate",       prefix = "mcxn",   type = "rate",
+    list(metric = "mcxn_rate",             prefix = "mcxn",           type = "rate",
          source_variable = "us010"),
-    list(metric = "useful_rate",     prefix = "useful", type = "rate",
-         source_variable = "us012")
+    list(metric = "useful_rate",           prefix = "useful",         type = "rate",
+         source_variable = "us012"),
+    list(metric = "time_per_day_minutes",  prefix = "time_min_total", type = "mean",
+         source_variable = "us019_time_min")
   )
 
   # ---- Iterate (platform x wave x metric) ----
