@@ -35,7 +35,7 @@ const FINDINGS: Finding[] = [
   {
     n: 4,
     title: 'Where do people learn things?',
-    blurb: 'Share who say a platform is useful or informative.',
+    blurb: 'Share of users who say a platform is useful or informative.',
     chart: 'Ranked horizontal bar',
     href: '/platforms?finding=useful',
   },
