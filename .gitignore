@@ -77,6 +77,9 @@ next-env.d.ts
 .DS_Store
 Thumbs.db
 
+# LibreOffice / OpenOffice lock files (e.g., docs/.~lock.data-dictionary.csv#)
+.~lock.*#
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
