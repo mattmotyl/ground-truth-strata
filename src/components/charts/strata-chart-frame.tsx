@@ -27,6 +27,10 @@ interface StrataChartFrameProps {
   filenameBase: string;
   // Optional left-side controls slot (e.g., variable picker, wave filter).
   controls?: ReactNode;
+  // Optional content rendered immediately under the chart and above
+  // the Numbers block — used by Finding 01 for the "Note: X hidden"
+  // message and zoom controls.
+  chartFooter?: ReactNode;
 }
 
 export function StrataChartFrame({
@@ -46,6 +50,7 @@ export function StrataChartFrame({
   citation,
   filenameBase,
   controls,
+  chartFooter,
 }: StrataChartFrameProps) {
   return (
     <article className="mx-auto max-w-6xl px-6 py-10 space-y-6">
@@ -97,6 +102,8 @@ export function StrataChartFrame({
           >
             {chart}
           </div>
+
+          {chartFooter}
 
           <NumbersMeaningBlock
             stats={stats}

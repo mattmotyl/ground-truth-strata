@@ -188,9 +188,13 @@ export function FindingPlatformUsage({
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
-  const [visible, setVisible] = useState<string[]>(
-    initialPlatforms ?? DEFAULT_TOP_8,
-  );
+  // The 8 platforms that have a line in the chart legend. Fixed across
+  // the session — they don't move when the user hides one.
+  const chartPlatforms = initialPlatforms ?? DEFAULT_TOP_8;
+  // Set of platforms the user has hidden from the chart via legend
+  // click. Hidden lines stay in the legend (so the user can restore
+  // them) and stay in the Numbers table (grayed out).
+  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -209,16 +213,16 @@ export function FindingPlatformUsage({
 
   const chartData = useMemo(() => {
     if (!rows || !meta) return [];
-    return buildChartData(rows, meta, weighting, visible);
-  }, [rows, meta, weighting, visible]);
+    return buildChartData(rows, meta, weighting, chartPlatforms);
+  }, [rows, meta, weighting, chartPlatforms]);
 
   // Swatch lookup so the Numbers table can show the same colored marker
   // next to platforms that have a corresponding line in the chart.
-  // Platforms NOT in the chart legend (the bottom 15 of the 23) get no
-  // swatch — their rows still appear in the table but without a marker.
+  // Stable across hiding/showing — each chartPlatforms slug gets its
+  // assigned color regardless of which others are currently hidden.
   const swatchBySlug = useMemo(() => {
     const m = new Map<string, string>();
-    visible.forEach((slug, i) => {
+    chartPlatforms.forEach((slug, i) => {
       m.set(
         slug,
         STRATA_PALETTES.qualitative8[
@@ -227,12 +231,22 @@ export function FindingPlatformUsage({
       );
     });
     return m;
-  }, [visible]);
+  }, [chartPlatforms]);
 
-  // Set of platform slugs the user has explicitly hidden from the chart.
-  // Wired into the actual click-to-hide behavior in Round 3; for Round 2
-  // the table renders without any hidden rows.
-  const hidden = useMemo<ReadonlySet<string>>(() => new Set<string>(), []);
+  const toggleHidden = (slug: string) => {
+    setHidden((curr) => {
+      const next = new Set(curr);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
+
+  const showAll = () => setHidden(new Set());
+
+  const hiddenLabels = [...hidden].map(
+    (s) => platformLabels.get(s) ?? s,
+  );
 
   if (error) {
     return (
@@ -291,21 +305,29 @@ export function FindingPlatformUsage({
             fontFamily: CHART_FONTS.mono,
             fontSize: 12,
             paddingTop: 8,
+            cursor: 'pointer',
           }}
-          formatter={(value) => platformLabels.get(value) ?? value}
-          onClick={(entry) => {
-            const slug = entry.dataKey as string;
-            // Toggle: hide if visible (but keep at least one platform shown),
-            // re-show at the end if hidden. Since visible is the source of
-            // truth, removing it stops rendering its line.
-            setVisible((curr) =>
-              curr.includes(slug)
-                ? curr.filter((s) => s !== slug)
-                : [...curr, slug],
+          formatter={(value) => {
+            const slug = String(value);
+            const label = platformLabels.get(slug) ?? slug;
+            const isHidden = hidden.has(slug);
+            return (
+              <span
+                style={{
+                  color: isHidden ? '#605A6B' : '#18161F',
+                  textDecoration: isHidden ? 'line-through' : 'none',
+                }}
+              >
+                {label}
+              </span>
             );
           }}
+          onClick={(entry) => {
+            const slug = entry.dataKey as string;
+            toggleHidden(slug);
+          }}
         />
-        {visible.map((slug, i) => (
+        {chartPlatforms.map((slug, i) => (
           <Line
             key={slug}
             type="monotone"
@@ -320,11 +342,29 @@ export function FindingPlatformUsage({
             activeDot={{ r: 5 }}
             connectNulls={false}
             isAnimationActive={false}
+            hide={hidden.has(slug)}
           />
         ))}
       </LineChart>
     </ResponsiveContainer>
   );
+
+  // Hidden-platforms note rendered between chart and Numbers table.
+  let hiddenNote: string | null = null;
+  if (hidden.size === 1) {
+    hiddenNote =
+      'Note: ' +
+      hiddenLabels[0] +
+      ' hidden. Click legend to restore.';
+  } else if (hidden.size > 1 && hidden.size <= 3) {
+    const last = hiddenLabels[hiddenLabels.length - 1];
+    const head = hiddenLabels.slice(0, -1).join(', ');
+    hiddenNote =
+      'Note: ' + head + ' and ' + last + ' hidden. Click legend to restore.';
+  } else if (hidden.size > 3) {
+    hiddenNote =
+      'Note: ' + hidden.size + ' platforms hidden. Click legend to restore.';
+  }
 
   // CSV: long format mirroring the underlying platform_rates.json (one
   // row per platform-wave). Includes both weighted and unweighted
@@ -348,7 +388,7 @@ export function FindingPlatformUsage({
     'suppressed',
   ];
   const csvRows: unknown[][] = rows
-    .filter((r) => visible.includes(r.platform_slug))
+    .filter((r) => chartPlatforms.includes(r.platform_slug))
     .map((r) => [
       r.platform_slug,
       r.platform_label,
@@ -376,13 +416,29 @@ export function FindingPlatformUsage({
     waveCount +
     ' survey waves, 2023–2025). Click a platform in the legend to hide or show its line.';
   const interpretationText =
-    'The two highest-usage tools across the panel are workhorse communication channels — email and text messaging — not social-media platforms. Among purely social services, YouTube and Facebook have the broadest reach, with Instagram third. TikTok’s share has grown across waves while Snapchat’s has stayed roughly flat. Click a platform in the legend to focus on its trajectory; see The numbers for wave-6 point estimates with 95% confidence intervals.';
+    'The two highest-usage tools across the panel are workhorse communication channels — email and text messaging — not social-media platforms. Among purely social services, YouTube and Facebook have the broadest reach, with Instagram third. TikTok’s share has grown across waves while Snapchat’s has stayed roughly flat. The numbers table below covers all 23 platforms across the six survey waves; hover any cell for its 95% confidence interval and user count.';
   const methodologyFootnoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     weightingLabel +
-    ' estimates. 95% CIs in tooltip and The numbers. Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
+    ' estimates. 95% CIs available on hover (chart line + Numbers table cells). Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
     generatedAt +
     '.';
+
+  const chartFooter = hiddenNote ? (
+    <div
+      className="flex items-center justify-between gap-3 flex-wrap text-xs"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      <span className="text-slate">{hiddenNote}</span>
+      <button
+        type="button"
+        onClick={showAll}
+        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+      >
+        Show all
+      </button>
+    </div>
+  ) : null;
 
   return (
     <StrataChartFrame
@@ -393,6 +449,7 @@ export function FindingPlatformUsage({
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
+      chartFooter={chartFooter}
       customNumbers={
         <PlatformWaveTable
           rows={rows}
