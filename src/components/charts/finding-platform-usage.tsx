@@ -576,8 +576,33 @@ export function FindingPlatformUsage({
     ' (' +
     waveCount +
     ' survey waves, 2023–2025). Use the Platforms picker in the controls to add or remove lines.';
+  // SIGNIFICANCE-AWARE INTERPRETATION COPY — see describeChange() in
+  // src/lib/strata-formatters.ts for the rule. Every directional claim
+  // ("increased", "decreased", "grew", "fell", etc.) below must be
+  // backed by |W6 - W1| > 1.96 * sqrt(SE_W1^2 + SE_W6^2). Anything else
+  // is described as "remained stable" / "shifts within the margin of
+  // error."
+  //
+  // For the default DEFAULT_TOP_8 platforms, computed offline from
+  // public/data/platform_rates.json (metric=usage_rate, weighted):
+  //
+  //   slug             W1 -> W6 (diff)   1.96 * pooled_SE   verdict
+  //   ----------------------------------------------------------------
+  //   email            83.3% -> 79.4%  (-3.84pp)   3.12pp   DECREASED
+  //   youtube          66.7% -> 61.9%  (-4.86pp)   3.79pp   DECREASED
+  //   text_messaging   79.7% -> 80.8%  (+1.18pp)   3.23pp   stable
+  //   facebook         66.7% -> 64.2%  (-2.48pp)   3.73pp   stable
+  //   instagram        38.0% -> 40.0%  (+1.99pp)   3.67pp   stable
+  //   facetime         31.3% -> 28.4%  (-2.87pp)   3.46pp   stable
+  //   tiktok           26.9% -> 27.2%  (+0.27pp)   3.34pp   stable
+  //   snapchat         20.0% -> 18.9%  (-1.07pp)   2.86pp   stable
+  //
+  // Only Email and YouTube cross the significance threshold W1->W6.
+  // The earlier draft claim that TikTok's share had "grown across
+  // waves" was unsupported (0.27pp shift against a 3.34pp threshold)
+  // and has been removed.
   const interpretationText =
-    'The two highest-usage tools across the panel are workhorse communication channels — email and text messaging — not social-media platforms. Among purely social services, YouTube and Facebook have the broadest reach, with Instagram third. TikTok’s share has grown across waves while Snapchat’s has stayed roughly flat. The numbers table below covers all 23 platforms across the six survey waves; hover any cell for its 95% confidence interval and user count.';
+    'The two highest-usage tools across the panel are workhorse communication channels — text messaging and email — not social-media platforms. Among purely social services, Facebook and YouTube have the broadest reach in the most recent wave (W6), with Instagram a clear third. Two of the eight default platforms show statistically meaningful changes from W1 to W6: email use declined by about 3.8 percentage points and YouTube use declined by about 4.9 points (both exceed their 95% margins of error). The remaining six — text messaging, Facebook, Instagram, FaceTime, TikTok, and Snapchat — remained stable across the six waves; any apparent shifts are within the margin of error. The numbers table below covers all 23 platforms across the six survey waves; hover any cell for its 95% confidence interval and user count.';
   const methodologyFootnoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     weightingLabel +

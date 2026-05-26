@@ -156,6 +156,67 @@ export function waveTableHeader(
   return { months, year };
 }
 
+// =====================================================================
+// SIGNIFICANCE-AWARE WORDING — applies to every finding's interpretation.
+//
+// Matt's rule (FINDING01_FEEDBACK.md Round 7 / 2026-05-26):
+//   Only describe directional change ("increased" / "decreased" /
+//   "grew" / "fell" / "rose" / "dropped") if the W6-W1 difference is
+//   greater than 1.96 * sqrt(SE_W1^2 + SE_W6^2) — i.e., the change is
+//   statistically significant at the 95% level.
+//
+//   Otherwise, describe the series as "remained stable" / "showed no
+//   meaningful change" / "shifts smaller than the margin of error."
+//
+// Matt's professional/legal context (expert-witness work and
+// litigation) treats overstated trends as credibility risks, so this
+// rule is non-negotiable in placeholder interpretation copy. It
+// applies to all 8 starter findings and to any wave-to-wave language
+// in the trends / platforms / groups / correlations explorers.
+// =====================================================================
+
+export type ChangeDescription = 'increased' | 'decreased' | 'stable';
+
+/**
+ * Returns `'increased'`, `'decreased'`, or `'stable'` per Matt's rule
+ * (see comment block above). Pooled SE uses the independent-samples
+ * formula; panel data is correlated across waves so this is a
+ * conservative (upper-bound) threshold — fine for the "do not
+ * overstate" use case.
+ *
+ * Returns `'stable'` if any of v1/v2/se1/se2 is null.
+ *
+ * @param v1  first wave point estimate (proportion or mean)
+ * @param se1 first wave standard error
+ * @param v2  second wave point estimate
+ * @param se2 second wave standard error
+ * @param z   z-score for significance threshold; defaults to 1.96 (95%)
+ */
+export function describeChange(
+  v1: number | null | undefined,
+  se1: number | null | undefined,
+  v2: number | null | undefined,
+  se2: number | null | undefined,
+  z = 1.96,
+): ChangeDescription {
+  if (
+    v1 === null ||
+    v1 === undefined ||
+    v2 === null ||
+    v2 === undefined ||
+    se1 === null ||
+    se1 === undefined ||
+    se2 === null ||
+    se2 === undefined
+  ) {
+    return 'stable';
+  }
+  const diff = v2 - v1;
+  const pooledSE = Math.sqrt(se1 * se1 + se2 * se2);
+  if (Math.abs(diff) <= z * pooledSE) return 'stable';
+  return diff > 0 ? 'increased' : 'decreased';
+}
+
 // Compact CSV-safe representation of a value. Used by CSV downloads —
 // `value === null` becomes empty cell to match spreadsheet conventions.
 export function csvCell(value: unknown): string {
