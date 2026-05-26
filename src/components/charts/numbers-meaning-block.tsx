@@ -32,8 +32,16 @@ export function NumbersMeaningBlock({
   interpretation,
   isPlaceholder = false,
 }: NumbersMeaningBlockProps) {
+  // When customNumbers is provided (e.g. Finding 01's platform x wave
+  // table) the data view is too wide for a 50/50 column split — stack
+  // Numbers above Meaning so each gets the full panel width. The
+  // default stats-list layout keeps the side-by-side grid.
+  const stacked = !!customNumbers;
+  const containerClasses = stacked
+    ? 'gap-px bg-mist border border-mist rounded-md overflow-hidden flex flex-col'
+    : 'grid gap-px bg-mist border border-mist rounded-md overflow-hidden md:grid-cols-2';
   return (
-    <div className="grid gap-px bg-mist border border-mist rounded-md overflow-hidden md:grid-cols-2">
+    <div className={containerClasses}>
       <div
         className="bg-mist/50 p-5 space-y-3"
         style={{ fontFamily: 'var(--font-mono)' }}

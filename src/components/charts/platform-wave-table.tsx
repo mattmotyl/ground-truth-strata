@@ -9,6 +9,7 @@ import {
   formatN,
   formatPercent,
   shortWaveLabel,
+  waveTableHeader,
 } from '@/lib/strata-formatters';
 
 interface PlatformWaveTableProps {
@@ -166,15 +167,19 @@ export function PlatformWaveTable({
             {waves.map((w) => {
               const dates =
                 meta.waves.find((mw) => mw.wave === w)?.dates ?? '';
+              const { months, year } = waveTableHeader(dates);
               return (
                 <th
                   key={w}
                   scope="col"
                   className="text-right font-normal py-2 px-2"
                 >
-                  <div className="text-ink">W{w}</div>
-                  <div className="text-[10px] text-slate">
-                    {shortWaveLabel(w, dates)}
+                  <div className="text-ink leading-tight">W{w}</div>
+                  <div className="text-[10px] text-slate leading-tight">
+                    {months}
+                  </div>
+                  <div className="text-[10px] text-slate leading-tight">
+                    {year}
                   </div>
                 </th>
               );
