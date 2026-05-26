@@ -45,12 +45,14 @@ Adding a new variable, group, or metric requires a code change here.
 
 | Script | Reads | Writes | Notes |
 |---|---|---|---|
-| `r/clean/clean_all_waves.R` | raw CSVs + cleaning library | `r/output/cleaned/all_waves_long.rds` | Bound long tibble across all 6 waves; pulls MULTISELECT and battery-mean expansion children |
+| `r/clean/clean_all_waves.R` | raw CSVs + cleaning library | `r/output/cleaned/all_waves_long.rds` | Bound long tibble across all 6 waves; pulls MULTISELECT and battery-mean expansion children; derives time-per-day total |
 | `build_meta.R` | `.rds` + `docs/data-dictionary.json` | `meta.json` | Variable / wave / platform manifest with data-availability classification |
 | `build_trends.R` | `.rds` + `meta.json` | `trends.json` | Per (var × wave) mean or proportion |
-| `build_platform_rates.R` | `.rds` + `meta.json` | `platform_rates.json` | Per (platform × wave × metric) rate or mean |
-| `build_group_comparisons.R` | `.rds` + `meta.json` | `group_comparisons.json` | Per (outcome × grouping × group × wave) estimate |
-| `build_correlations.R` | `.rds` + `meta.json` | `correlations.json` | Per-wave pairwise Spearman over ~280 inputs |
+| `build_distributions.R` | `.rds` + `meta.json` | `distributions.json` | Per (var × wave × bin) proportion — Likert option, SCALE_0_10 integer bin, count bin (num_sm_used / num_ai_used) |
+| `build_platform_rates.R` | `.rds` + `meta.json` | `platform_rates.json` | Per (platform × wave × metric) rate or mean (7 metrics) |
+| `build_conditional_breakdowns.R` | `.rds` + `meta.json` | `conditional_breakdowns.json` | Per (construct × platform × wave × option) proportion AMONG respondents who said YES to the parent yes/no for that platform-wave. Constructs: nuximpact, nuxtopic, bftwimpact, bftwtopic, mcxntopic, usefultopic |
+| `build_group_comparisons.R` | `.rds` + `meta.json` | `group_comparisons.json` | Per (outcome × grouping × group × wave [× platform]) estimate. `platform_slug` field is null for scalar outcomes, slug string for per-platform outcomes (currently only us019_time_min) |
+| `build_correlations.R` | `.rds` + `meta.json` | `correlations.json` | Per-wave pairwise Spearman over ~300 inputs |
 | `build_all.R` | (all of the above) | (all of the above) | Top-level driver with timing/size summary |
 
 ## Shared utilities (`utils/`)

@@ -20,12 +20,14 @@ suppressPackageStartupMessages({
 })
 
 steps <- list(
-  list(label = "Clean all waves",         script = here("r", "clean",      "clean_all_waves.R")),
-  list(label = "Build meta.json",         script = here("r", "precompute", "build_meta.R")),
-  list(label = "Build trends.json",       script = here("r", "precompute", "build_trends.R")),
-  list(label = "Build platform_rates",    script = here("r", "precompute", "build_platform_rates.R")),
-  list(label = "Build group_comparisons", script = here("r", "precompute", "build_group_comparisons.R")),
-  list(label = "Build correlations",      script = here("r", "precompute", "build_correlations.R"))
+  list(label = "Clean all waves",            script = here("r", "clean",      "clean_all_waves.R")),
+  list(label = "Build meta.json",            script = here("r", "precompute", "build_meta.R")),
+  list(label = "Build trends.json",          script = here("r", "precompute", "build_trends.R")),
+  list(label = "Build distributions",        script = here("r", "precompute", "build_distributions.R")),
+  list(label = "Build platform_rates",       script = here("r", "precompute", "build_platform_rates.R")),
+  list(label = "Build conditional_breakdowns", script = here("r", "precompute", "build_conditional_breakdowns.R")),
+  list(label = "Build group_comparisons",    script = here("r", "precompute", "build_group_comparisons.R")),
+  list(label = "Build correlations",         script = here("r", "precompute", "build_correlations.R"))
 )
 
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
@@ -51,7 +53,8 @@ tryCatch({
   }
 
   cat("--- Output file sizes ---\n")
-  for (f in c("meta.json", "trends.json", "platform_rates.json",
+  for (f in c("meta.json", "trends.json", "distributions.json",
+              "platform_rates.json", "conditional_breakdowns.json",
               "group_comparisons.json", "correlations.json",
               "contextual-events.json")) {
     p <- here("public", "data", f)
