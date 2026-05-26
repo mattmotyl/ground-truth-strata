@@ -14,7 +14,11 @@ export interface StatRow {
 }
 
 interface NumbersMeaningBlockProps {
-  stats: StatRow[];
+  // Use either `stats` (the default ranked-list layout) or
+  // `customNumbers` (any ReactNode — e.g. a per-finding table).
+  // If `customNumbers` is provided, `stats` is ignored.
+  stats?: StatRow[];
+  customNumbers?: ReactNode;
   interpretation: ReactNode;
   // Marks the interpretation as awaiting Matt's review. Renders a badge
   // next to "What the numbers mean" so chart copy that hasn't been
@@ -24,6 +28,7 @@ interface NumbersMeaningBlockProps {
 
 export function NumbersMeaningBlock({
   stats,
+  customNumbers,
   interpretation,
   isPlaceholder = false,
 }: NumbersMeaningBlockProps) {
@@ -36,28 +41,32 @@ export function NumbersMeaningBlock({
         <p className="text-xs text-slate uppercase tracking-wide">
           The numbers
         </p>
-        <ul className="space-y-2 text-sm">
-          {stats.map((s) => (
-            <li key={s.key} className="flex items-baseline gap-2">
-              {s.swatch ? (
-                <span
-                  aria-hidden
-                  className="inline-block h-2.5 w-2.5 rounded-sm shrink-0 mt-1"
-                  style={{ backgroundColor: s.swatch }}
-                />
-              ) : null}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                  <span className="text-ink/85">{s.label}</span>
-                  <span className="font-medium text-ink">{s.value}</span>
-                </div>
-                {s.sub ? (
-                  <div className="text-xs text-slate">{s.sub}</div>
+        {customNumbers ? (
+          customNumbers
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {(stats ?? []).map((s) => (
+              <li key={s.key} className="flex items-baseline gap-2">
+                {s.swatch ? (
+                  <span
+                    aria-hidden
+                    className="inline-block h-2.5 w-2.5 rounded-sm shrink-0 mt-1"
+                    style={{ backgroundColor: s.swatch }}
+                  />
                 ) : null}
-              </div>
-            </li>
-          ))}
-        </ul>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between gap-2 flex-wrap">
+                    <span className="text-ink/85">{s.label}</span>
+                    <span className="font-medium text-ink">{s.value}</span>
+                  </div>
+                  {s.sub ? (
+                    <div className="text-xs text-slate">{s.sub}</div>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       <div className="bg-white p-5 space-y-3">

@@ -26,9 +26,9 @@ import {
   formatPercent,
   shortWaveLabel,
 } from '@/lib/strata-formatters';
+import { PlatformWaveTable } from './platform-wave-table';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
-import type { StatRow } from './numbers-meaning-block';
 
 // Default visible set: the 8 platforms with the highest weighted usage
 // rate in W1. The user can toggle individual platforms via the legend.
@@ -212,47 +212,27 @@ export function FindingPlatformUsage({
     return buildChartData(rows, meta, weighting, visible);
   }, [rows, meta, weighting, visible]);
 
-  const w6Stats = useMemo<StatRow[]>(() => {
-    if (!rows) return [];
-    type Ranked = StatRow & { _sortBy: number };
-    const ranked: Ranked[] = [];
-    for (const slug of visible) {
-      const row = rows.find(
-        (r) => r.wave === 6 && r.platform_slug === slug,
-      );
-      if (!row) continue;
-      const value =
-        weighting === 'weighted' ? row.weighted_value : row.value;
-      const ciLo =
-        weighting === 'weighted' ? row.weighted_ci_lower : row.ci_lower;
-      const ciHi =
-        weighting === 'weighted' ? row.weighted_ci_upper : row.ci_upper;
-      const nUsers = userCount(row);
-      const swatch =
+  // Swatch lookup so the Numbers table can show the same colored marker
+  // next to platforms that have a corresponding line in the chart.
+  // Platforms NOT in the chart legend (the bottom 15 of the 23) get no
+  // swatch — their rows still appear in the table but without a marker.
+  const swatchBySlug = useMemo(() => {
+    const m = new Map<string, string>();
+    visible.forEach((slug, i) => {
+      m.set(
+        slug,
         STRATA_PALETTES.qualitative8[
-          visible.indexOf(slug) % STRATA_PALETTES.qualitative8.length
-        ];
-      const ciText = formatCI(ciLo, ciHi);
-      const nText = nUsers !== null ? `n=${formatN(nUsers)}` : '';
-      const subText =
-        ciText && nText
-          ? `${ciText} · ${nText}`
-          : ciText || nText || '';
-      ranked.push({
-        key: slug,
-        label: platformLabels.get(slug) ?? slug,
-        value: row.suppressed ? 'insufficient n' : formatPercent(value),
-        sub: row.suppressed ? null : subText,
-        swatch,
-        _sortBy: value ?? -1,
-      });
-    }
-    ranked.sort((a, b) => b._sortBy - a._sortBy);
-    return ranked.map(({ _sortBy, ...rest }) => {
-      void _sortBy;
-      return rest;
+          i % STRATA_PALETTES.qualitative8.length
+        ],
+      );
     });
-  }, [rows, visible, weighting, platformLabels]);
+    return m;
+  }, [visible]);
+
+  // Set of platform slugs the user has explicitly hidden from the chart.
+  // Wired into the actual click-to-hide behavior in Round 3; for Round 2
+  // the table renders without any hidden rows.
+  const hidden = useMemo<ReadonlySet<string>>(() => new Set<string>(), []);
 
   if (error) {
     return (
@@ -413,7 +393,15 @@ export function FindingPlatformUsage({
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
-      stats={w6Stats}
+      customNumbers={
+        <PlatformWaveTable
+          rows={rows}
+          meta={meta}
+          weighting={weighting}
+          hidden={hidden}
+          swatchBySlug={swatchBySlug}
+        />
+      }
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote={methodologyFootnoteText}

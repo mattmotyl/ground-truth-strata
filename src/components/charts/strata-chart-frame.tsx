@@ -17,7 +17,8 @@ interface StrataChartFrameProps {
   onWeightingChange: (next: Weighting) => void;
   chart: ReactNode;
   chartRef: RefObject<HTMLDivElement | null>;
-  stats: StatRow[];
+  stats?: StatRow[];
+  customNumbers?: ReactNode;
   interpretation: ReactNode;
   isPlaceholderInterpretation?: boolean;
   methodologyFootnote: ReactNode;
@@ -37,6 +38,7 @@ export function StrataChartFrame({
   chart,
   chartRef,
   stats,
+  customNumbers,
   interpretation,
   isPlaceholderInterpretation,
   methodologyFootnote,
@@ -98,6 +100,7 @@ export function StrataChartFrame({
 
           <NumbersMeaningBlock
             stats={stats}
+            customNumbers={customNumbers}
             interpretation={interpretation}
             isPlaceholder={isPlaceholderInterpretation}
           />
