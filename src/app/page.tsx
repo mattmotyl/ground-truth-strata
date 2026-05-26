@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import Link from 'next/link';
 import { StartHereBand } from '@/components/start-here-band';
 
@@ -5,22 +6,31 @@ export default function HomePage() {
   return (
     <>
       <section className="border-b border-mist">
-        <div className="mx-auto max-w-6xl px-6 py-14 grid gap-8 lg:grid-cols-[3fr_2fr] items-start">
-          <div className="space-y-5">
-            <h1
-              className="text-4xl sm:text-5xl text-plum leading-tight"
-              style={{ fontFamily: 'var(--font-serif)' }}
-            >
-              A data tool for serious questions about
-              <br />
-              social media and technology.
-            </h1>
-            <p className="text-lg text-ink/80 leading-relaxed max-w-2xl">
-              Strata lets researchers, policymakers, lawyers, journalists,
-              and curious people explore findings from a six-wave
-              longitudinal survey of U.S. adults conducted between 2023 and
-              2025.
-            </p>
+        <div className="mx-auto max-w-6xl px-6 py-14 grid gap-8 lg:grid-cols-[3fr_2fr] items-center">
+          <div className="grid gap-6 sm:grid-cols-[auto_1fr] items-center">
+            <Image
+              src="/images/strata-hero-transparent.webp"
+              alt="Ground Truth Strata"
+              width={1253}
+              height={1253}
+              priority
+              className="w-40 sm:w-48 h-auto"
+            />
+            <div className="space-y-5">
+              <h1
+                className="text-4xl sm:text-5xl text-plum leading-tight"
+                style={{ fontFamily: 'var(--font-serif)' }}
+              >
+                A data tool for serious questions about social media and
+                technology.
+              </h1>
+              <p className="text-lg text-ink/80 leading-relaxed max-w-2xl">
+                Strata lets researchers, policymakers, lawyers,
+                journalists, and curious people explore findings from a
+                six-wave longitudinal survey of U.S. adults conducted
+                between 2023 and 2025.
+              </p>
+            </div>
           </div>
           <aside
             className="rounded-md border border-mist bg-paper p-5 space-y-3 text-sm"
