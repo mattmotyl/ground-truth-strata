@@ -3,12 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CartesianGrid,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
   Tooltip,
   usePlotArea,
+  useXAxisScale,
+  useYAxisScale,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -31,8 +32,9 @@ import { PlatformWaveTable } from './platform-wave-table';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
 
-// Default visible set: the 8 platforms with the highest weighted usage
-// rate in W1. The user can toggle individual platforms via the legend.
+// Default chart selection: the 8 platforms with the highest weighted
+// usage rate in W1. The user can swap any of these out via the
+// platform multiselect in the controls aside (cap at MAX_CHART_PLATFORMS).
 const DEFAULT_TOP_8: string[] = [
   'email',
   'text_messaging',
@@ -43,6 +45,8 @@ const DEFAULT_TOP_8: string[] = [
   'tiktok',
   'snapchat',
 ];
+
+const MAX_CHART_PLATFORMS = 12;
 
 interface ChartDatum {
   wave: number;
@@ -176,6 +180,88 @@ function PlatformTooltip({
   );
 }
 
+// Renders one text label per visible line, positioned at the line's
+// last non-null data point. Vertical collision detection nudges
+// overlapping labels (within 14px) downward so they stay readable.
+// Rendered inside the LineChart's SVG so the labels move correctly
+// when the chart resizes.
+interface LineEndLabelsProps {
+  chartPlatforms: string[];
+  chartData: ChartDatum[];
+  swatchBySlug: ReadonlyMap<string, string>;
+  platformLabels: ReadonlyMap<string, string>;
+}
+
+function LineEndLabels({
+  chartPlatforms,
+  chartData,
+  swatchBySlug,
+  platformLabels,
+}: LineEndLabelsProps) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  if (!xScale || !yScale || chartData.length === 0) return null;
+
+  const COLLISION_PX = 14;
+  type LabelEntry = {
+    slug: string;
+    label: string;
+    color: string;
+    x: number;
+    y: number;
+  };
+  const labels: LabelEntry[] = [];
+  for (const slug of chartPlatforms) {
+    // Find the latest wave with a non-null value for this platform.
+    let lastDatum: ChartDatum | null = null;
+    for (let i = chartData.length - 1; i >= 0; i--) {
+      const v = chartData[i][slug];
+      if (typeof v === 'number') {
+        lastDatum = chartData[i];
+        break;
+      }
+    }
+    if (!lastDatum) continue;
+    const value = lastDatum[slug];
+    if (typeof value !== 'number') continue;
+    const xPx = xScale(lastDatum.waveLabel);
+    const yPx = yScale(value);
+    if (typeof xPx !== 'number' || typeof yPx !== 'number') continue;
+    labels.push({
+      slug,
+      label: platformLabels.get(slug) ?? slug,
+      color: swatchBySlug.get(slug) ?? '#605A6B',
+      x: xPx,
+      y: yPx,
+    });
+  }
+
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) {
+    if (labels[i].y - labels[i - 1].y < COLLISION_PX) {
+      labels[i].y = labels[i - 1].y + COLLISION_PX;
+    }
+  }
+
+  return (
+    <g aria-label="Line endpoint labels">
+      {labels.map((l) => (
+        <text
+          key={l.slug}
+          x={l.x + 6}
+          y={l.y + 4}
+          fontSize={11}
+          fontFamily="var(--font-mono)"
+          fill={l.color}
+          style={{ pointerEvents: 'none' }}
+        >
+          {l.label}
+        </text>
+      ))}
+    </g>
+  );
+}
+
 // Rendered inside the LineChart's SVG so we can use Recharts' hooks to
 // read the live plot-area coordinates and anchor the zig-zag to the Y
 // axis baseline, just below the lowest tick. Replaces the old absolute-
@@ -213,13 +299,12 @@ export function FindingPlatformUsage({
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
-  // The 8 platforms that have a line in the chart legend. Fixed across
-  // the session — they don't move when the user hides one.
-  const chartPlatforms = initialPlatforms ?? DEFAULT_TOP_8;
-  // Set of platforms the user has hidden from the chart via legend
-  // click. Hidden lines stay in the legend (so the user can restore
-  // them) and stay in the Numbers table (grayed out).
-  const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  // The platforms that have a line in the chart. User-controlled via
+  // the multiselect in the controls aside. Capped at
+  // MAX_CHART_PLATFORMS (12) for readability.
+  const [chartPlatforms, setChartPlatforms] = useState<string[]>(
+    () => initialPlatforms ?? DEFAULT_TOP_8,
+  );
   // Y axis zoom mode and custom-range bounds (percentages, 0-100).
   // 'full'   : [0, 1] domain, the default
   // 'fit'    : [min - 5%, max + 5%] of visible data, clamped to [0, 1]
@@ -266,20 +351,19 @@ export function FindingPlatformUsage({
     return m;
   }, [chartPlatforms]);
 
-  const toggleHidden = (slug: string) => {
-    setHidden((curr) => {
-      const next = new Set(curr);
-      if (next.has(slug)) next.delete(slug);
-      else next.add(slug);
-      return next;
+  const toggleChartPlatform = (slug: string) => {
+    setChartPlatforms((curr) => {
+      if (curr.includes(slug)) {
+        // Allow removing down to zero — the chart shows an empty plot,
+        // which is recoverable via Reset.
+        return curr.filter((s) => s !== slug);
+      }
+      if (curr.length >= MAX_CHART_PLATFORMS) return curr;
+      return [...curr, slug];
     });
   };
 
-  const showAll = () => setHidden(new Set());
-
-  const hiddenLabels = [...hidden].map(
-    (s) => platformLabels.get(s) ?? s,
-  );
+  const resetChartPlatforms = () => setChartPlatforms(DEFAULT_TOP_8);
 
   // Compute Y domain from current mode + state.
   const yDomain = useMemo<[number, number]>(() => {
@@ -290,16 +374,14 @@ export function FindingPlatformUsage({
       if (hi <= lo) return [0, 1];
       return [lo, hi];
     }
-    // Fit to visible data ±5 percentage points, clamped to [0, 1].
+    // Fit to chart-selected platforms' data, ±5 percentage points,
+    // clamped to [0, 1].
     if (!rows) return [0, 1];
-    const visibleChartPlatforms = chartPlatforms.filter(
-      (s) => !hidden.has(s),
-    );
-    if (visibleChartPlatforms.length === 0) return [0, 1];
+    if (chartPlatforms.length === 0) return [0, 1];
     let min = Infinity;
     let max = -Infinity;
     for (const r of rows) {
-      if (!visibleChartPlatforms.includes(r.platform_slug)) continue;
+      if (!chartPlatforms.includes(r.platform_slug)) continue;
       if (r.suppressed) continue;
       const v =
         weighting === 'weighted' ? r.weighted_value : r.value;
@@ -312,7 +394,7 @@ export function FindingPlatformUsage({
       Math.max(0, Math.floor((min - 0.05) * 100) / 100),
       Math.min(1, Math.ceil((max + 0.05) * 100) / 100),
     ];
-  }, [yMode, customMin, customMax, rows, chartPlatforms, hidden, weighting]);
+  }, [yMode, customMin, customMax, rows, chartPlatforms, weighting]);
 
   const isZoomed = yMode !== 'full';
 
@@ -344,7 +426,7 @@ export function FindingPlatformUsage({
     <ResponsiveContainer width="100%" height={CHART_HEIGHTS.line}>
       <LineChart
         data={chartData}
-        margin={{ top: 16, right: 32, bottom: 24, left: 8 }}
+        margin={{ top: 16, right: 130, bottom: 24, left: 8 }}
       >
         <CartesianGrid stroke="#E7E1EC" strokeDasharray="3 3" />
         <XAxis
@@ -367,75 +449,34 @@ export function FindingPlatformUsage({
             <PlatformTooltip {...props} platformLabels={platformLabels} />
           )}
         />
-        <Legend
-          verticalAlign="bottom"
-          height={32}
-          wrapperStyle={{
-            fontFamily: CHART_FONTS.mono,
-            fontSize: 12,
-            paddingTop: 8,
-            cursor: 'pointer',
-          }}
-          formatter={(value) => {
-            const slug = String(value);
-            const label = platformLabels.get(slug) ?? slug;
-            const isHidden = hidden.has(slug);
-            return (
-              <span
-                style={{
-                  color: isHidden ? '#605A6B' : '#18161F',
-                  textDecoration: isHidden ? 'line-through' : 'none',
-                }}
-              >
-                {label}
-              </span>
-            );
-          }}
-          onClick={(entry) => {
-            const slug = entry.dataKey as string;
-            toggleHidden(slug);
-          }}
-        />
-        {chartPlatforms.map((slug, i) => (
+        {chartPlatforms.map((slug) => (
           <Line
             key={slug}
             type="monotone"
             dataKey={slug}
-            stroke={
-              STRATA_PALETTES.qualitative8[
-                i % STRATA_PALETTES.qualitative8.length
-              ]
-            }
+            stroke={swatchBySlug.get(slug) ?? '#605A6B'}
             strokeWidth={2}
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
             connectNulls={false}
             isAnimationActive={false}
-            hide={hidden.has(slug)}
           />
         ))}
+        <LineEndLabels
+          chartPlatforms={chartPlatforms}
+          chartData={chartData}
+          swatchBySlug={swatchBySlug}
+          platformLabels={platformLabels}
+        />
         <BrokenAxisIndicator visible={isZoomed} />
       </LineChart>
     </ResponsiveContainer>
     </div>
   );
 
-  // Hidden-platforms note rendered between chart and Numbers table.
-  let hiddenNote: string | null = null;
-  if (hidden.size === 1) {
-    hiddenNote =
-      'Note: ' +
-      hiddenLabels[0] +
-      ' hidden. Click legend to restore.';
-  } else if (hidden.size > 1 && hidden.size <= 3) {
-    const last = hiddenLabels[hiddenLabels.length - 1];
-    const head = hiddenLabels.slice(0, -1).join(', ');
-    hiddenNote =
-      'Note: ' + head + ' and ' + last + ' hidden. Click legend to restore.';
-  } else if (hidden.size > 3) {
-    hiddenNote =
-      'Note: ' + hidden.size + ' platforms hidden. Click legend to restore.';
-  }
+  // Round 3's "Note: X hidden" note is gone — the multiselect IS the
+  // way to choose chart platforms now. chartFooter below surfaces the
+  // zoom note only.
 
   // CSV: long format mirroring the underlying platform_rates.json (one
   // row per platform-wave). Includes both weighted and unweighted
@@ -485,7 +526,7 @@ export function FindingPlatformUsage({
     wavesSpan +
     ' (' +
     waveCount +
-    ' survey waves, 2023–2025). Click a platform in the legend to hide or show its line.';
+    ' survey waves, 2023–2025). Use the Platforms picker in the controls to add or remove lines.';
   const interpretationText =
     'The two highest-usage tools across the panel are workhorse communication channels — email and text messaging — not social-media platforms. Among purely social services, YouTube and Facebook have the broadest reach, with Instagram third. TikTok’s share has grown across waves while Snapchat’s has stayed roughly flat. The numbers table below covers all 23 platforms across the six survey waves; hover any cell for its 95% confidence interval and user count.';
   const methodologyFootnoteText =
@@ -495,39 +536,23 @@ export function FindingPlatformUsage({
     generatedAt +
     '.';
 
-  const chartFooter = (
+  const chartFooter = isZoomed ? (
     <div
-      className="space-y-2 text-xs"
+      className="flex items-center justify-between gap-3 flex-wrap text-xs"
       style={{ fontFamily: 'var(--font-mono)' }}
     >
-      {hiddenNote ? (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-slate">{hiddenNote}</span>
-          <button
-            type="button"
-            onClick={showAll}
-            className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
-          >
-            Show all
-          </button>
-        </div>
-      ) : null}
-      {isZoomed ? (
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <span className="text-slate">
-            Note: Y axis is zoomed. Full range not shown.
-          </span>
-          <button
-            type="button"
-            onClick={() => setYMode('full')}
-            className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
-          >
-            Reset to full range
-          </button>
-        </div>
-      ) : null}
+      <span className="text-slate">
+        Note: Y axis is zoomed. Full range not shown.
+      </span>
+      <button
+        type="button"
+        onClick={() => setYMode('full')}
+        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+      >
+        Reset to full range
+      </button>
     </div>
-  );
+  ) : null;
 
   // Y-axis zoom controls rendered in the controls aside via the
   // `controls` prop on StrataChartFrame.
@@ -601,6 +626,89 @@ export function FindingPlatformUsage({
     </div>
   );
 
+  // Platform multiselect — replaces Round 3's click-to-hide legend
+  // behavior. User picks any subset of the 23 platforms to chart,
+  // up to MAX_CHART_PLATFORMS (12).
+  const platformControls = (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p
+          className="text-xs text-slate uppercase tracking-wide"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Platforms ({chartPlatforms.length} of {MAX_CHART_PLATFORMS} max)
+        </p>
+      </div>
+      <ul
+        className="max-h-64 overflow-y-auto border border-mist rounded-md bg-paper px-2 py-1 space-y-0.5"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {meta.platforms.map((p) => {
+          const selected = chartPlatforms.includes(p.slug);
+          const atCap = chartPlatforms.length >= MAX_CHART_PLATFORMS;
+          const disabled = !selected && atCap;
+          const swatch = swatchBySlug.get(p.slug);
+          return (
+            <li key={p.slug}>
+              <label
+                className={
+                  'flex items-center gap-2 text-xs rounded px-1 py-0.5 ' +
+                  (disabled
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'cursor-pointer hover:bg-mist/50')
+                }
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  disabled={disabled}
+                  onChange={() => toggleChartPlatform(p.slug)}
+                  className="accent-plum"
+                />
+                {swatch ? (
+                  <span
+                    aria-hidden
+                    className="inline-block h-2 w-2 rounded-sm shrink-0"
+                    style={{ backgroundColor: swatch }}
+                  />
+                ) : (
+                  <span className="inline-block h-2 w-2 shrink-0" />
+                )}
+                <span className={selected ? 'text-ink' : 'text-slate'}>
+                  {p.label}
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+      {chartPlatforms.length >= MAX_CHART_PLATFORMS ? (
+        <p
+          className="text-[10px] text-slate italic"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          {MAX_CHART_PLATFORMS}-platform maximum reached. Uncheck one to
+          add another.
+        </p>
+      ) : null}
+      <button
+        type="button"
+        onClick={resetChartPlatforms}
+        className="text-xs text-mulberry hover:text-plum underline-offset-2 hover:underline"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        Reset to default 8
+      </button>
+    </div>
+  );
+
+  const controlsContent = (
+    <div className="space-y-5">
+      {platformControls}
+      {yAxisControls}
+    </div>
+  );
+
   return (
     <StrataChartFrame
       eyebrow="Finding 01 · Trends over time"
@@ -610,14 +718,14 @@ export function FindingPlatformUsage({
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
-      controls={yAxisControls}
+      controls={controlsContent}
       chartFooter={chartFooter}
       customNumbers={
         <PlatformWaveTable
           rows={rows}
           meta={meta}
           weighting={weighting}
-          hidden={hidden}
+          hidden={new Set<string>()}
           swatchBySlug={swatchBySlug}
         />
       }
