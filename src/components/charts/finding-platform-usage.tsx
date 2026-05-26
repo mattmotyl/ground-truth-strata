@@ -24,6 +24,7 @@ import {
   formatCI,
   formatN,
   formatPercent,
+  shortWaveLabel,
 } from '@/lib/strata-formatters';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
@@ -51,6 +52,20 @@ interface ChartDatum {
   [k: string]: number | string | null;
 }
 
+// Count of respondents who reported using a given platform in a given
+// wave. For usage_rate rows, n_panel is the wave sample size (the
+// denominator), and value is the share reporting yes; the count of
+// users is therefore round(value * n_panel). We always derive this
+// from the UNWEIGHTED row (raw counts in the sample) so the display
+// is stable across the weighted/unweighted toggle — weighting affects
+// the rate ESTIMATE, not the count of respondents who actually
+// reported using the platform.
+function userCount(row: PlatformRateRow): number | null {
+  if (row.suppressed) return null;
+  if (row.value === null || row.n === null) return null;
+  return Math.round(row.value * row.n);
+}
+
 function buildChartData(
   rows: PlatformRateRow[],
   meta: MetaJson,
@@ -60,10 +75,11 @@ function buildChartData(
   const waveDateMap = new Map(meta.waves.map((w) => [w.wave, w.dates]));
   const waves = [...new Set(rows.map((r) => r.wave))].sort();
   return waves.map((wave) => {
+    const dates = waveDateMap.get(wave) ?? '';
     const datum: ChartDatum = {
       wave,
-      waveLabel: `W${wave}`,
-      waveDates: waveDateMap.get(wave) ?? '',
+      waveLabel: shortWaveLabel(wave, dates),
+      waveDates: dates,
     };
     for (const slug of visibleSlugs) {
       const row = rows.find(
@@ -73,7 +89,7 @@ function buildChartData(
         datum[slug] = null;
         datum[`${slug}_ci_lo`] = null;
         datum[`${slug}_ci_hi`] = null;
-        datum[`${slug}_n`] = null;
+        datum[`${slug}_users`] = null;
         continue;
       }
       datum[slug] =
@@ -82,8 +98,9 @@ function buildChartData(
         weighting === 'weighted' ? row.weighted_ci_lower : row.ci_lower;
       datum[`${slug}_ci_hi`] =
         weighting === 'weighted' ? row.weighted_ci_upper : row.ci_upper;
-      datum[`${slug}_n`] =
-        weighting === 'weighted' ? row.weighted_n_eff : row.n;
+      // Always show the actual user count (unweighted-derived), not
+      // weighted_n_eff — see userCount() comment.
+      datum[`${slug}_users`] = userCount(row);
     }
     return datum;
   });
@@ -129,7 +146,7 @@ function PlatformTooltip({
             typeof p.value === 'number' ? p.value : null;
           const ciLo = datum[`${slug}_ci_lo`];
           const ciHi = datum[`${slug}_ci_hi`];
-          const n = datum[`${slug}_n`];
+          const nUsers = datum[`${slug}_users`];
           if (value === null) return null;
           return (
             <li key={slug} className="flex items-baseline gap-2">
@@ -147,8 +164,8 @@ function PlatformTooltip({
               {typeof ciLo === 'number' && typeof ciHi === 'number' ? (
                 <span className="text-slate">{formatCI(ciLo, ciHi)}</span>
               ) : null}
-              {typeof n === 'number' ? (
-                <span className="text-slate">n={formatN(n)}</span>
+              {typeof nUsers === 'number' ? (
+                <span className="text-slate">n={formatN(nUsers)}</span>
               ) : null}
             </li>
           );
@@ -210,20 +227,22 @@ export function FindingPlatformUsage({
         weighting === 'weighted' ? row.weighted_ci_lower : row.ci_lower;
       const ciHi =
         weighting === 'weighted' ? row.weighted_ci_upper : row.ci_upper;
-      const n = weighting === 'weighted' ? row.weighted_n_eff : row.n;
+      const nUsers = userCount(row);
       const swatch =
         STRATA_PALETTES.qualitative8[
           visible.indexOf(slug) % STRATA_PALETTES.qualitative8.length
         ];
+      const ciText = formatCI(ciLo, ciHi);
+      const nText = nUsers !== null ? `n=${formatN(nUsers)}` : '';
+      const subText =
+        ciText && nText
+          ? `${ciText} · ${nText}`
+          : ciText || nText || '';
       ranked.push({
         key: slug,
         label: platformLabels.get(slug) ?? slug,
         value: row.suppressed ? 'insufficient n' : formatPercent(value),
-        sub: row.suppressed ? null : (
-          <>
-            {formatCI(ciLo, ciHi)} · n={formatN(n)}
-          </>
-        ),
+        sub: row.suppressed ? null : subText,
         swatch,
         _sortBy: value ?? -1,
       });
@@ -328,9 +347,10 @@ export function FindingPlatformUsage({
   );
 
   // CSV: long format mirroring the underlying platform_rates.json (one
-  // row per platform-wave-weighting). Includes both weighted and
-  // unweighted estimates regardless of toggle so the CSV is the whole
-  // truth, not just the current view.
+  // row per platform-wave). Includes both weighted and unweighted
+  // estimates regardless of toggle so the CSV is the whole truth, not
+  // just the current view. Adds a derived n_users column (count of
+  // respondents who reported using the platform).
   const csvHeaders = [
     'platform_slug',
     'platform_label',
@@ -339,7 +359,8 @@ export function FindingPlatformUsage({
     'value',
     'ci_lower',
     'ci_upper',
-    'n',
+    'n_panel',
+    'n_users',
     'weighted_value',
     'weighted_ci_lower',
     'weighted_ci_upper',
@@ -357,6 +378,7 @@ export function FindingPlatformUsage({
       r.ci_lower,
       r.ci_upper,
       r.n,
+      userCount(r),
       r.weighted_value,
       r.weighted_ci_lower,
       r.weighted_ci_upper,
@@ -364,47 +386,37 @@ export function FindingPlatformUsage({
       r.suppressed,
     ]);
 
+  const waveCount = meta.waves.length;
+  const weightingLabel =
+    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
+  const subtitleText =
+    'Share of U.S. adults reporting each platform among the services they use, across ' +
+    wavesSpan +
+    ' (' +
+    waveCount +
+    ' survey waves, 2023–2025). Click a platform in the legend to hide or show its line.';
+  const interpretationText =
+    'The two highest-usage tools across the panel are workhorse communication channels — email and text messaging — not social-media platforms. Among purely social services, YouTube and Facebook have the broadest reach, with Instagram third. TikTok’s share has grown across waves while Snapchat’s has stayed roughly flat. Click a platform in the legend to focus on its trajectory; see The numbers for wave-6 point estimates with 95% confidence intervals.';
+  const methodologyFootnoteText =
+    'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
+    weightingLabel +
+    ' estimates. 95% CIs in tooltip and The numbers. Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
+    generatedAt +
+    '.';
+
   return (
     <StrataChartFrame
       eyebrow="Finding 01 · Trends over time"
       title="Who uses what?"
-      subtitle={
-        <>
-          Share of U.S. adults reporting each platform among the services
-          they use, across {wavesSpan} ({meta.waves.length} survey waves,
-          2023&ndash;2025). Click a platform in the legend to hide or
-          show its line.
-        </>
-      }
+      subtitle={subtitleText}
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
       stats={w6Stats}
       isPlaceholderInterpretation
-      interpretation={
-        <>
-          The two highest-usage tools across the panel are workhorse
-          communication channels — <strong>email</strong> and{' '}
-          <strong>text messaging</strong> — not social-media platforms.
-          Among purely social services, <strong>YouTube</strong> and{' '}
-          <strong>Facebook</strong> have the broadest reach, with{' '}
-          <strong>Instagram</strong> third. TikTok&rsquo;s share has
-          grown across waves while Snapchat&rsquo;s has stayed roughly
-          flat. Click a platform in the legend to focus on its
-          trajectory; see <em>The numbers</em> for wave-6 point
-          estimates with 95% confidence intervals.
-        </>
-      }
-      methodologyFootnote={
-        <>
-          Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025.{' '}
-          {weighting === 'weighted' ? 'Weighted' : 'Unweighted'}{' '}
-          estimates. 95% CIs in tooltip and <em>The numbers</em>.
-          Cells with n &lt; 30 are suppressed by design. Precomputed
-          JSON generated {generatedAt}.
-        </>
-      }
+      interpretation={interpretationText}
+      methodologyFootnote={methodologyFootnoteText}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: 'Who uses what? Platform usage rates',

@@ -42,6 +42,43 @@ export function formatWaveLabel(
   return `W${wave}`;
 }
 
+// Parses meta.json's `waves[].dates` like "March 2 - May 7, 2023" or
+// "November 6, 2023 - February 18, 2024" into a compact axis label
+// "Mar '23". Falls back to the wave number if parsing fails.
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+const MONTH_SHORT_BY_NAME = new Map<string, string>(
+  MONTH_NAMES.map((m) => [m, m.slice(0, 3)]),
+);
+
+export function shortWaveLabel(
+  wave: number,
+  dates: string | null | undefined,
+): string {
+  if (!dates) return `W${wave}`;
+  // Find the FIRST month name in the string — that's the wave start month.
+  let startMonth: string | null = null;
+  for (const m of MONTH_NAMES) {
+    if (dates.startsWith(m + ' ')) {
+      startMonth = m;
+      break;
+    }
+  }
+  if (!startMonth) return `W${wave}`;
+  // Find the year associated with the start month: if the dates string
+  // spans years (e.g., "November 6, 2023 - February 18, 2024"), the
+  // year right after the start-month date is the one we want.
+  const startMonthIdx = dates.indexOf(startMonth);
+  const segmentAfterStart = dates.slice(startMonthIdx);
+  const startYearMatch = segmentAfterStart.match(/\b(\d{4})\b/);
+  if (!startYearMatch) return `W${wave}`;
+  const shortMonth = MONTH_SHORT_BY_NAME.get(startMonth) ?? startMonth;
+  const shortYear = startYearMatch[1].slice(2);
+  return `${shortMonth} '${shortYear}`;
+}
+
 // Compact CSV-safe representation of a value. Used by CSV downloads —
 // `value === null` becomes empty cell to match spreadsheet conventions.
 export function csvCell(value: unknown): string {
