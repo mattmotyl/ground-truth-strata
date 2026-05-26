@@ -9,6 +9,7 @@ import {
   Finding04Useful,
   Finding05Connections,
 } from '@/components/charts/findings-platforms';
+import { FindingPoliticalSkew } from '@/components/charts/finding-political-skew';
 
 interface FindingDef {
   slug: string;
@@ -41,6 +42,12 @@ const FINDINGS: FindingDef[] = [
     label: 'Where do people connect?',
     short: 'Meaningful connections',
     render: () => <Finding05Connections />,
+  },
+  {
+    slug: 'political-composition',
+    label: 'Which platforms are most politically skewed?',
+    short: 'Political skew',
+    render: () => <FindingPoliticalSkew />,
   },
 ];
 
