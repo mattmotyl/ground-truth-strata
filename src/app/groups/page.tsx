@@ -1,17 +1,9 @@
-import { RouteStub } from '@/components/route-stub';
+import { FindingGenderNegativeExperience } from '@/components/charts/finding-gender-negative';
 
 export default function GroupsPage() {
-  return (
-    <RouteStub
-      eyebrow="Demographic group differences"
-      title="Who experiences what, differently?"
-      description="Grouped-bar comparisons by gender, age, education, race, political ideology tertile, and platform-user status. Browse outcomes by group across waves with 95% confidence intervals."
-      comingNext={[
-        'Grouped bar chart with error bars per group × wave',
-        'Group-by selector across 29 grouping variables',
-        'Lazy-load gating on group_comparisons.json (6.7 MB)',
-        'Suppression handling for low-n cells',
-      ]}
-    />
-  );
+  // For v0.1.0 the /groups route shows Finding 06 — Do men and women
+  // experience platforms differently? — as the default view. Future
+  // milestones will add a finding-selector tab bar (mirroring
+  // /platforms) when more group-comparison findings ship.
+  return <FindingGenderNegativeExperience />;
 }
