@@ -6,73 +6,123 @@ export default function HomePage() {
   return (
     <>
       <section className="border-b border-mist">
-        <div className="mx-auto max-w-6xl px-6 py-14 grid gap-8 lg:grid-cols-[3fr_2fr] items-center">
-          <div className="grid gap-6 sm:grid-cols-[auto_1fr] items-center">
-            <Image
-              src="/images/strata-hero-transparent.webp"
-              alt="Ground Truth Strata"
-              width={1253}
-              height={1253}
-              priority
-              className="w-40 sm:w-48 h-auto"
-            />
-            <div className="space-y-5">
-              <h1
-                className="text-4xl sm:text-5xl text-plum leading-tight"
-                style={{ fontFamily: 'var(--font-serif)' }}
-              >
-                A data tool for serious questions about social media and
-                technology.
-              </h1>
-              <p className="text-lg text-ink/80 leading-relaxed max-w-2xl">
-                Strata lets researchers, policymakers, lawyers,
-                journalists, and curious people explore findings from a
-                six-wave longitudinal survey of U.S. adults conducted
-                between 2023 and 2025.
-              </p>
-            </div>
+        <div className="mx-auto max-w-6xl px-6 py-14 grid gap-10 lg:grid-cols-2 items-center">
+          <Image
+            src="/images/strata-hero-transparent.webp"
+            alt="Ground Truth Strata"
+            width={1253}
+            height={1253}
+            priority
+            className="w-72 sm:w-80 lg:w-96 h-auto mx-auto lg:mx-0"
+          />
+          <div className="space-y-5">
+            <h1
+              className="text-4xl sm:text-5xl text-plum leading-tight"
+              style={{ fontFamily: 'var(--font-serif)' }}
+            >
+              A data tool for serious questions about social media and
+              technology.
+            </h1>
+            <p className="text-lg text-ink/80 leading-relaxed max-w-2xl">
+              Strata lets researchers, policymakers, lawyers,
+              journalists, and curious people explore findings from a
+              six-wave longitudinal survey of U.S. adults conducted
+              between 2023 and 2025.
+            </p>
           </div>
-          <aside
-            className="rounded-md border border-mist bg-paper p-5 space-y-3 text-sm"
-            aria-labelledby="how-to-use-heading"
-          >
+        </div>
+      </section>
+
+      <section
+        className="border-b border-mist bg-mist/30"
+        aria-labelledby="how-to-use-heading"
+      >
+        <div className="mx-auto max-w-6xl px-6 py-10 grid gap-6 lg:grid-cols-[1fr_2fr] items-start">
+          <div>
             <h2
               id="how-to-use-heading"
-              className="text-base text-plum"
+              className="text-2xl text-plum"
               style={{ fontFamily: 'var(--font-serif)' }}
             >
               How to use Strata
             </h2>
-            <ol className="list-decimal list-outside ml-5 space-y-1 text-ink/85">
-              <li>
+            <p className="text-sm text-slate mt-2">
+              Four things to know before you dig in.
+            </p>
+          </div>
+          <ol className="grid gap-4 sm:grid-cols-2 text-sm text-ink/85">
+            <li className="flex gap-3">
+              <span
+                aria-hidden
+                className="text-mulberry shrink-0"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                01
+              </span>
+              <span>
                 Pick a question from <em>Start here</em>, or jump to an
                 explorer in the nav.
-              </li>
-              <li>
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span
+                aria-hidden
+                className="text-mulberry shrink-0"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                02
+              </span>
+              <span>
                 Charts default to <em>weighted</em> estimates with 95%
                 confidence intervals. Toggle as needed.
-              </li>
-              <li>
-                Read the <em>What the numbers mean</em> column for plain-
-                language context. Every chart shows its <em>n</em> and
-                methodology footnote.
-              </li>
-              <li>
-                Cells with fewer than 30 respondents are suppressed by
-                design. <Link href="/about" className="text-mulberry hover:text-plum underline">Read the methodology →</Link>
-              </li>
-            </ol>
-            <p className="text-xs text-slate pt-2 border-t border-mist">
-              Raw data is available via free registration at{' '}
-              <a
-                href="https://uasdata.usc.edu/page/Registration+Form"
-                className="text-mulberry hover:text-plum"
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span
+                aria-hidden
+                className="text-mulberry shrink-0"
+                style={{ fontFamily: 'var(--font-mono)' }}
               >
-                uasdata.usc.edu
-              </a>
-              .
-            </p>
-          </aside>
+                03
+              </span>
+              <span>
+                Read the <em>What the numbers mean</em> column for
+                plain-language context. Every chart shows its{' '}
+                <em>n</em> and methodology footnote.
+              </span>
+            </li>
+            <li className="flex gap-3">
+              <span
+                aria-hidden
+                className="text-mulberry shrink-0"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                04
+              </span>
+              <span>
+                Cells with fewer than 30 respondents are suppressed by
+                design.{' '}
+                <Link
+                  href="/about"
+                  className="text-mulberry hover:text-plum underline"
+                >
+                  Read the methodology →
+                </Link>
+              </span>
+            </li>
+          </ol>
+        </div>
+        <div className="mx-auto max-w-6xl px-6 pb-8 -mt-4">
+          <p className="text-xs text-slate">
+            Raw data is available via free registration at{' '}
+            <a
+              href="https://uasdata.usc.edu/page/Registration+Form"
+              className="text-mulberry hover:text-plum"
+            >
+              uasdata.usc.edu
+            </a>
+            .
+          </p>
         </div>
       </section>
 
