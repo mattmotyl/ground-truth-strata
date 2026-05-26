@@ -79,6 +79,68 @@ export function shortWaveLabel(
   return `${shortMonth} '${shortYear}`;
 }
 
+// Parses meta.json's `waves[].dates` like "March 2 - May 7, 2023" or
+// "November 6, 2023 - February 18, 2024" into start/end month and year
+// components, plus a sameYear flag.
+interface WaveDateParts {
+  startMonth: string;
+  startYear: string;
+  endMonth: string;
+  endYear: string;
+  sameYear: boolean;
+}
+
+function parseWaveDates(dates: string): WaveDateParts | null {
+  // Match: "Month1 D[, Y1] - Month2 D, Y2"  (hyphen-minus or en-dash)
+  const re =
+    /^([A-Z][a-z]+)\s+\d+(?:,\s*(\d{4}))?\s*[-–]\s*([A-Z][a-z]+)\s+\d+,\s*(\d{4})$/;
+  const m = dates.match(re);
+  if (!m) return null;
+  const [, mon1, year1, mon2, year2] = m;
+  const startYear = year1 ?? year2;
+  return {
+    startMonth: mon1.slice(0, 3),
+    startYear,
+    endMonth: mon2.slice(0, 3),
+    endYear: year2,
+    sameYear: startYear === year2,
+  };
+}
+
+// Compact wave label for X-axis ticks: "Mar–May '23" (single-year) or
+// "Nov '23–Feb '24" (cross-year). Falls back to the raw string if the
+// dates field doesn't parse.
+export function waveDateRangeLabel(
+  dates: string | null | undefined,
+): string {
+  if (!dates) return '';
+  const parts = parseWaveDates(dates);
+  if (!parts) return dates;
+  const startYY = parts.startYear.slice(2);
+  const endYY = parts.endYear.slice(2);
+  if (parts.sameYear) {
+    return `${parts.startMonth}–${parts.endMonth} '${startYY}`;
+  }
+  return `${parts.startMonth} '${startYY}–${parts.endMonth} '${endYY}`;
+}
+
+// Three-line stack for table column headers. Returns { months, year }
+// where:
+//   months = "Mar–May" or "Nov–Feb"
+//   year   = "'23"     or "'23–'24"
+export function waveTableHeader(
+  dates: string | null | undefined,
+): { months: string; year: string } {
+  if (!dates) return { months: '', year: '' };
+  const parts = parseWaveDates(dates);
+  if (!parts) return { months: '', year: '' };
+  const startYY = parts.startYear.slice(2);
+  const endYY = parts.endYear.slice(2);
+  const months = `${parts.startMonth}–${parts.endMonth}`;
+  const year = parts.sameYear ? `'${startYY}` : `'${startYY}–'${endYY}`;
+  return { months, year };
+}
+
 // Compact CSV-safe representation of a value. Used by CSV downloads —
 // `value === null` becomes empty cell to match spreadsheet conventions.
 export function csvCell(value: unknown): string {

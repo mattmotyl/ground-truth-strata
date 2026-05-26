@@ -8,6 +8,7 @@ import {
   LineChart,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -24,7 +25,7 @@ import {
   formatCI,
   formatN,
   formatPercent,
-  shortWaveLabel,
+  waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { PlatformWaveTable } from './platform-wave-table';
 import { StrataChartFrame } from './strata-chart-frame';
@@ -78,7 +79,7 @@ function buildChartData(
     const dates = waveDateMap.get(wave) ?? '';
     const datum: ChartDatum = {
       wave,
-      waveLabel: shortWaveLabel(wave, dates),
+      waveLabel: waveDateRangeLabel(dates),
       waveDates: dates,
     };
     for (const slug of visibleSlugs) {
@@ -172,6 +173,30 @@ function PlatformTooltip({
         })}
       </ul>
     </div>
+  );
+}
+
+// Rendered inside the LineChart's SVG so we can use Recharts' hooks to
+// read the live plot-area coordinates and anchor the zig-zag to the Y
+// axis baseline, just below the lowest tick. Replaces the old absolute-
+// positioned overlay that overlapped the legend.
+function BrokenAxisIndicator({ visible }: { visible: boolean }) {
+  const plotArea = usePlotArea();
+  if (!visible || !plotArea) return null;
+  const xBaseline = plotArea.x;
+  const yBaseline = plotArea.y + plotArea.height;
+  return (
+    <g
+      aria-label="Y axis is zoomed (broken axis indicator)"
+      transform={`translate(${xBaseline - 5}, ${yBaseline + 2})`}
+    >
+      <path
+        d="M 0 0 L 10 4 L 0 10 L 10 14 L 0 20"
+        stroke="#605A6B"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </g>
   );
 }
 
@@ -389,25 +414,9 @@ export function FindingPlatformUsage({
             hide={hidden.has(slug)}
           />
         ))}
+        <BrokenAxisIndicator visible={isZoomed} />
       </LineChart>
     </ResponsiveContainer>
-    {isZoomed ? (
-      <svg
-        aria-label="Y axis is zoomed (broken axis indicator)"
-        className="absolute pointer-events-none"
-        style={{ left: 38, bottom: 36 }}
-        width="14"
-        height="22"
-        viewBox="0 0 14 22"
-      >
-        <path
-          d="M 1 0 L 13 4 L 1 10 L 13 14 L 1 20"
-          stroke="#605A6B"
-          strokeWidth="1.5"
-          fill="none"
-        />
-      </svg>
-    ) : null}
     </div>
   );
 
