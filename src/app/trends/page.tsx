@@ -1,17 +1,9 @@
-import { RouteStub } from '@/components/route-stub';
+import { FindingPlatformUsage } from '@/components/charts/finding-platform-usage';
 
 export default function TrendsPage() {
-  return (
-    <RouteStub
-      eyebrow="Trends over time"
-      title="How is the social-media landscape changing?"
-      description="A line-chart explorer over the six survey waves. Pick any analyzable variable from the data dictionary; chart it across waves with 95% confidence intervals, contextual event annotations, and a weighted/unweighted toggle."
-      comingNext={[
-        'Variable picker with domain filter + keyword search',
-        'Multi-platform line chart for platform-indexed variables',
-        'Vertical reference lines from contextual-events.json',
-        'PNG/CSV download and per-chart citation',
-      ]}
-    />
-  );
+  // For v0.1.0 the /trends route defaults to Finding 1 — "Who uses what?".
+  // The full variable picker that lets the user chart any analyzable
+  // variable across waves is part of a later milestone; until then this
+  // route returns the first starter finding.
+  return <FindingPlatformUsage />;
 }
