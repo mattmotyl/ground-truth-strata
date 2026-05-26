@@ -9,6 +9,8 @@ import {
   ErrorBar,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
+  useXAxisScale,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -24,6 +26,7 @@ import {
   formatCI,
   formatN,
   formatPercent,
+  waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { PlatformWaveTable } from './platform-wave-table';
 import { StrataChartFrame } from './strata-chart-frame';
@@ -110,6 +113,53 @@ interface BarTooltipProps {
     value?: unknown;
     payload?: unknown;
   }[];
+}
+
+// Renders one percent label per visible bar at the RIGHT EDGE of the
+// CI whisker (not at the point-estimate tip), so the label is never
+// crossed by the error bar. Lives inside the BarChart's SVG so it can
+// use Recharts' scale hooks to read the live x/y pixel positions —
+// same pattern as LineEndLabels in finding-platform-usage.tsx.
+// Recharts' built-in label prop only exposes (x, y, width, height,
+// value, index) — not the full datum — so anchoring to ciHigh from
+// that callback is awkward to type. A sibling SVG layer is simpler
+// and matches the existing /trends chart convention.
+interface BarCiLabelsProps {
+  data: readonly ChartDatum[];
+}
+function BarCiLabels({ data }: BarCiLabelsProps) {
+  const xScale = useXAxisScale();
+  const plotArea = usePlotArea();
+  if (!xScale || !plotArea || data.length === 0) return null;
+  // Vertical band per category = plot height / number of bars. Center
+  // of band i = plotArea.y + (i + 0.5) * bandStep. This matches the
+  // bars' rendered vertical centers regardless of Recharts' internal
+  // scale variant (`useYAxisScale` doesn't expose bandwidth for the
+  // category axis here, so derive from the plot geometry instead).
+  const bandStep = plotArea.height / data.length;
+  return (
+    <g aria-label="Bar value labels (positioned beyond CI tips)">
+      {data.map((d, i) => {
+        const labelX = xScale(d.ciHigh);
+        if (typeof labelX !== 'number') return null;
+        const cy = plotArea.y + (i + 0.5) * bandStep;
+        return (
+          <text
+            key={d.platform_slug}
+            x={labelX + 6}
+            y={cy}
+            dominantBaseline="middle"
+            textAnchor="start"
+            fontFamily="var(--font-mono)"
+            fontSize={11}
+            fill="#18161F"
+          >
+            {formatPercent(d.value)}
+          </text>
+        );
+      })}
+    </g>
+  );
 }
 
 function BarTooltip({ active, payload }: BarTooltipProps) {
@@ -359,14 +409,6 @@ export function FindingPlatformRankedBar({
           dataKey="value"
           radius={[0, 2, 2, 0]}
           isAnimationActive={false}
-          label={{
-            position: 'right',
-            formatter: (v: unknown) =>
-              typeof v === 'number' ? formatPercent(v) : '',
-            fontFamily: 'var(--font-mono)',
-            fontSize: 11,
-            fill: '#18161F',
-          }}
         >
           {chartData.map((d) => (
             <Cell
@@ -382,6 +424,7 @@ export function FindingPlatformRankedBar({
             strokeWidth={1}
           />
         </Bar>
+        <BarCiLabels data={chartData} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -434,7 +477,7 @@ export function FindingPlatformRankedBar({
                 }
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                W{w} ({dates.split(',')[0]})
+                W{w} ({waveDateRangeLabel(dates)})
               </span>
             </label>
           );

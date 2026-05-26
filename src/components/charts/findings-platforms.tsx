@@ -80,17 +80,17 @@ function buildRankedInterpretation(
 }
 
 // ---------------------------------------------------------------------
-// Finding 02 — Where do bad things happen? (nux_rate, warm scale)
+// Finding 02 — Negative personal experiences (nux_rate, us003, warm scale)
 // ---------------------------------------------------------------------
 export function Finding02NegativeExperiences() {
   return (
     <FindingPlatformRankedBar
       eyebrow="Finding 02 · Platform comparison"
-      title="Where do bad things happen?"
+      title="Where do people have negative personal experiences?"
       subtitle="Share of platform users reporting a recent negative personal experience on each platform."
       metric="nux_rate"
       colorScale="warm"
-      citationTitle="Where do bad things happen? Platform negative-experience rates"
+      citationTitle="Where do people have negative personal experiences? Platform rates"
       variables={['us003 (nux)']}
       filenameBase="strata_platform_nux"
       buildInterpretation={(ctx) =>
@@ -111,7 +111,7 @@ export function Finding03BadForWorld() {
     <FindingPlatformRankedBar
       eyebrow="Finding 03 · Platform comparison"
       title="Where is content bad for the world?"
-      subtitle="Share of platform users who say a platform’s content is bad for society."
+      subtitle="Share of platform users who say a platform’s content is bad for the world."
       metric="bftw_rate"
       colorScale="warm"
       citationTitle="Where is content bad for the world? Platform bad-for-world rates"
@@ -120,7 +120,7 @@ export function Finding03BadForWorld() {
       buildInterpretation={(ctx) =>
         buildRankedInterpretation(
           ctx,
-          'bad-for-society rates',
+          'bad-for-the-world rates',
         )
       }
     />

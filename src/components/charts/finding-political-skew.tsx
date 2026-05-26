@@ -29,6 +29,7 @@ import {
   formatCI,
   formatN,
   formatNumber,
+  waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
@@ -471,7 +472,7 @@ export function FindingPoliticalSkew() {
                 }
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                W{w} ({dates.split(',')[0]})
+                W{w} ({waveDateRangeLabel(dates)})
               </span>
             </label>
           );

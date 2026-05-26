@@ -27,6 +27,29 @@ import type {
 
 const DATA_BASE = '/data';
 
+// "None" and "Something else" are survey response options on the
+// platform-usage checklist, not platforms. Their rows must never appear
+// in any chart or table — they corrupt platform-experience analyses
+// (a respondent who selected "None" has no platform-specific
+// experience to report, and "Something else" is uncategorized). The
+// filter lives at the data layer so no downstream component can
+// reintroduce them by accident.
+export const EXCLUDED_PLATFORM_SLUGS: ReadonlySet<string> = new Set([
+  'none',
+  'something_else',
+]);
+
+// Per-variable correlation-table tokens that mirror the excluded
+// platform slugs. correlations.json uses variables like
+// `platform_user_none` and `time_per_day_minutes_something_else`,
+// so the slug-tail match below catches both prefixes.
+function isExcludedCorrelationVar(name: string): boolean {
+  for (const slug of EXCLUDED_PLATFORM_SLUGS) {
+    if (name === slug || name.endsWith(`_${slug}`)) return true;
+  }
+  return false;
+}
+
 async function fetchJson<T>(file: string): Promise<T> {
   const res = await fetch(`${DATA_BASE}/${file}`);
   if (!res.ok) {
@@ -51,7 +74,12 @@ let _correlations: Promise<CorrelationRow[]> | null = null;
 let _contextualEvents: Promise<ContextualEventsJson> | null = null;
 
 export function loadMeta(): Promise<MetaJson> {
-  return (_meta ??= fetchJson<MetaJson>('meta.json'));
+  return (_meta ??= fetchJson<MetaJson>('meta.json').then((meta) => ({
+    ...meta,
+    platforms: meta.platforms.filter(
+      (p) => !EXCLUDED_PLATFORM_SLUGS.has(p.slug),
+    ),
+  })));
 }
 
 export function loadTrends(): Promise<TrendRow[]> {
@@ -63,12 +91,18 @@ export function loadDistributions(): Promise<DistributionRow[]> {
 }
 
 export function loadPlatformRates(): Promise<PlatformRateRow[]> {
-  return (_platformRates ??= fetchJson<PlatformRateRow[]>('platform_rates.json'));
+  return (_platformRates ??= fetchJson<PlatformRateRow[]>(
+    'platform_rates.json',
+  ).then((rows) =>
+    rows.filter((r) => !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug)),
+  ));
 }
 
 export function loadConditionalBreakdowns(): Promise<ConditionalBreakdownRow[]> {
   return (_conditional ??= fetchJson<ConditionalBreakdownRow[]>(
     'conditional_breakdowns.json',
+  ).then((rows) =>
+    rows.filter((r) => !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug)),
   ));
 }
 
@@ -76,12 +110,26 @@ export function loadConditionalBreakdowns(): Promise<ConditionalBreakdownRow[]> 
 export function loadGroupComparisons(): Promise<GroupComparisonRow[]> {
   return (_groupComparisons ??= fetchJson<GroupComparisonRow[]>(
     'group_comparisons.json',
+  ).then((rows) =>
+    rows.filter(
+      (r) =>
+        r.platform_slug === null ||
+        !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug),
+    ),
   ));
 }
 
 // LARGE — keep behind a user gesture.
 export function loadCorrelations(): Promise<CorrelationRow[]> {
-  return (_correlations ??= fetchJson<CorrelationRow[]>('correlations.json'));
+  return (_correlations ??= fetchJson<CorrelationRow[]>(
+    'correlations.json',
+  ).then((rows) =>
+    rows.filter(
+      (r) =>
+        !isExcludedCorrelationVar(r.var1) &&
+        !isExcludedCorrelationVar(r.var2),
+    ),
+  ));
 }
 
 export function loadContextualEvents(): Promise<ContextualEventsJson> {

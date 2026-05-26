@@ -18,7 +18,7 @@ const FINDINGS: Finding[] = [
   },
   {
     n: 2,
-    title: 'Where do bad things happen?',
+    title: 'Where do people have negative personal experiences?',
     blurb:
       'Share of users reporting a recent negative personal experience on each platform.',
     chart: 'Ranked horizontal bar',
@@ -28,7 +28,7 @@ const FINDINGS: Finding[] = [
     n: 3,
     title: 'Where is content bad for the world?',
     blurb:
-      'Share of users who say a platform is bad for society, by platform.',
+      'Share of users who say a platform is bad for the world, by platform.',
     chart: 'Ranked horizontal bar',
     href: '/platforms?finding=bftw',
   },

@@ -21,14 +21,14 @@ interface FindingDef {
 const FINDINGS: FindingDef[] = [
   {
     slug: 'negative-experiences',
-    label: 'Where do bad things happen?',
+    label: 'Where do people have negative personal experiences?',
     short: 'Negative experiences',
     render: () => <Finding02NegativeExperiences />,
   },
   {
     slug: 'bftw',
     label: 'Where is content bad for the world?',
-    short: 'Bad for society',
+    short: 'Bad for the world',
     render: () => <Finding03BadForWorld />,
   },
   {

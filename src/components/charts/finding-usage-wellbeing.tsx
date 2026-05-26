@@ -9,6 +9,7 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -21,6 +22,7 @@ import { CHART_FONTS, STRATA_PALETTES } from '@/lib/strata-charts';
 import {
   formatN,
   formatNumber,
+  waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
@@ -123,12 +125,51 @@ function CorrelationTooltip({ active, payload }: BarTooltipProps) {
   );
 }
 
+// Same zig-zag glyph used on /trends (see BrokenAxisIndicator in
+// finding-platform-usage.tsx). Anchored to the bottom-left junction of
+// the plot area so it sits on the X-axis line where the value-axis
+// origin would be when the chart is zoomed off the full [-1, +1] range.
+function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
+  const plotArea = usePlotArea();
+  if (!visible || !plotArea) return null;
+  const xBaseline = plotArea.x;
+  const yBaseline = plotArea.y + plotArea.height;
+  return (
+    <g
+      aria-label="X axis is zoomed (broken axis indicator)"
+      transform={`translate(${xBaseline - 5}, ${yBaseline - 22})`}
+    >
+      <path
+        d="M 0 0 L 10 4 L 0 10 L 10 14 L 0 20"
+        stroke="#605A6B"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </g>
+  );
+}
+
 export function FindingUsageWellbeing() {
   const [rows, setRows] = useState<CorrelationRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [outcomeVar, setOutcomeVar] = useState<string>('ex003c');
+  // Wave: time_per_day_minutes exists in W4 and W5 in correlations.json
+  // (UAS519/W6 has zero entries for this variable, so it's correctly
+  // absent from the precompute). Default to the most recent available
+  // wave; user can switch to compare. `null` means "fall through to the
+  // last availableWave once data has loaded".
+  const [requestedWave, setRequestedWave] = useState<number | null>(null);
+  // X axis zoom mode and custom bounds. Spearman ρ is bounded by
+  // [-1, +1] so 'full' is the only honest default; auto-fitting to data
+  // makes |ρ| = 0.1 look like a major effect, which it isn't.
+  // 'full'   : [-1, +1]
+  // 'fit'    : [min - 0.05, max + 0.05] of visible data, clamped to [-1, 1]
+  // 'custom' : [customMin, customMax], user-entered bounds
+  const [xMode, setXMode] = useState<'full' | 'fit' | 'custom'>('full');
+  const [customMin, setCustomMin] = useState<number>(-1);
+  const [customMax, setCustomMax] = useState<number>(1);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -165,7 +206,10 @@ export function FindingUsageWellbeing() {
     }).map((r) => r.wave))].sort((a, b) => a - b);
   }, [rows, outcomeVar]);
 
-  const selectedWave = availableWaves[availableWaves.length - 1] ?? 5;
+  const selectedWave =
+    requestedWave !== null && availableWaves.includes(requestedWave)
+      ? requestedWave
+      : availableWaves[availableWaves.length - 1] ?? 5;
 
   const chartData = useMemo<ChartDatum[]>(() => {
     if (!rows) return [];
@@ -228,11 +272,29 @@ export function FindingUsageWellbeing() {
       : STRATA_PALETTES.diverging.below;
   };
 
-  const maxAbs = Math.max(
-    0.1,
-    ...chartData.map((d) => Math.abs(d.r)),
-  );
-  const xMax = Math.ceil(maxAbs * 10) / 10 + 0.05;
+  const clampToUnit = (v: number) => Math.max(-1, Math.min(1, v));
+  const xDomain: [number, number] = (() => {
+    if (xMode === 'full') return [-1, 1];
+    if (xMode === 'custom') {
+      const lo = clampToUnit(customMin);
+      const hi = clampToUnit(customMax);
+      if (hi <= lo) return [-1, 1];
+      return [lo, hi];
+    }
+    if (chartData.length === 0) return [-1, 1];
+    let min = Infinity;
+    let max = -Infinity;
+    for (const d of chartData) {
+      if (d.r < min) min = d.r;
+      if (d.r > max) max = d.r;
+    }
+    if (min === Infinity) return [-1, 1];
+    const lo = clampToUnit(Math.floor((min - 0.05) * 100) / 100);
+    const hi = clampToUnit(Math.ceil((max + 0.05) * 100) / 100);
+    if (hi <= lo) return [-1, 1];
+    return [lo, hi];
+  })();
+  const isZoomed = xMode !== 'full';
 
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const weightingLabel =
@@ -267,8 +329,11 @@ export function FindingUsageWellbeing() {
     nonSigCount > 0
       ? `Correlations on the remaining ${nonSigCount} platform${nonSigCount === 1 ? '' : 's'} fall short of statistical significance (p ≥ 0.05) at this wave's sample sizes — interpret as "no detectable association".`
       : '';
-  const caveat =
-    'Spearman ρ is bounded by [-1, +1]; correlations of |ρ| < 0.1 are typically considered small even when statistically meaningful. This is an observational survey: associations do not imply causation. Time-per-day data is only available in W5 in the current precomputed JSON, so this finding is single-wave.';
+  const waveAvailabilityClause =
+    availableWaves.length > 1
+      ? `Time-per-day correlations against this outcome are available in waves ${availableWaves.map((w) => `W${w}`).join(' and ')} in the precomputed JSON; W6 is excluded because UAS519 has zero respondents on the time-per-day item.`
+      : `Time-per-day correlations against this outcome are available only in W${selectedWave} in the precomputed JSON; other waves do not have overlapping respondents on both items.`;
+  const caveat = `Spearman ρ is bounded by [-1, +1]; correlations of |ρ| < 0.1 are typically considered small even when statistically meaningful. This is an observational survey: associations do not imply causation. ${waveAvailabilityClause}`;
   const interpretationText = [
     `Outcome variable: ${selectedOutcome.label}. ${selectedOutcome.direction === 'positive_is_worse' ? 'Higher scores indicate WORSE wellbeing.' : 'Higher scores indicate BETTER wellbeing.'}`,
     moreTimeMore,
@@ -329,7 +394,8 @@ export function FindingUsageWellbeing() {
         />
         <XAxis
           type="number"
-          domain={[-xMax, xMax]}
+          domain={xDomain}
+          allowDataOverflow
           tickFormatter={(v) => formatNumber(v as number, 2)}
           stroke="#605A6B"
           fontFamily={CHART_FONTS.mono}
@@ -367,45 +433,181 @@ export function FindingUsageWellbeing() {
             <Cell key={d.platform_slug} fill={colorForBar(d)} />
           ))}
         </Bar>
+        <BrokenXAxisIndicator visible={isZoomed} />
       </BarChart>
     </ResponsiveContainer>
   );
 
-  // Outcome variable selector.
-  const outcomeSelector = (
-    <div className="space-y-2">
-      <p
-        className="text-xs text-slate uppercase tracking-wide"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        Wellbeing outcome
-      </p>
-      <fieldset className="flex flex-col gap-1 text-sm">
-        <legend className="sr-only">Wellbeing outcome variable</legend>
-        {OUTCOME_OPTIONS.map((o) => (
-          <label
-            key={o.variable}
-            className="flex items-start gap-2 cursor-pointer"
+  // Outcome variable selector, wave selector, and X-axis zoom controls
+  // share the left aside. The X-axis defaults to the full Spearman ρ
+  // range (-1, +1); see PHASE4_UI_SPEC "Axis and Scale Rules" —
+  // auto-fitting to data makes |ρ| ≈ 0.1 look like a large effect,
+  // which it isn't.
+  const controlsAside = (
+    <div className="space-y-5">
+      {availableWaves.length > 1 ? (
+        <div className="space-y-2">
+          <p
+            className="text-xs text-slate uppercase tracking-wide"
+            style={{ fontFamily: 'var(--font-mono)' }}
           >
-            <input
-              type="radio"
-              name="usage-wellbeing-outcome"
-              value={o.variable}
-              checked={outcomeVar === o.variable}
-              onChange={() => setOutcomeVar(o.variable)}
-              className="accent-plum mt-0.5 shrink-0"
-            />
-            <span
-              className={outcomeVar === o.variable ? 'text-ink' : 'text-slate'}
-              style={{ fontFamily: 'var(--font-mono)' }}
+            Wave
+          </p>
+          <fieldset className="flex flex-col gap-1 text-sm">
+            <legend className="sr-only">Select wave</legend>
+            {availableWaves.map((w) => {
+              const dates =
+                meta.waves.find((mw) => mw.wave === w)?.dates ?? '';
+              return (
+                <label
+                  key={w}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <input
+                    type="radio"
+                    name="usage-wellbeing-wave"
+                    value={w}
+                    checked={selectedWave === w}
+                    onChange={() => setRequestedWave(w)}
+                    className="accent-plum"
+                  />
+                  <span
+                    className={
+                      selectedWave === w ? 'text-ink' : 'text-slate'
+                    }
+                    style={{ fontFamily: 'var(--font-mono)' }}
+                  >
+                    W{w} ({waveDateRangeLabel(dates)})
+                  </span>
+                </label>
+              );
+            })}
+          </fieldset>
+        </div>
+      ) : null}
+
+      <div className="space-y-2">
+        <p
+          className="text-xs text-slate uppercase tracking-wide"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Wellbeing outcome
+        </p>
+        <fieldset className="flex flex-col gap-1 text-sm">
+          <legend className="sr-only">Wellbeing outcome variable</legend>
+          {OUTCOME_OPTIONS.map((o) => (
+            <label
+              key={o.variable}
+              className="flex items-start gap-2 cursor-pointer"
             >
-              {o.label}
-            </span>
-          </label>
-        ))}
-      </fieldset>
+              <input
+                type="radio"
+                name="usage-wellbeing-outcome"
+                value={o.variable}
+                checked={outcomeVar === o.variable}
+                onChange={() => setOutcomeVar(o.variable)}
+                className="accent-plum mt-0.5 shrink-0"
+              />
+              <span
+                className={
+                  outcomeVar === o.variable ? 'text-ink' : 'text-slate'
+                }
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {o.label}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+      </div>
+
+      <div className="space-y-2">
+        <p
+          className="text-xs text-slate uppercase tracking-wide"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          X axis
+        </p>
+        <fieldset className="flex flex-col gap-1 text-sm">
+          <legend className="sr-only">X axis zoom mode</legend>
+          {(['full', 'fit', 'custom'] as const).map((mode) => (
+            <label
+              key={mode}
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="usage-wellbeing-x-mode"
+                value={mode}
+                checked={xMode === mode}
+                onChange={() => setXMode(mode)}
+                className="accent-plum"
+              />
+              <span
+                className={xMode === mode ? 'text-ink' : 'text-slate'}
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {mode === 'full'
+                  ? 'Full range (-1.0 to +1.0)'
+                  : mode === 'fit'
+                    ? 'Fit to data'
+                    : 'Custom'}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {xMode === 'custom' ? (
+          <div
+            className="grid grid-cols-2 gap-2 pt-1"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            <label className="flex flex-col gap-1 text-xs text-slate">
+              Min ρ
+              <input
+                type="number"
+                min={-1}
+                max={1}
+                step={0.05}
+                value={customMin}
+                onChange={(e) => setCustomMin(Number(e.target.value))}
+                className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-slate">
+              Max ρ
+              <input
+                type="number"
+                min={-1}
+                max={1}
+                step={0.05}
+                value={customMax}
+                onChange={(e) => setCustomMax(Number(e.target.value))}
+                className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+              />
+            </label>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
+
+  const chartFooter = isZoomed ? (
+    <div
+      className="flex items-center justify-between gap-3 flex-wrap text-xs"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      <span className="text-slate">
+        Note: X axis is zoomed. Full Spearman ρ range (-1, +1) not shown.
+      </span>
+      <button
+        type="button"
+        onClick={() => setXMode('full')}
+        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+      >
+        Reset to full range
+      </button>
+    </div>
+  ) : null;
 
   // Numbers table.
   const numbers = (
@@ -477,12 +679,17 @@ export function FindingUsageWellbeing() {
     <StrataChartFrame
       eyebrow="Finding 08 · Correlations"
       title="Does using social media more mean feeling worse?"
-      subtitle={`Spearman ρ between time-per-day on each platform and a wellbeing/loneliness outcome at W${selectedWave} (${selectedWaveDates}). Time-per-day data is only available in W${selectedWave} in the precomputed JSON, so this is a single-wave snapshot. ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored only when the underlying p-value is below 0.05.`}
+      subtitle={`Spearman ρ between time-per-day on each platform and a wellbeing/loneliness outcome at W${selectedWave} (${selectedWaveDates}). ${
+        availableWaves.length > 1
+          ? `Available in W${availableWaves.join(' and W')} for this outcome — switch waves in the controls.`
+          : `Available only in W${selectedWave} for this outcome (other waves lack overlapping respondents).`
+      } ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored only when the underlying p-value is below 0.05.`}
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
-      controls={outcomeSelector}
+      controls={controlsAside}
+      chartFooter={chartFooter}
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
