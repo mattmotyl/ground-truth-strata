@@ -55,6 +55,11 @@ out/
 next-env.d.ts
 *.pem
 
+# Playwright MCP screenshots — UI verification artifacts stay local
+# (matches the broader Strata convention of keeping audit artifacts
+# under M:\MM\Websites\strata-local\audit\)
+.playwright-mcp/
+
 # Environment variables
 .env
 .env.local

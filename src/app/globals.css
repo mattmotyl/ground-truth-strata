@@ -4,12 +4,37 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* =====================================================================
+ * Strata color palette
+ * Maintain continuity with mattmotyl.com. Hex values are the canonical
+ * brand tokens; oklch values below are derived for shadcn semantic
+ * tokens (which expect oklch in Tailwind v4 + shadcn defaults).
+ *
+ *   --ink      #18161F   primary text, dark backgrounds
+ *   --paper    #F6F3EE   page background, light surfaces
+ *   --plum     #4B2E63   primary brand accent, headers
+ *   --slate    #605A6B   secondary text, labels
+ *   --mist     #E7E1EC   borders, dividers, subtle backgrounds
+ *   --mulberry #7A5A8F   interactive elements, hover states
+ *   --lilac    #B08CC7   dark-mode accent, secondary highlights
+ * ===================================================================== */
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-serif);
+
+  /* Strata brand tokens — usable directly via class names */
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-plum: var(--plum);
+  --color-slate: var(--slate);
+  --color-mist: var(--mist);
+  --color-mulberry: var(--mulberry);
+  --color-lilac: var(--lilac);
+
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,72 +74,55 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  /* Strata brand tokens (hex; do not change without checking mattmotyl.com) */
+  --ink: #18161f;
+  --paper: #f6f3ee;
+  --plum: #4b2e63;
+  --slate: #605a6b;
+  --mist: #e7e1ec;
+  --mulberry: #7a5a8f;
+  --lilac: #b08cc7;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* shadcn semantic tokens mapped to Strata palette */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--plum);
+  --primary-foreground: var(--paper);
+  --secondary: var(--mist);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: var(--slate);
+  --accent: var(--mulberry);
+  --accent-foreground: var(--paper);
+  --destructive: #cc0000;
+  --border: var(--mist);
+  --input: var(--mist);
+  --ring: var(--mulberry);
+
+  /* Chart tokens reserved for shadcn primitives. The actual Strata
+   * chart palettes (warm/cool/political/etc.) are defined in
+   * src/lib/strata-charts.ts and applied per chart, NOT through these
+   * tokens. */
+  --chart-1: var(--plum);
+  --chart-2: var(--mulberry);
+  --chart-3: var(--lilac);
+  --chart-4: var(--slate);
+  --chart-5: var(--mist);
+
+  --radius: 0.375rem;
+
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--plum);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--mist);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--mist);
+  --sidebar-ring: var(--mulberry);
 }
 
 @layer base {
@@ -125,6 +133,20 @@
     @apply bg-background text-foreground;
   }
   html {
-    @apply font-sans;
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif), Georgia, serif;
+    color: var(--plum);
+  }
+  code,
+  kbd,
+  pre,
+  samp,
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
   }
 }
