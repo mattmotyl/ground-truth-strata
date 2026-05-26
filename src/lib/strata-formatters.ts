@@ -124,6 +124,21 @@ export function waveDateRangeLabel(
   return `${parts.startMonth} '${startYY}–${parts.endMonth} '${endYY}`;
 }
 
+// Splits a waveDateRangeLabel ("Mar–May '23" or "Nov '23–Feb '24") into
+// two lines for the X-axis ticks. The split happens immediately after
+// the en-dash so the start-of-window sits on line 1 and the end-of-
+// window sits on line 2:
+//   "Mar–May '23"    -> ["Mar–",      "May '23"]
+//   "Nov '23–Feb '24" -> ["Nov '23–", "Feb '24"]
+// Falls back to [label, ''] if no en-dash is present.
+export function splitWaveLabelLines(
+  label: string,
+): [string, string] {
+  const idx = label.indexOf('–');
+  if (idx === -1) return [label, ''];
+  return [label.slice(0, idx + 1), label.slice(idx + 1).trim()];
+}
+
 // Three-line stack for table column headers. Returns { months, year }
 // where:
 //   months = "Mar–May" or "Nov–Feb"

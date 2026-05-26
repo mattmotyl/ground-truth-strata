@@ -26,6 +26,7 @@ import {
   formatCI,
   formatN,
   formatPercent,
+  splitWaveLabelLines,
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { PlatformWaveTable } from './platform-wave-table';
@@ -271,10 +272,14 @@ function BrokenAxisIndicator({ visible }: { visible: boolean }) {
   if (!visible || !plotArea) return null;
   const xBaseline = plotArea.x;
   const yBaseline = plotArea.y + plotArea.height;
+  // The zig-zag path is 20px tall. Position it so its BOTTOM rests on
+  // the X-axis line (yBaseline). Drawn just inside the plot area at
+  // the bottom of the Y-axis line, not below it. Width is 10px so we
+  // straddle the Y-axis line by 5px on each side.
   return (
     <g
       aria-label="Y axis is zoomed (broken axis indicator)"
-      transform={`translate(${xBaseline - 5}, ${yBaseline + 2})`}
+      transform={`translate(${xBaseline - 5}, ${yBaseline - 22})`}
     >
       <path
         d="M 0 0 L 10 4 L 0 10 L 10 14 L 0 20"
@@ -282,6 +287,47 @@ function BrokenAxisIndicator({ visible }: { visible: boolean }) {
         strokeWidth="1.5"
         fill="none"
       />
+    </g>
+  );
+}
+
+// Custom XAxis tick that renders the wave label on two lines so a long
+// date range like "Nov '23–Feb '24" stays legible without overflowing
+// the column. Splits the label after the en-dash.
+interface AxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+}
+
+function TwoLineXTick(props: AxisTickProps) {
+  const value = props.payload?.value;
+  if (typeof value !== 'string') return null;
+  const [line1, line2] = splitWaveLabelLines(value);
+  return (
+    <g transform={`translate(${props.x ?? 0},${props.y ?? 0})`}>
+      <text
+        x={0}
+        y={0}
+        dy={14}
+        textAnchor="middle"
+        fontFamily="var(--font-mono)"
+        fontSize={12}
+        fill="#605A6B"
+      >
+        {line1}
+      </text>
+      <text
+        x={0}
+        y={0}
+        dy={28}
+        textAnchor="middle"
+        fontFamily="var(--font-mono)"
+        fontSize={12}
+        fill="#605A6B"
+      >
+        {line2}
+      </text>
     </g>
   );
 }
@@ -435,6 +481,9 @@ export function FindingPlatformUsage({
           fontFamily={CHART_FONTS.mono}
           fontSize={12}
           tickMargin={6}
+          height={48}
+          interval={0}
+          tick={<TwoLineXTick />}
         />
         <YAxis
           domain={yDomain}
