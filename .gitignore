@@ -37,11 +37,23 @@ scripts/phase*_recheck_*.R
 # .claude/settings.json IS committed.
 .claude/settings.local.json
 
-# Node
+# Node / Next.js
 node_modules/
 .next/
 out/
 .vercel/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/coverage
+/build
+*.tsbuildinfo
+next-env.d.ts
+*.pem
 
 # Environment variables
 .env
