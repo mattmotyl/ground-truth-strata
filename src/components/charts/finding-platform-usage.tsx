@@ -195,6 +195,14 @@ export function FindingPlatformUsage({
   // click. Hidden lines stay in the legend (so the user can restore
   // them) and stay in the Numbers table (grayed out).
   const [hidden, setHidden] = useState<Set<string>>(() => new Set());
+  // Y axis zoom mode and custom-range bounds (percentages, 0-100).
+  // 'full'   : [0, 1] domain, the default
+  // 'fit'    : [min - 5%, max + 5%] of visible data, clamped to [0, 1]
+  // 'custom' : [customMin/100, customMax/100], user-entered bounds
+  const [yMode, setYMode] =
+    useState<'full' | 'fit' | 'custom'>('full');
+  const [customMin, setCustomMin] = useState<number>(0);
+  const [customMax, setCustomMax] = useState<number>(100);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -248,6 +256,41 @@ export function FindingPlatformUsage({
     (s) => platformLabels.get(s) ?? s,
   );
 
+  // Compute Y domain from current mode + state.
+  const yDomain = useMemo<[number, number]>(() => {
+    if (yMode === 'full') return [0, 1];
+    if (yMode === 'custom') {
+      const lo = Math.max(0, Math.min(100, customMin)) / 100;
+      const hi = Math.max(0, Math.min(100, customMax)) / 100;
+      if (hi <= lo) return [0, 1];
+      return [lo, hi];
+    }
+    // Fit to visible data ±5 percentage points, clamped to [0, 1].
+    if (!rows) return [0, 1];
+    const visibleChartPlatforms = chartPlatforms.filter(
+      (s) => !hidden.has(s),
+    );
+    if (visibleChartPlatforms.length === 0) return [0, 1];
+    let min = Infinity;
+    let max = -Infinity;
+    for (const r of rows) {
+      if (!visibleChartPlatforms.includes(r.platform_slug)) continue;
+      if (r.suppressed) continue;
+      const v =
+        weighting === 'weighted' ? r.weighted_value : r.value;
+      if (v === null) continue;
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
+    if (min === Infinity) return [0, 1];
+    return [
+      Math.max(0, Math.floor((min - 0.05) * 100) / 100),
+      Math.min(1, Math.ceil((max + 0.05) * 100) / 100),
+    ];
+  }, [yMode, customMin, customMax, rows, chartPlatforms, hidden, weighting]);
+
+  const isZoomed = yMode !== 'full';
+
   if (error) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center text-ink/80">
@@ -272,6 +315,7 @@ export function FindingPlatformUsage({
   const wavesSpan = `W${Math.min(...allWaves)}–W${Math.max(...allWaves)}`;
 
   const chart = (
+    <div className="relative">
     <ResponsiveContainer width="100%" height={CHART_HEIGHTS.line}>
       <LineChart
         data={chartData}
@@ -286,7 +330,7 @@ export function FindingPlatformUsage({
           tickMargin={6}
         />
         <YAxis
-          domain={[0, 1]}
+          domain={yDomain}
           tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
           stroke="#605A6B"
           fontFamily={CHART_FONTS.mono}
@@ -347,6 +391,24 @@ export function FindingPlatformUsage({
         ))}
       </LineChart>
     </ResponsiveContainer>
+    {isZoomed ? (
+      <svg
+        aria-label="Y axis is zoomed (broken axis indicator)"
+        className="absolute pointer-events-none"
+        style={{ left: 38, bottom: 36 }}
+        width="14"
+        height="22"
+        viewBox="0 0 14 22"
+      >
+        <path
+          d="M 1 0 L 13 4 L 1 10 L 13 14 L 1 20"
+          stroke="#605A6B"
+          strokeWidth="1.5"
+          fill="none"
+        />
+      </svg>
+    ) : null}
+    </div>
   );
 
   // Hidden-platforms note rendered between chart and Numbers table.
@@ -424,21 +486,111 @@ export function FindingPlatformUsage({
     generatedAt +
     '.';
 
-  const chartFooter = hiddenNote ? (
+  const chartFooter = (
     <div
-      className="flex items-center justify-between gap-3 flex-wrap text-xs"
+      className="space-y-2 text-xs"
       style={{ fontFamily: 'var(--font-mono)' }}
     >
-      <span className="text-slate">{hiddenNote}</span>
-      <button
-        type="button"
-        onClick={showAll}
-        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
-      >
-        Show all
-      </button>
+      {hiddenNote ? (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-slate">{hiddenNote}</span>
+          <button
+            type="button"
+            onClick={showAll}
+            className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+          >
+            Show all
+          </button>
+        </div>
+      ) : null}
+      {isZoomed ? (
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          <span className="text-slate">
+            Note: Y axis is zoomed. Full range not shown.
+          </span>
+          <button
+            type="button"
+            onClick={() => setYMode('full')}
+            className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+          >
+            Reset to full range
+          </button>
+        </div>
+      ) : null}
     </div>
-  ) : null;
+  );
+
+  // Y-axis zoom controls rendered in the controls aside via the
+  // `controls` prop on StrataChartFrame.
+  const yAxisControls = (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        Y axis
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">Y axis zoom mode</legend>
+        {(['full', 'fit', 'custom'] as const).map((mode) => (
+          <label
+            key={mode}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="radio"
+              name="y-mode"
+              value={mode}
+              checked={yMode === mode}
+              onChange={() => setYMode(mode)}
+              className="accent-plum"
+            />
+            <span
+              className={yMode === mode ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {mode === 'full'
+                ? 'Full range (0–100%)'
+                : mode === 'fit'
+                ? 'Fit to data'
+                : 'Custom'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {yMode === 'custom' ? (
+        <div
+          className="grid grid-cols-2 gap-2 pt-1"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            Min %
+            <input
+              type="number"
+              min={0}
+              max={99}
+              step={1}
+              value={customMin}
+              onChange={(e) => setCustomMin(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            Max %
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={customMax}
+              onChange={(e) => setCustomMax(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <StrataChartFrame
@@ -449,6 +601,7 @@ export function FindingPlatformUsage({
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
+      controls={yAxisControls}
       chartFooter={chartFooter}
       customNumbers={
         <PlatformWaveTable
