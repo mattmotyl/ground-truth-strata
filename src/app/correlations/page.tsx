@@ -1,17 +1,9 @@
-import { RouteStub } from '@/components/route-stub';
+import { FindingUsageWellbeing } from '@/components/charts/finding-usage-wellbeing';
 
 export default function CorrelationsPage() {
-  return (
-    <RouteStub
-      eyebrow="Correlations"
-      title="What goes with what?"
-      description="Pairwise Spearman correlations across the variable battery, computed per wave. Pick two variables, see ρ with confidence interval, n, and an epistemic caveat for small samples or small effect sizes."
-      comingNext={[
-        'Variable-pair picker over the full battery (~300 inputs)',
-        'Per-wave scatter with regression line and confidence band',
-        'Weighted/unweighted toggle for ρ',
-        'Lazy-load gating on correlations.json (8.3 MB)',
-      ]}
-    />
-  );
+  // For v0.1.0 the /correlations route shows Finding 08 — Does using
+  // social media more mean feeling worse? — as the default view.
+  // Future milestones will add a finding-selector tab bar (mirroring
+  // /platforms) when more correlation findings ship.
+  return <FindingUsageWellbeing />;
 }
