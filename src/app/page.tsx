@@ -13,7 +13,7 @@ export default function HomePage() {
             width={1253}
             height={1253}
             priority
-            className="w-72 sm:w-80 lg:w-96 h-auto mx-auto lg:mx-0"
+            className="w-64 sm:w-72 lg:w-[22rem] h-auto mx-auto lg:mx-0"
           />
           <div className="space-y-5">
             <h1
@@ -35,21 +35,16 @@ export default function HomePage() {
 
       <section
         className="border-b border-mist bg-mist/30"
-        aria-labelledby="how-to-use-heading"
+        aria-labelledby="before-you-dig-in-heading"
       >
         <div className="mx-auto max-w-6xl px-6 py-10 grid gap-6 lg:grid-cols-[1fr_2fr] items-start">
-          <div>
-            <h2
-              id="how-to-use-heading"
-              className="text-2xl text-plum"
-              style={{ fontFamily: 'var(--font-serif)' }}
-            >
-              How to use Strata
-            </h2>
-            <p className="text-sm text-slate mt-2">
-              Four things to know before you dig in.
-            </p>
-          </div>
+          <h2
+            id="before-you-dig-in-heading"
+            className="text-2xl text-plum"
+            style={{ fontFamily: 'var(--font-serif)' }}
+          >
+            Before you dig in
+          </h2>
           <ol className="grid gap-4 sm:grid-cols-2 text-sm text-ink/85">
             <li className="flex gap-3">
               <span
@@ -111,18 +106,6 @@ export default function HomePage() {
               </span>
             </li>
           </ol>
-        </div>
-        <div className="mx-auto max-w-6xl px-6 pb-8 -mt-4">
-          <p className="text-xs text-slate">
-            Raw data is available via free registration at{' '}
-            <a
-              href="https://uasdata.usc.edu/page/Registration+Form"
-              className="text-mulberry hover:text-plum"
-            >
-              uasdata.usc.edu
-            </a>
-            .
-          </p>
         </div>
       </section>
 

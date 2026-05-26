@@ -600,9 +600,12 @@ export function FindingPlatformUsage({
   // Only Email and YouTube cross the significance threshold W1->W6.
   // The earlier draft claim that TikTok's share had "grown across
   // waves" was unsupported (0.27pp shift against a 3.34pp threshold)
-  // and has been removed.
+  // and has been removed. The "table covers all 23 platforms..."
+  // sentence used to live here but it now lives as a footnote inside
+  // the Numbers box (which sits above the interpretation), so
+  // referring to a table "below" was directionally wrong.
   const interpretationText =
-    'The two highest-usage tools across the panel are workhorse communication channels — text messaging and email — not social-media platforms. Among purely social services, Facebook and YouTube have the broadest reach in the most recent wave (W6), with Instagram a clear third. Two of the eight default platforms show statistically meaningful changes from W1 to W6: email use declined by about 3.8 percentage points and YouTube use declined by about 4.9 points (both exceed their 95% margins of error). The remaining six — text messaging, Facebook, Instagram, FaceTime, TikTok, and Snapchat — remained stable across the six waves; any apparent shifts are within the margin of error. The numbers table below covers all 23 platforms across the six survey waves; hover any cell for its 95% confidence interval and user count.';
+    'The two highest-usage tools across the panel are workhorse communication channels — text messaging and email — not social-media platforms. Among purely social services, Facebook and YouTube have the broadest reach in the most recent wave (W6), with Instagram a clear third. Two of the eight default platforms show statistically meaningful changes from W1 to W6: email use declined by about 3.8 percentage points and YouTube use declined by about 4.9 points (both exceed their 95% margins of error). The remaining six — text messaging, Facebook, Instagram, FaceTime, TikTok, and Snapchat — remained stable across the six waves; any apparent shifts are within the margin of error.';
   const methodologyFootnoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     weightingLabel +
@@ -795,13 +798,23 @@ export function FindingPlatformUsage({
       controls={controlsContent}
       chartFooter={chartFooter}
       customNumbers={
-        <PlatformWaveTable
-          rows={rows}
-          meta={meta}
-          weighting={weighting}
-          hidden={new Set<string>()}
-          swatchBySlug={swatchBySlug}
-        />
+        <>
+          <PlatformWaveTable
+            rows={rows}
+            meta={meta}
+            weighting={weighting}
+            hidden={new Set<string>()}
+            swatchBySlug={swatchBySlug}
+          />
+          <p
+            className="text-xs text-slate italic mt-3"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            Table covers all 23 platforms across the six survey waves.
+            Hover any cell for its 95% confidence interval and user
+            count.
+          </p>
+        </>
       }
       isPlaceholderInterpretation
       interpretation={interpretationText}
