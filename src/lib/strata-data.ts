@@ -19,6 +19,8 @@ import type {
   GroupComparisonRow,
   MetaJson,
   PlatformDef,
+  PlatformDemographicRow,
+  PlatformGroupComparisonRow,
   PlatformRateRow,
   TrendRow,
   VariableDef,
@@ -68,8 +70,10 @@ let _meta: Promise<MetaJson> | null = null;
 let _trends: Promise<TrendRow[]> | null = null;
 let _distributions: Promise<DistributionRow[]> | null = null;
 let _platformRates: Promise<PlatformRateRow[]> | null = null;
+let _platformDemographics: Promise<PlatformDemographicRow[]> | null = null;
 let _conditional: Promise<ConditionalBreakdownRow[]> | null = null;
 let _groupComparisons: Promise<GroupComparisonRow[]> | null = null;
+let _platformGroupComparisons: Promise<PlatformGroupComparisonRow[]> | null = null;
 let _correlations: Promise<CorrelationRow[]> | null = null;
 let _contextualEvents: Promise<ContextualEventsJson> | null = null;
 let _questionTexts: Promise<QuestionTextsJson> | null = null;
@@ -114,6 +118,14 @@ export function loadPlatformRates(): Promise<PlatformRateRow[]> {
   ));
 }
 
+export function loadPlatformDemographics(): Promise<PlatformDemographicRow[]> {
+  return (_platformDemographics ??= fetchJson<PlatformDemographicRow[]>(
+    'platform_demographics.json',
+  ).then((rows) =>
+    rows.filter((r) => !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug)),
+  ));
+}
+
 export function loadConditionalBreakdowns(): Promise<ConditionalBreakdownRow[]> {
   return (_conditional ??= fetchJson<ConditionalBreakdownRow[]>(
     'conditional_breakdowns.json',
@@ -132,6 +144,21 @@ export function loadGroupComparisons(): Promise<GroupComparisonRow[]> {
         r.platform_slug === null ||
         !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug),
     ),
+  ));
+}
+
+// LARGE — keep behind a user gesture. Per-platform outcomes by
+// demographic group (us003/us007/us010/us012 rates + us019_time_min
+// means). Every row's `platform_slug` is non-null. Denominators are
+// conditional on platform use — see the schema docstring on
+// PlatformGroupComparisonRow in strata-types.ts.
+export function loadPlatformGroupComparisons(): Promise<
+  PlatformGroupComparisonRow[]
+> {
+  return (_platformGroupComparisons ??= fetchJson<PlatformGroupComparisonRow[]>(
+    'platform_group_comparisons.json',
+  ).then((rows) =>
+    rows.filter((r) => !EXCLUDED_PLATFORM_SLUGS.has(r.platform_slug)),
   ));
 }
 
@@ -205,8 +232,10 @@ export function __resetStrataCaches(): void {
   _trends = null;
   _distributions = null;
   _platformRates = null;
+  _platformDemographics = null;
   _conditional = null;
   _groupComparisons = null;
+  _platformGroupComparisons = null;
   _correlations = null;
   _contextualEvents = null;
   _questionTexts = null;

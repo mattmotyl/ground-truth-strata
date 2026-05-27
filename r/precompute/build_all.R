@@ -62,7 +62,8 @@ tryCatch({
   for (f in c("meta.json", "trends.json", "distributions.json",
               "platform_rates.json", "platform_demographics.json",
               "conditional_breakdowns.json",
-              "group_comparisons.json", "correlations.json",
+              "group_comparisons.json", "platform_group_comparisons.json",
+              "correlations.json",
               "contextual-events.json")) {
     p <- here("public", "data", f)
     if (file.exists(p)) {
