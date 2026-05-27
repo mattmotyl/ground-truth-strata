@@ -1,5 +1,7 @@
 # Data files — never commit raw or cleaned survey data
 /r/data/
+/r/output/
+/r/clean/
 /r/output/*.csv
 /r/output/*.rds
 /r/output/*.rda

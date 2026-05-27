@@ -19,12 +19,18 @@ suppressPackageStartupMessages({
   library(here)
 })
 
+# Step 0 — Data input
+# all_waves_long.rds is a pre-built input produced from confidential
+# survey data by r/clean/clean_all_waves.R (not in public repo).
+# Obtain this file from Matt before running the precompute pipeline.
+# All steps below assume r/output/cleaned/all_waves_long.rds exists.
+
 steps <- list(
-  list(label = "Clean all waves",            script = here("r", "clean",      "clean_all_waves.R")),
   list(label = "Build meta.json",            script = here("r", "precompute", "build_meta.R")),
   list(label = "Build trends.json",          script = here("r", "precompute", "build_trends.R")),
   list(label = "Build distributions",        script = here("r", "precompute", "build_distributions.R")),
   list(label = "Build platform_rates",       script = here("r", "precompute", "build_platform_rates.R")),
+  list(label = "Build platform_demographics", script = here("r", "precompute", "build_platform_demographics.R")),
   list(label = "Build conditional_breakdowns", script = here("r", "precompute", "build_conditional_breakdowns.R")),
   list(label = "Build group_comparisons",    script = here("r", "precompute", "build_group_comparisons.R")),
   list(label = "Build correlations",         script = here("r", "precompute", "build_correlations.R"))
@@ -54,7 +60,8 @@ tryCatch({
 
   cat("--- Output file sizes ---\n")
   for (f in c("meta.json", "trends.json", "distributions.json",
-              "platform_rates.json", "conditional_breakdowns.json",
+              "platform_rates.json", "platform_demographics.json",
+              "conditional_breakdowns.json",
               "group_comparisons.json", "correlations.json",
               "contextual-events.json")) {
     p <- here("public", "data", f)

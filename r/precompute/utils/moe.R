@@ -14,11 +14,12 @@ ci_from_se <- function(est, se, conf_level = 0.95) {
   list(lower = est - z * se, upper = est + z * se)
 }
 
-# Re-export the cleaning layer's get_moe() — Kish-design-effect-adjusted
-# worst-case MoE for a proportion at 0.5, in percentage points (* 100).
-# Useful for showing a conservative bound alongside actual CIs in the UI.
-# Source from the canonical location so any future fix to the cleaning
-# helper propagates.
+# Re-export get_moe() — Kish-design-effect-adjusted worst-case MoE for
+# a proportion at 0.5, in percentage points (* 100). Useful for showing
+# a conservative bound alongside actual CIs in the UI.
+# Historically lived in r/clean/utils/get_moe.R; copied to
+# r/precompute/utils/ during the v0.1.0 repo cleanup so the public
+# precompute pipeline is self-contained.
 if (!exists("get_moe", mode = "function")) {
-  source(here::here("r", "clean", "utils", "get_moe.R"), local = FALSE)
+  source(here::here("r", "precompute", "utils", "get_moe.R"), local = FALSE)
 }

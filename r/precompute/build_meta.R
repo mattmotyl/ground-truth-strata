@@ -16,6 +16,59 @@ suppressPackageStartupMessages({
   library(jsonlite)
 })
 
+source(here::here("r", "precompute", "utils", "exclusions.R"))
+
+# ── Output exclusions ──────────────────────────────────────────────
+# These exclusions apply to JSON output only. They do NOT affect the
+# cleaned .rds files or the R cleaning scripts.
+# Re-including any of these in a future release is a one-line change.
+
+EXCLUDED_DOMAINS <- c(
+  "AI_ATTITUDES"        # W4+ data unavailable; W1-W3 alone would mislead
+)
+
+EXCLUDED_VARIABLES <- c(
+  # Time-spent items — sparse (us019 absent W6; W4-W5 only)
+  "us019_hours", "us019_minutes",
+
+  # Conditional follow-up items — only valid in conditional_breakdowns.json.
+  # These are asked only of respondents who answered the parent question
+  # affirmatively (e.g., us004 only if us003 = yes). Including them in
+  # general correlations/trends would compute estimates on a selected
+  # subgroup, not the full sample, producing misleading results.
+  "us004", "us005",     # negative experience: impact + topic
+  "us008", "us016",     # bad for world: impact + topic
+  "us025", "us026",     # meaningful connection + useful: topic
+
+  # In-person experience items (us020-us024) intentionally included.
+  # These are the in-person counterparts to platform-indexed experience
+  # items (us002/us003/us007/us010/us012) and appear only in W5-W6.
+  # Build scripts derive waves_present_in_data from the cleaned tibble
+  # so only W5-W6 rows will be emitted — no change needed elsewhere.
+
+  # Administrative / sampling variables
+  "citizenus", "statereside", "primary_respondent",
+  "bornus", "stateborn", "language", "dateofbirth_year",
+  "regis", "cs_001"
+)
+
+# Variables excluded from specific outputs only — not globally excluded.
+# us001 (platform use, binary) is excluded from trends.json and
+# group_comparisons.json because platform_rates.json already covers
+# usage rates. It is INCLUDED in correlations.json — see Step 1a.
+EXCLUDED_VARIABLES_TRENDS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_GROUP_COMPARISONS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_CORRELATIONS <- EXCLUDED_VARIABLES  # us001 intentionally kept
+
+EXCLUDED_SUFFIXES <- c(
+  "_other"              # free-text 'other specify' captures — out of scope
+)
+
+EXCLUDED_TYPES <- c(
+  "STRING_OPEN"         # catches any open-text variables not already excluded
+)
+# ── End exclusions ─────────────────────────────────────────────────
+
 # ---- Sink diagnostic log (per Matt's R-output-via-sink convention) ----
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
 ts        <- format(Sys.time(), "%Y%m%d_%H%M%S")
@@ -43,7 +96,7 @@ tryCatch({
   wave_meta <- read_csv(here("r", "data", "wave_data.csv"), show_col_types = FALSE)
 
   cat("Sourcing r/clean/utils/platform_map.R\n")
-  source(here("r", "clean", "utils", "platform_map.R"), local = TRUE)
+  source(here("r", "precompute", "utils", "platform_map.R"), local = TRUE)
 
   # ---- Platform-indexed prefix lookup (mirrors rename_variables prefix_map) ----
   # Adding a new platform-indexed family means updating BOTH
@@ -339,6 +392,49 @@ tryCatch({
   })
   cat(sprintf("  done in %.1fs\n",
               as.numeric(difftime(Sys.time(), t0, units = "secs"))))
+
+  # ---- Apply output exclusions (Step 1) — flag, don't drop ----
+  # Excluded variables stay in meta.json so consumers like
+  # build_conditional_breakdowns.R can still find their response_options.
+  # Downstream build scripts (trends, platform_rates, group_comparisons,
+  # correlations, distributions) skip flagged variables via
+  # !isTRUE(v$excluded_from_outputs). Per-script vectors
+  # (EXCLUDED_VARIABLES_TRENDS adds us001, etc.) still apply on top of
+  # the flag — see the per-script Filter() calls.
+  #
+  # us001 is intentionally NOT flagged here — it stays available for
+  # build_platform_rates and build_correlations (the latter derives the
+  # platform_user_<slug> binaries from it).
+  reasons <- vapply(variables_out, function(v) {
+    exclusion_reason(v, EXCLUDED_VARIABLES, EXCLUDED_DOMAINS,
+                     EXCLUDED_SUFFIXES, EXCLUDED_TYPES)
+  }, character(1))
+
+  variables_out <- Map(function(v, r) {
+    v$excluded_from_outputs <- nzchar(r)
+    v$exclusion_reason      <- if (nzchar(r)) r else NULL
+    v
+  }, variables_out, reasons)
+
+  n_flagged <- sum(nzchar(reasons))
+  cat(sprintf("\nExclusions applied: flagged %d of %d variables as excluded_from_outputs.\n",
+              n_flagged, length(variables_out)))
+  if (n_flagged > 0) {
+    flagged_reasons <- reasons[nzchar(reasons)]
+    rule_table <- table(flagged_reasons)
+    cat("Flagged variables by rule:\n")
+    for (rule in sort(names(rule_table))) {
+      cat(sprintf("  %-22s %d\n", rule, as.integer(rule_table[[rule]])))
+    }
+    cat("Flagged variables (detail):\n")
+    for (v in variables_out) {
+      if (isTRUE(v$excluded_from_outputs)) {
+        cat(sprintf("  [%-20s] %-30s (%s)\n",
+                    v$exclusion_reason, v$variable_name,
+                    if (!is.null(v$construct)) v$construct else ""))
+      }
+    }
+  }
 
   # ---- Summary diagnostics ----
   avail_counts <- table(vapply(variables_out,
