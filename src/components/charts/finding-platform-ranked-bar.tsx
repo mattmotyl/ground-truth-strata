@@ -14,7 +14,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { loadMeta, loadPlatformRates } from '@/lib/strata-data';
+import {
+  loadMeta,
+  loadPlatformRates,
+  loadQuestionTexts,
+  type QuestionTextsJson,
+} from '@/lib/strata-data';
 import type {
   MetaJson,
   PlatformRateMetric,
@@ -26,9 +31,18 @@ import {
   formatCI,
   formatN,
   formatPercent,
+  fullWaveLabel,
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
+import {
+  formatSurveyQuestion,
+  surveyQuestionFor,
+} from '@/lib/strata-survey';
 import { PlatformWaveTable } from './platform-wave-table';
+import {
+  DEFAULT_CHART_PLATFORMS,
+  PlatformMultiselect,
+} from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
 
@@ -52,6 +66,20 @@ import { type Weighting } from './weighted-toggle';
 // =====================================================================
 
 export type ColorScale = 'warm' | 'cool';
+
+// T2-5: each platform-rate metric is computed from a specific survey
+// item. This mapping lets the chart frame display the survey
+// question (or construct) above the plot — see surveyQuestionFor()
+// in src/lib/strata-survey.ts.
+const METRIC_SOURCE_VARIABLE: Record<PlatformRateMetric, string> = {
+  usage_rate: 'us001',
+  frequency_mean: 'us002',
+  nux_rate: 'us003',
+  bftw_rate: 'us007',
+  mcxn_rate: 'us010',
+  useful_rate: 'us012',
+  time_per_day_minutes: 'us019_time_min',
+};
 
 export interface RankedFindingProps {
   eyebrow: string;
@@ -92,6 +120,22 @@ interface ChartDatum {
   suppressed: boolean;
 }
 
+// All-waves grouped-bar mode (T2-3): one row per platform, with one
+// {value, ciErr, n} triple per available wave. Recharts renders one
+// <Bar dataKey="w{wave}_value"> per wave, grouped side-by-side under
+// the platform's Y-axis category. Time information stays visible —
+// per Matt's rule, we never collapse across waves.
+type AllWavesDatum = {
+  platform_slug: string;
+  platformLabel: string;
+} & {
+  [K in `w${number}_value` | `w${number}_ciHigh` | `w${number}_n`]?:
+    | number
+    | null;
+} & {
+  [K in `w${number}_ciErr`]?: [number, number] | null;
+};
+
 // Bucket a value into 1-of-N color bins. Bin 0 is the lightest (low
 // magnitude); the last bin is the darkest (high magnitude). The chart's
 // max value drives the scaling so colors stretch across the visible
@@ -113,6 +157,34 @@ interface BarTooltipProps {
     value?: unknown;
     payload?: unknown;
   }[];
+}
+
+// Horizontal axis-break zig-zag drawn ON the X-axis line (the bottom
+// edge of the plot area), just inside the Y-axis origin. Signals that
+// the percentage axis has been broken — values to the left of the
+// zig-zag are not shown. Oriented along the X-axis: a small wavy
+// glyph that straddles the axis line by ~4px above and below.
+function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
+  const plotArea = usePlotArea();
+  if (!visible || !plotArea) return null;
+  const xBaseline = plotArea.x;
+  const yBaseline = plotArea.y + plotArea.height;
+  return (
+    <g
+      aria-label="X axis is zoomed (broken axis indicator)"
+      transform={`translate(${xBaseline + 2}, ${yBaseline})`}
+    >
+      {/* White background patch so the glyph reads cleanly over the
+          axis line itself. */}
+      <rect x={-1} y={-5} width={22} height={10} fill="#F6F3EE" />
+      <path
+        d="M 0 0 L 4 -4 L 8 4 L 12 -4 L 16 4 L 20 0"
+        stroke="#605A6B"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </g>
+  );
 }
 
 // Renders one percent label per visible bar at the RIGHT EDGE of the
@@ -137,11 +209,15 @@ function BarCiLabels({ data }: BarCiLabelsProps) {
   // scale variant (`useYAxisScale` doesn't expose bandwidth for the
   // category axis here, so derive from the plot geometry instead).
   const bandStep = plotArea.height / data.length;
+  const plotRight = plotArea.x + plotArea.width;
   return (
     <g aria-label="Bar value labels (positioned beyond CI tips)">
       {data.map((d, i) => {
         const labelX = xScale(d.ciHigh);
         if (typeof labelX !== 'number') return null;
+        // Clip labels whose CI tip falls outside the visible plot area
+        // (happens when the user zooms past the bar's CI tip).
+        if (labelX > plotRight) return null;
         const cy = plotArea.y + (i + 0.5) * bandStep;
         return (
           <text
@@ -191,6 +267,55 @@ function BarTooltip({ active, payload }: BarTooltipProps) {
   );
 }
 
+// All-waves grouped tooltip. The hovered bar's payload includes every
+// wave's value for the platform; we list them so a reader sees the
+// full per-wave trajectory at once.
+interface AllWavesTooltipProps {
+  active?: boolean;
+  payload?: readonly {
+    dataKey?: unknown;
+    payload?: unknown;
+    color?: string;
+  }[];
+  waves: readonly number[];
+}
+function AllWavesTooltip({ active, payload, waves }: AllWavesTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0]?.payload as AllWavesDatum | undefined;
+  if (!datum) return null;
+  return (
+    <div
+      className="bg-white border border-mist rounded-md shadow-sm p-3 text-xs space-y-1 max-w-xs"
+      style={{ fontFamily: CHART_FONTS.mono }}
+    >
+      <div className="text-ink font-medium">{datum.platformLabel}</div>
+      <ul className="space-y-0.5">
+        {waves.map((w) => {
+          const v = datum[`w${w}_value`];
+          const n = datum[`w${w}_n`];
+          if (typeof v !== 'number') {
+            return (
+              <li key={w} className="flex items-baseline gap-2">
+                <span className="text-slate w-14">Wave {w}</span>
+                <span className="text-slate">—</span>
+              </li>
+            );
+          }
+          return (
+            <li key={w} className="flex items-baseline gap-2">
+              <span className="text-slate w-14">Wave {w}</span>
+              <span className="text-ink">{formatPercent(v)}</span>
+              {typeof n === 'number' ? (
+                <span className="text-slate">n={formatN(n)}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 export function FindingPlatformRankedBar({
   eyebrow,
   title,
@@ -204,16 +329,48 @@ export function FindingPlatformRankedBar({
 }: RankedFindingProps) {
   const [allRows, setAllRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const [questionTexts, setQuestionTexts] =
+    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [selectedWave, setSelectedWave] = useState<number>(6);
+  // Platform multiselect — same DEFAULT_CHART_PLATFORMS as Finding 01.
+  // Filters which bars appear in the chart (Numbers table stays whole-
+  // truth: all platforms in this metric across all waves).
+  const [chartPlatforms, setChartPlatforms] = useState<string[]>(
+    () => [...DEFAULT_CHART_PLATFORMS],
+  );
+  // X-axis zoom mode (T2-2 + T2-6). Default is the full 0-100%
+  // percentage range, matching PHASE4_UI_SPEC "Axis and Scale Rules".
+  //   'full'   : [0, 1] — honest default
+  //   'fit'    : [max(0, min-5pp), min(1, max+5pp)] of visible bars
+  //   'custom' : [customMin/100, customMax/100]
+  const [xMode, setXMode] =
+    useState<'full' | 'fit' | 'custom'>('full');
+  const [customMin, setCustomMin] = useState<number>(0);
+  const [customMax, setCustomMax] = useState<number>(100);
+  // T2-3: 'single' (default) renders the current per-wave snapshot;
+  // 'all' renders a grouped bar (one bar per wave per platform) so a
+  // reader can see how each platform's value moved across waves.
+  // Time information stays visible in both modes.
+  const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const chartRef = useRef<HTMLDivElement | null>(null);
 
+  const toggleChartPlatform = (slug: string) => {
+    setChartPlatforms((curr) => {
+      if (curr.includes(slug)) return curr.filter((s) => s !== slug);
+      return [...curr, slug];
+    });
+  };
+  const resetChartPlatforms = () =>
+    setChartPlatforms([...DEFAULT_CHART_PLATFORMS]);
+
   useEffect(() => {
-    Promise.all([loadPlatformRates(), loadMeta()])
-      .then(([rows, m]) => {
+    Promise.all([loadPlatformRates(), loadMeta(), loadQuestionTexts()])
+      .then(([rows, m, qt]) => {
         setAllRows(rows.filter((r) => r.metric === metric));
         setMeta(m);
+        setQuestionTexts(qt);
       })
       .catch(setError);
   }, [metric]);
@@ -242,9 +399,20 @@ export function FindingPlatformRankedBar({
         ? selectedWave
         : availableWaves[availableWaves.length - 1];
 
+  // sortedRows drives the chart AND the interpretation. The platform
+  // multiselect filters here so unchecking a platform drops it from
+  // both. The Numbers table below uses the full allRows independently
+  // so it stays whole-truth.
+  const chartPlatformsSet = useMemo(
+    () => new Set(chartPlatforms),
+    [chartPlatforms],
+  );
   const sortedRows = useMemo(() => {
     if (!allRows) return [] as PlatformRateRow[];
-    const waveRows = allRows.filter((r) => r.wave === effectiveWave);
+    const waveRows = allRows.filter(
+      (r) =>
+        r.wave === effectiveWave && chartPlatformsSet.has(r.platform_slug),
+    );
     return [...waveRows].sort((a, b) => {
       const av =
         a.suppressed
@@ -257,7 +425,7 @@ export function FindingPlatformRankedBar({
       if (av !== bv) return bv - av;
       return a.platform_label.localeCompare(b.platform_label);
     });
-  }, [allRows, effectiveWave, weighting]);
+  }, [allRows, effectiveWave, weighting, chartPlatformsSet]);
 
   const chartData = useMemo<ChartDatum[]>(() => {
     return sortedRows
@@ -286,6 +454,71 @@ export function FindingPlatformRankedBar({
       });
   }, [sortedRows, weighting, platformLabelBySlug]);
 
+  // All-waves grouped-bar data shape. One row per selected platform,
+  // with fields w{wave}_value / w{wave}_ciErr / w{wave}_n / w{wave}_ciHigh.
+  // Sorted by the latest available wave's value descending.
+  const allWavesChartData = useMemo<AllWavesDatum[]>(() => {
+    if (!allRows) return [];
+    const slugs = [...new Set(allRows.map((r) => r.platform_slug))].filter(
+      (s) => chartPlatformsSet.has(s),
+    );
+    const rowsBySlug = new Map<string, AllWavesDatum>();
+    for (const slug of slugs) {
+      rowsBySlug.set(slug, {
+        platform_slug: slug,
+        platformLabel: platformLabelBySlug.get(slug) ?? slug,
+      });
+    }
+    for (const r of allRows) {
+      const datum = rowsBySlug.get(r.platform_slug);
+      if (!datum) continue;
+      if (r.suppressed) {
+        datum[`w${r.wave}_value`] = null;
+        datum[`w${r.wave}_ciErr`] = null;
+        datum[`w${r.wave}_ciHigh`] = null;
+        datum[`w${r.wave}_n`] = null;
+        continue;
+      }
+      const v = (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
+      const lo =
+        (weighting === 'weighted' ? r.weighted_ci_lower : r.ci_lower) ?? v;
+      const hi =
+        (weighting === 'weighted' ? r.weighted_ci_upper : r.ci_upper) ?? v;
+      datum[`w${r.wave}_value`] = v;
+      datum[`w${r.wave}_ciHigh`] = hi;
+      datum[`w${r.wave}_n`] = r.n;
+      if (v !== null && lo !== null && hi !== null) {
+        datum[`w${r.wave}_ciErr`] = [
+          Math.max(0, v - lo),
+          Math.max(0, hi - v),
+        ];
+      } else {
+        datum[`w${r.wave}_ciErr`] = null;
+      }
+    }
+    const data = [...rowsBySlug.values()];
+    // Sort by the latest-available wave's value descending. Falls back
+    // to the prior wave if the latest is null for some platforms.
+    data.sort((a, b) => {
+      const waves = [...availableWaves].reverse();
+      for (const w of waves) {
+        const av = a[`w${w}_value`];
+        const bv = b[`w${w}_value`];
+        if (typeof av === 'number' && typeof bv === 'number') {
+          return bv - av;
+        }
+      }
+      return (a.platformLabel ?? '').localeCompare(b.platformLabel ?? '');
+    });
+    return data;
+  }, [
+    allRows,
+    chartPlatformsSet,
+    platformLabelBySlug,
+    weighting,
+    availableWaves,
+  ]);
+
   if (error) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center text-ink/80">
@@ -308,8 +541,39 @@ export function FindingPlatformRankedBar({
     colorScale === 'warm'
       ? STRATA_PALETTES.harm
       : STRATA_PALETTES.positive;
-  const chartMax = Math.max(0.05, ...chartData.map((d) => d.ciHigh));
-  const xDomainMax = Math.min(1, Math.ceil(chartMax * 10) / 10);
+
+  // X-axis domain (T2-2 + T2-6). Full range default = [0, 1].
+  // Fit-to-data = ±5pp around the visible CI envelope, clamped.
+  // Custom = user-entered [min, max] percentages.
+  const xDomain: [number, number] = (() => {
+    if (xMode === 'full') return [0, 1];
+    if (xMode === 'custom') {
+      const lo = Math.max(0, Math.min(100, customMin)) / 100;
+      const hi = Math.max(0, Math.min(100, customMax)) / 100;
+      if (hi <= lo) return [0, 1];
+      return [lo, hi];
+    }
+    if (chartData.length === 0) return [0, 1];
+    let min = Infinity;
+    let max = -Infinity;
+    for (const d of chartData) {
+      if (d.ciLow < min) min = d.ciLow;
+      if (d.ciHigh > max) max = d.ciHigh;
+    }
+    if (min === Infinity) return [0, 1];
+    return [
+      Math.max(0, Math.floor((min - 0.05) * 100) / 100),
+      Math.min(1, Math.ceil((max + 0.05) * 100) / 100),
+    ];
+  })();
+  // Magnitude scale for bar colors stays bound to visible data so
+  // colors stretch usefully across the displayed bars regardless of
+  // axis zoom — color encodes magnitude, not axis position.
+  const colorScaleMax = Math.max(
+    0.05,
+    ...chartData.map((d) => d.ciHigh),
+  );
+  const isZoomed = xMode !== 'full';
 
   const interpretationText = buildInterpretation({
     meta,
@@ -324,8 +588,11 @@ export function FindingPlatformRankedBar({
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
   const weightingLabel =
     weighting === 'weighted' ? 'Weighted' : 'Unweighted';
-  const wavesSpan = `W${Math.min(...availableWaves)}–W${Math.max(...availableWaves)}`;
-  const fullSubtitle = `${subtitle} Data shown for W${effectiveWave} (${selectedWaveDates}). Use the wave selector to switch waves.`;
+  const wavesSpan = `Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)}`;
+  const fullSubtitle =
+    viewMode === 'all'
+      ? `${subtitle} All available waves shown side-by-side (${wavesSpan}, ${availableWaves.length} waves) per platform. Switch to Single-wave view to compare platforms at one point in time.`
+      : `${subtitle} Data shown for ${fullWaveLabel(effectiveWave, selectedWaveDates)}. Use the wave selector to switch waves, or All-waves view to see every wave for each platform.`;
 
   const csvHeaders = [
     'platform_slug',
@@ -366,18 +633,33 @@ export function FindingPlatformRankedBar({
   chartData.forEach((d) => {
     swatchBySlug.set(
       d.platform_slug,
-      colorForValue(d.value, xDomainMax, palette),
+      colorForValue(d.value, colorScaleMax, palette),
     );
   });
 
   const barHeight = 26;
-  const chartHeight = Math.max(
+  const singleWaveHeight = Math.max(
     260,
     chartData.length * barHeight + 64,
   );
+  // All-waves rendering needs more vertical room — each platform's
+  // band has N bars stacked side-by-side (Recharts groups them within
+  // the category band). ~12px per bar + ~14px inter-platform gap.
+  const allWavesHeight = Math.max(
+    320,
+    allWavesChartData.length *
+      (availableWaves.length * 12 + 14) +
+      64,
+  );
 
-  const chart = (
-    <ResponsiveContainer width="100%" height={chartHeight}>
+  const waveColor = (wave: number): string => {
+    const idx = availableWaves.indexOf(wave);
+    const palette = STRATA_PALETTES.qualitative8;
+    return palette[Math.max(0, idx) % palette.length];
+  };
+
+  const singleWaveChart = (
+    <ResponsiveContainer width="100%" height={singleWaveHeight}>
       <BarChart
         data={chartData}
         layout="vertical"
@@ -386,7 +668,8 @@ export function FindingPlatformRankedBar({
         <CartesianGrid stroke="#E7E1EC" strokeDasharray="3 3" horizontal={false} />
         <XAxis
           type="number"
-          domain={[0, xDomainMax]}
+          domain={xDomain}
+          allowDataOverflow
           tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
           stroke="#605A6B"
           fontFamily={CHART_FONTS.mono}
@@ -413,7 +696,7 @@ export function FindingPlatformRankedBar({
           {chartData.map((d) => (
             <Cell
               key={d.platform_slug}
-              fill={colorForValue(d.value, xDomainMax, palette)}
+              fill={colorForValue(d.value, colorScaleMax, palette)}
             />
           ))}
           <ErrorBar
@@ -425,9 +708,102 @@ export function FindingPlatformRankedBar({
           />
         </Bar>
         <BarCiLabels data={chartData} />
+        <BrokenXAxisIndicator visible={isZoomed} />
       </BarChart>
     </ResponsiveContainer>
   );
+
+  const allWavesChart = (
+    <ResponsiveContainer width="100%" height={allWavesHeight}>
+      <BarChart
+        data={allWavesChartData}
+        layout="vertical"
+        margin={{ top: 8, right: 24, bottom: 16, left: 8 }}
+        barGap={1}
+        barCategoryGap="20%"
+      >
+        <CartesianGrid stroke="#E7E1EC" strokeDasharray="3 3" horizontal={false} />
+        <XAxis
+          type="number"
+          domain={xDomain}
+          allowDataOverflow
+          tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
+          stroke="#605A6B"
+          fontFamily={CHART_FONTS.mono}
+          fontSize={12}
+        />
+        <YAxis
+          dataKey="platformLabel"
+          type="category"
+          width={120}
+          stroke="#605A6B"
+          fontFamily={CHART_FONTS.mono}
+          fontSize={12}
+          tick={{ fill: '#18161F' }}
+        />
+        <Tooltip
+          cursor={{ fill: '#E7E1EC', opacity: 0.4 }}
+          content={(props) => (
+            <AllWavesTooltip {...props} waves={availableWaves} />
+          )}
+        />
+        {availableWaves.map((w) => (
+          <Bar
+            key={w}
+            dataKey={`w${w}_value`}
+            name={`Wave ${w}`}
+            fill={waveColor(w)}
+            radius={[0, 2, 2, 0]}
+            isAnimationActive={false}
+          >
+            <ErrorBar
+              dataKey={`w${w}_ciErr`}
+              direction="x"
+              width={3}
+              stroke="#605A6B"
+              strokeWidth={1}
+            />
+          </Bar>
+        ))}
+        <BrokenXAxisIndicator visible={isZoomed} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  // Compact wave legend for the all-waves chart so a viewer can tie
+  // bar colors to waves without a busy default Recharts Legend.
+  const allWavesLegend = (
+    <div
+      className="flex items-center justify-center gap-4 flex-wrap text-xs mt-2"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      {availableWaves.map((w) => {
+        const dates =
+          meta.waves.find((mw) => mw.wave === w)?.dates ?? '';
+        return (
+          <span key={w} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: waveColor(w) }}
+            />
+            <span className="text-ink">Wave {w}</span>
+            <span className="text-slate">{waveDateRangeLabel(dates)}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  const chart =
+    viewMode === 'all' ? (
+      <>
+        {allWavesChart}
+        {allWavesLegend}
+      </>
+    ) : (
+      singleWaveChart
+    );
 
   const suppressedCount = sortedRows.filter((r) => r.suppressed).length;
   const suppressedNote =
@@ -444,6 +820,41 @@ export function FindingPlatformRankedBar({
     `Source: UAS panel ${wavesSpan} (UAS514–UAS519), 2023–2025. ${weightingLabel} estimates. 95% CIs shown as error bars at bar tips and in hover tooltip. n shown in tooltip is the count of respondents asked about each platform. Cells with n < 30 are suppressed by design${
       suppressedNote ? ` (this wave: ${suppressedNote})` : ''
     }. Precomputed JSON generated ${generatedAt}.`;
+
+  const viewModeToggle = (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        View
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">Chart view mode</legend>
+        {(['single', 'all'] as const).map((mode) => (
+          <label
+            key={mode}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="radio"
+              name={`view-mode-${metric}`}
+              value={mode}
+              checked={viewMode === mode}
+              onChange={() => setViewMode(mode)}
+              className="accent-plum"
+            />
+            <span
+              className={viewMode === mode ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {mode === 'single' ? 'Single wave' : 'All waves'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
 
   const waveSelector = (
     <div className="space-y-2">
@@ -477,7 +888,7 @@ export function FindingPlatformRankedBar({
                 }
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                W{w} ({waveDateRangeLabel(dates)})
+                {fullWaveLabel(w, dates)}
               </span>
             </label>
           );
@@ -486,16 +897,125 @@ export function FindingPlatformRankedBar({
     </div>
   );
 
+  const xAxisControls = (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        X axis
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">X axis zoom mode</legend>
+        {(['full', 'fit', 'custom'] as const).map((mode) => (
+          <label
+            key={mode}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="radio"
+              name={`x-mode-${metric}`}
+              value={mode}
+              checked={xMode === mode}
+              onChange={() => setXMode(mode)}
+              className="accent-plum"
+            />
+            <span
+              className={xMode === mode ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {mode === 'full'
+                ? 'Full range (0–100%)'
+                : mode === 'fit'
+                  ? 'Fit to data'
+                  : 'Custom'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {xMode === 'custom' ? (
+        <div
+          className="grid grid-cols-2 gap-2 pt-1"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            Min %
+            <input
+              type="number"
+              min={0}
+              max={99}
+              step={1}
+              value={customMin}
+              onChange={(e) => setCustomMin(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            Max %
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={customMax}
+              onChange={(e) => setCustomMax(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const controlsAside = (
+    <div className="space-y-5">
+      <PlatformMultiselect
+        platforms={meta.platforms}
+        selected={chartPlatforms}
+        onToggle={toggleChartPlatform}
+        onReset={resetChartPlatforms}
+        swatchBySlug={swatchBySlug}
+      />
+      {viewModeToggle}
+      {viewMode === 'single' ? waveSelector : null}
+      {xAxisControls}
+    </div>
+  );
+
+  const chartFooter = isZoomed ? (
+    <div
+      className="flex items-center justify-between gap-3 flex-wrap text-xs"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      <span className="text-slate">
+        Note: X axis is zoomed. Full range (0–100%) not shown.
+      </span>
+      <button
+        type="button"
+        onClick={() => setXMode('full')}
+        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+      >
+        Reset to full range
+      </button>
+    </div>
+  ) : null;
+
+  const surveyQuestion = formatSurveyQuestion(
+    surveyQuestionFor(METRIC_SOURCE_VARIABLE[metric], questionTexts, meta),
+  );
+
   return (
     <StrataChartFrame
       eyebrow={eyebrow}
       title={title}
       subtitle={fullSubtitle}
+      surveyQuestion={surveyQuestion || undefined}
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
-      controls={waveSelector}
+      controls={controlsAside}
+      chartFooter={chartFooter}
       customNumbers={
         <>
           <PlatformWaveTable

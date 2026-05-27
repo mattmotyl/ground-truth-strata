@@ -1,5 +1,6 @@
 'use client';
 
+import { fullWaveDateRange } from '@/lib/strata-formatters';
 import {
   computePlatformChanges,
   FindingPlatformRankedBar,
@@ -31,8 +32,9 @@ function buildRankedInterpretation(
   metricNoun: string,
 ): string {
   const { selectedWave, meta } = ctx;
-  const selectedDates =
-    meta.waves.find((w) => w.wave === selectedWave)?.dates ?? '';
+  const selectedDates = fullWaveDateRange(
+    meta.waves.find((w) => w.wave === selectedWave)?.dates ?? '',
+  );
   const changes = computePlatformChanges(ctx);
   const eligible = changes.filter((c) => (c.selectedN ?? 0) >= 200);
   const top3 = eligible.slice(0, 3);
@@ -49,7 +51,7 @@ function buildRankedInterpretation(
     changeClause = '';
   } else if (significant.length === 0) {
     changeClause =
-      `No platforms (n ≥ 200) show a statistically meaningful change in ${metricNoun} from W${earliest} to W${selectedWave} at the 95% level.`;
+      `No platforms (n ≥ 200) show a statistically meaningful change in ${metricNoun} from Wave ${earliest} to Wave ${selectedWave} at the 95% level.`;
   } else {
     const sigParts = significant.map((c) => {
       const dir = c.change === 'increased' ? 'higher' : 'lower';
@@ -61,7 +63,7 @@ function buildRankedInterpretation(
       return `${c.label} is ${dir} (${earlierPct} → ${currentPct})`;
     });
     changeClause =
-      `From W${earliest} to W${selectedWave}, ${significant.length} platform(s) show statistically meaningful shifts in ${metricNoun}: ${sigParts.join('; ')}. Remaining platforms in this view remained stable within the 95% margin of error.`;
+      `From Wave ${earliest} to Wave ${selectedWave}, ${significant.length} platform(s) show statistically meaningful shifts in ${metricNoun}: ${sigParts.join('; ')}. Remaining platforms in this view remained stable within the 95% margin of error.`;
   }
   const smallNPlatforms = changes
     .filter((c) => (c.selectedN ?? 0) < 200)
@@ -71,7 +73,7 @@ function buildRankedInterpretation(
       ? ` Platforms with n < 200 in this wave (${smallNPlatforms.join(', ')}) appear in the chart but carry wider confidence intervals — interpret with care.`
       : '';
   return (
-    `In W${selectedWave} (${selectedDates}), the platforms with the highest ${metricNoun} ` +
+    `In Wave ${selectedWave} (${selectedDates}), the platforms with the highest ${metricNoun} ` +
     `(among those with n ≥ 200) are ${topNames} — ${topRates}. ` +
     (changeClause ? changeClause + ' ' : '') +
     'Confidence intervals are shown as error bars at each bar tip and on hover.' +

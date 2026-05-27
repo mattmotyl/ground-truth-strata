@@ -16,12 +16,19 @@ import {
 import {
   loadMeta,
   loadPlatformRates,
+  loadQuestionTexts,
+  type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
   MetaJson,
   PlatformRateRow,
 } from '@/lib/strata-types';
-import { CHART_FONTS, CHART_HEIGHTS, STRATA_PALETTES } from '@/lib/strata-charts';
+import {
+  CHART_FONTS,
+  CHART_HEIGHTS,
+  STRATA_PALETTES,
+  strokeDashForIndex,
+} from '@/lib/strata-charts';
 import {
   formatCI,
   formatN,
@@ -29,25 +36,18 @@ import {
   splitWaveLabelLines,
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
+import {
+  formatSurveyQuestion,
+  surveyQuestionFor,
+} from '@/lib/strata-survey';
 import { PlatformWaveTable } from './platform-wave-table';
+import {
+  DEFAULT_CHART_PLATFORMS,
+  MAX_CHART_PLATFORMS,
+  PlatformMultiselect,
+} from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
-
-// Default chart selection: the 8 platforms with the highest weighted
-// usage rate in W1. The user can swap any of these out via the
-// platform multiselect in the controls aside (cap at MAX_CHART_PLATFORMS).
-const DEFAULT_TOP_8: string[] = [
-  'email',
-  'text_messaging',
-  'youtube',
-  'facebook',
-  'instagram',
-  'facetime',
-  'tiktok',
-  'snapchat',
-];
-
-const MAX_CHART_PLATFORMS = 12;
 
 interface ChartDatum {
   wave: number;
@@ -343,13 +343,15 @@ export function FindingPlatformUsage({
 }: FindingPlatformUsageProps = {}) {
   const [rows, setRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const [questionTexts, setQuestionTexts] =
+    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   // The platforms that have a line in the chart. User-controlled via
   // the multiselect in the controls aside. Capped at
   // MAX_CHART_PLATFORMS (12) for readability.
   const [chartPlatforms, setChartPlatforms] = useState<string[]>(
-    () => initialPlatforms ?? DEFAULT_TOP_8,
+    () => initialPlatforms ?? [...DEFAULT_CHART_PLATFORMS],
   );
   // Y axis zoom mode and custom-range bounds (percentages, 0-100).
   // 'full'   : [0, 1] domain, the default
@@ -362,10 +364,11 @@ export function FindingPlatformUsage({
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    Promise.all([loadPlatformRates(), loadMeta()])
-      .then(([allRows, m]) => {
+    Promise.all([loadPlatformRates(), loadMeta(), loadQuestionTexts()])
+      .then(([allRows, m, qt]) => {
         setRows(allRows.filter((r) => r.metric === 'usage_rate'));
         setMeta(m);
+        setQuestionTexts(qt);
       })
       .catch(setError);
   }, []);
@@ -389,10 +392,21 @@ export function FindingPlatformUsage({
     chartPlatforms.forEach((slug, i) => {
       m.set(
         slug,
-        STRATA_PALETTES.qualitative8[
-          i % STRATA_PALETTES.qualitative8.length
+        STRATA_PALETTES.qualitative16[
+          i % STRATA_PALETTES.qualitative16.length
         ],
       );
+    });
+    return m;
+  }, [chartPlatforms]);
+
+  // Per-slug stroke pattern. Solid for the first 8 lines; dashed for
+  // lines 9-16 so red/green-colorblind visitors get a secondary cue
+  // to tell additional lines apart from the earlier ones.
+  const dashBySlug = useMemo(() => {
+    const m = new Map<string, string | undefined>();
+    chartPlatforms.forEach((slug, i) => {
+      m.set(slug, strokeDashForIndex(i));
     });
     return m;
   }, [chartPlatforms]);
@@ -409,7 +423,8 @@ export function FindingPlatformUsage({
     });
   };
 
-  const resetChartPlatforms = () => setChartPlatforms(DEFAULT_TOP_8);
+  const resetChartPlatforms = () =>
+    setChartPlatforms([...DEFAULT_CHART_PLATFORMS]);
 
   // Compute Y domain from current mode + state.
   const yDomain = useMemo<[number, number]>(() => {
@@ -465,7 +480,7 @@ export function FindingPlatformUsage({
 
   const allWaves = meta.waves.map((w) => w.wave);
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const wavesSpan = `W${Math.min(...allWaves)}–W${Math.max(...allWaves)}`;
+  const wavesSpan = `Wave ${Math.min(...allWaves)}–Wave ${Math.max(...allWaves)}`;
 
   const chart = (
     <div className="relative">
@@ -504,6 +519,7 @@ export function FindingPlatformUsage({
             type="monotone"
             dataKey={slug}
             stroke={swatchBySlug.get(slug) ?? '#605A6B'}
+            strokeDasharray={dashBySlug.get(slug)}
             strokeWidth={2}
             dot={{ r: 3 }}
             activeDot={{ r: 5 }}
@@ -583,29 +599,33 @@ export function FindingPlatformUsage({
   // is described as "remained stable" / "shifts within the margin of
   // error."
   //
-  // For the default DEFAULT_TOP_8 platforms, computed offline from
+  // For the new DEFAULT_CHART_PLATFORMS (traditional social media; see
+  // platform-multiselect.tsx), computed offline from
   // public/data/platform_rates.json (metric=usage_rate, weighted):
   //
-  //   slug             W1 -> W6 (diff)   1.96 * pooled_SE   verdict
+  //   slug         W1 -> W6 (diff)    1.96 * pooled_SE   verdict
   //   ----------------------------------------------------------------
-  //   email            83.3% -> 79.4%  (-3.84pp)   3.12pp   DECREASED
-  //   youtube          66.7% -> 61.9%  (-4.86pp)   3.79pp   DECREASED
-  //   text_messaging   79.7% -> 80.8%  (+1.18pp)   3.23pp   stable
-  //   facebook         66.7% -> 64.2%  (-2.48pp)   3.73pp   stable
-  //   instagram        38.0% -> 40.0%  (+1.99pp)   3.67pp   stable
-  //   facetime         31.3% -> 28.4%  (-2.87pp)   3.46pp   stable
-  //   tiktok           26.9% -> 27.2%  (+0.27pp)   3.34pp   stable
-  //   snapchat         20.0% -> 18.9%  (-1.07pp)   2.86pp   stable
+  //   facebook     66.7% -> 64.2%  (-2.48pp)   3.73pp   stable
+  //   youtube      66.7% -> 61.9%  (-4.86pp)   3.79pp   DECREASED
+  //   instagram    38.0% -> 40.0%  (+1.99pp)   3.67pp   stable
+  //   tiktok       26.9% -> 27.2%  (+0.27pp)   3.34pp   stable
+  //   snapchat     20.0% -> 18.9%  (-1.07pp)   2.86pp   stable
+  //   reddit       11.5% -> 15.5%  (+4.05pp)   2.25pp   INCREASED
+  //   linkedin     18.4% -> 13.9%  (-4.48pp)   2.66pp   DECREASED
+  //   twitter_x    18.5% -> 13.6%  (-4.91pp)   2.74pp   DECREASED
   //
-  // Only Email and YouTube cross the significance threshold W1->W6.
-  // The earlier draft claim that TikTok's share had "grown across
-  // waves" was unsupported (0.27pp shift against a 3.34pp threshold)
-  // and has been removed. The "table covers all 23 platforms..."
-  // sentence used to live here but it now lives as a footnote inside
-  // the Numbers box (which sits above the interpretation), so
-  // referring to a table "below" was directionally wrong.
+  // Four of the eight default platforms cross the significance
+  // threshold W1->W6 (YouTube, Reddit, LinkedIn, X). Reddit is the
+  // only one that increased; the others declined. The remaining four
+  // (Facebook, Instagram, TikTok, Snapchat) shifted within the
+  // margin of error.
+  //
+  // [PLACEHOLDER -- Matt to review]: framing rewritten for the new
+  // default selection; prior copy described email/text_messaging as
+  // the highest-usage tools, which is still true in the underlying
+  // data but those tools are no longer in the default chart view.
   const interpretationText =
-    'The two highest-usage tools across the panel are workhorse communication channels — text messaging and email — not social-media platforms. Among purely social services, Facebook and YouTube have the broadest reach in the most recent wave (W6), with Instagram a clear third. Two of the eight default platforms show statistically meaningful changes from W1 to W6: email use declined by about 3.8 percentage points and YouTube use declined by about 4.9 points (both exceed their 95% margins of error). The remaining six — text messaging, Facebook, Instagram, FaceTime, TikTok, and Snapchat — remained stable across the six waves; any apparent shifts are within the margin of error.';
+    'Among the eight traditional social-media platforms in the default view, Facebook and YouTube have the broadest reach across U.S. adults in the most recent wave (W6), with Instagram a clear third. Four platforms show statistically meaningful changes from W1 to W6: YouTube use declined by about 4.9 percentage points, X (Twitter) by 4.9 points, and LinkedIn by 4.5 points, while Reddit grew by 4.1 points (all exceed their 95% margins of error). Facebook, Instagram, TikTok, and Snapchat remained stable across the six waves; any apparent shifts are within the margin of error. Communication utilities such as text messaging and email reach a larger share of U.S. adults than any of these platforms — toggle them on in the Platforms picker to see their trends.';
   const methodologyFootnoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     weightingLabel +
@@ -703,87 +723,21 @@ export function FindingPlatformUsage({
     </div>
   );
 
-  // Platform multiselect — replaces Round 3's click-to-hide legend
-  // behavior. User picks any subset of the 23 platforms to chart,
-  // up to MAX_CHART_PLATFORMS (12).
-  const platformControls = (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between gap-2">
-        <p
-          className="text-xs text-slate uppercase tracking-wide"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          Platforms ({chartPlatforms.length} of {MAX_CHART_PLATFORMS} max)
-        </p>
-      </div>
-      <ul
-        className="max-h-64 overflow-y-auto border border-mist rounded-md bg-paper px-2 py-1 space-y-0.5"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {meta.platforms.map((p) => {
-          const selected = chartPlatforms.includes(p.slug);
-          const atCap = chartPlatforms.length >= MAX_CHART_PLATFORMS;
-          const disabled = !selected && atCap;
-          const swatch = swatchBySlug.get(p.slug);
-          return (
-            <li key={p.slug}>
-              <label
-                className={
-                  'flex items-center gap-2 text-xs rounded px-1 py-0.5 ' +
-                  (disabled
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'cursor-pointer hover:bg-mist/50')
-                }
-              >
-                <input
-                  type="checkbox"
-                  checked={selected}
-                  disabled={disabled}
-                  onChange={() => toggleChartPlatform(p.slug)}
-                  className="accent-plum"
-                />
-                {swatch ? (
-                  <span
-                    aria-hidden
-                    className="inline-block h-2 w-2 rounded-sm shrink-0"
-                    style={{ backgroundColor: swatch }}
-                  />
-                ) : (
-                  <span className="inline-block h-2 w-2 shrink-0" />
-                )}
-                <span className={selected ? 'text-ink' : 'text-slate'}>
-                  {p.label}
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-      {chartPlatforms.length >= MAX_CHART_PLATFORMS ? (
-        <p
-          className="text-[10px] text-slate italic"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {MAX_CHART_PLATFORMS}-platform maximum reached. Uncheck one to
-          add another.
-        </p>
-      ) : null}
-      <button
-        type="button"
-        onClick={resetChartPlatforms}
-        className="text-xs text-mulberry hover:text-plum underline-offset-2 hover:underline"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        Reset to default 8
-      </button>
+  const controlsContent = (
+    <div className="space-y-5">
+      <PlatformMultiselect
+        platforms={meta.platforms}
+        selected={chartPlatforms}
+        onToggle={toggleChartPlatform}
+        onReset={resetChartPlatforms}
+        swatchBySlug={swatchBySlug}
+      />
+      {yAxisControls}
     </div>
   );
 
-  const controlsContent = (
-    <div className="space-y-5">
-      {platformControls}
-      {yAxisControls}
-    </div>
+  const surveyQuestion = formatSurveyQuestion(
+    surveyQuestionFor('us001', questionTexts, meta),
   );
 
   return (
@@ -791,6 +745,7 @@ export function FindingPlatformUsage({
       eyebrow="Finding 01 · Trends over time"
       title="Who uses what?"
       subtitle={subtitleText}
+      surveyQuestion={surveyQuestion || undefined}
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={chart}

@@ -125,7 +125,7 @@ export default function AboutPage() {
             <tbody>
               {meta.waves.map((w) => (
                 <tr key={w.wave} className="border-b border-mist/60">
-                  <td className="py-2 pr-4">W{w.wave}</td>
+                  <td className="py-2 pr-4">Wave {w.wave}</td>
                   <td className="py-2 pr-4">UAS{w.uas_num}</td>
                   <td className="py-2 pr-4 text-ink">{w.dates}</td>
                   <td className="py-2 pr-4 text-right">

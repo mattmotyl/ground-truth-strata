@@ -27,6 +27,11 @@ interface StrataChartFrameProps {
   filenameBase: string;
   // Optional left-side controls slot (e.g., variable picker, wave filter).
   controls?: ReactNode;
+  // T2-5: optional survey-question (or construct) line displayed
+  // above the chart so a reader knows exactly what was asked of the
+  // respondent for the variable being plotted. Recommend the
+  // surveyQuestionText() helper from src/lib/strata-survey.ts.
+  surveyQuestion?: ReactNode;
   // Optional content rendered immediately under the chart and above
   // the Numbers block — used by Finding 01 for the "Note: X hidden"
   // message and zoom controls.
@@ -50,6 +55,7 @@ export function StrataChartFrame({
   citation,
   filenameBase,
   controls,
+  surveyQuestion,
   chartFooter,
 }: StrataChartFrameProps) {
   return (
@@ -98,8 +104,16 @@ export function StrataChartFrame({
         <div className="space-y-4">
           <div
             ref={chartRef}
-            className="rounded-md border border-mist bg-white p-4"
+            className="rounded-md border border-mist bg-white p-4 space-y-3"
           >
+            {surveyQuestion ? (
+              <h2
+                className="text-base sm:text-lg font-semibold text-ink leading-snug"
+                style={{ fontFamily: 'var(--font-serif)' }}
+              >
+                {surveyQuestion}
+              </h2>
+            ) : null}
             {chart}
           </div>
 

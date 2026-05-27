@@ -10,13 +10,16 @@ import {
   ReferenceLine,
   ResponsiveContainer,
   Tooltip,
+  usePlotArea,
   XAxis,
   YAxis,
 } from 'recharts';
 import {
   loadGroupComparisons,
   loadMeta,
+  loadQuestionTexts,
   loadTrends,
+  type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
   GroupComparisonRow,
@@ -29,8 +32,17 @@ import {
   formatCI,
   formatN,
   formatNumber,
+  fullWaveLabel,
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
+import {
+  formatSurveyQuestion,
+  surveyQuestionFor,
+} from '@/lib/strata-survey';
+import {
+  DEFAULT_CHART_PLATFORMS,
+  PlatformMultiselect,
+} from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
 
@@ -56,6 +68,12 @@ import { type Weighting } from './weighted-toggle';
 
 const OUTCOME = 'rate_self';
 const NATIONAL_VAR = 'rate_self';
+// T2-8 (revised handoff): minimum n for a platform's bar to appear in
+// the chart. Below this floor the estimate is too noisy to compare
+// reliably against the national mean. Threshold revised from 200 → 100
+// after Matt's review — n>=100 is still defensible while keeping
+// more platforms on screen.
+const SMALL_N_FOR_CHART = 100;
 
 interface ChartDatum {
   platform_slug: string;
@@ -63,11 +81,31 @@ interface ChartDatum {
   skew: number;
   skewErr: [number, number];
   platformMean: number;
+  platformSE: number;
   platformCI: [number, number];
   nationalMean: number;
   n: number | null;
   significant: boolean;
 }
+
+// All-waves data shape (T2-3). One row per platform with one
+// {skew, skewErr, n, significant, platformMean, nationalMean} per
+// available wave so the tooltip can read both the per-bar skew and
+// the underlying means.
+type AllWavesDatum = {
+  platform_slug: string;
+  platformLabel: string;
+} & {
+  [K in
+    | `w${number}_skew`
+    | `w${number}_n`
+    | `w${number}_platformMean`
+    | `w${number}_nationalMean`]?: number | null;
+} & {
+  [K in `w${number}_skewErr`]?: [number, number] | null;
+} & {
+  [K in `w${number}_significant`]?: boolean;
+};
 
 interface BarTooltipProps {
   active?: boolean;
@@ -107,18 +145,136 @@ function PoliticalTooltip({ active, payload }: BarTooltipProps) {
   );
 }
 
+// All-waves tooltip: list per-wave skew + n + significance for the
+// hovered platform so a reader sees the full per-wave trajectory.
+interface AllWavesPoliticalTooltipProps {
+  active?: boolean;
+  payload?: readonly { payload?: unknown }[];
+  waves: readonly number[];
+}
+function AllWavesPoliticalTooltip({
+  active,
+  payload,
+  waves,
+}: AllWavesPoliticalTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0]?.payload as AllWavesDatum | undefined;
+  if (!datum) return null;
+  return (
+    <div
+      className="bg-white border border-mist rounded-md shadow-sm p-3 text-xs space-y-1 max-w-xs"
+      style={{ fontFamily: CHART_FONTS.mono }}
+    >
+      <div className="text-ink font-medium">{datum.platformLabel}</div>
+      <ul className="space-y-0.5">
+        {waves.map((w) => {
+          const skew = datum[`w${w}_skew`];
+          const mean = datum[`w${w}_platformMean`];
+          const nat = datum[`w${w}_nationalMean`];
+          const n = datum[`w${w}_n`];
+          const sig = datum[`w${w}_significant`];
+          if (typeof skew !== 'number') {
+            return (
+              <li key={w} className="flex items-baseline gap-2">
+                <span className="text-slate w-14">Wave {w}</span>
+                <span className="text-slate">— (n &lt; {SMALL_N_FOR_CHART})</span>
+              </li>
+            );
+          }
+          return (
+            <li key={w} className="flex items-baseline gap-2 flex-wrap">
+              <span className="text-slate w-14">Wave {w}</span>
+              <span className="text-ink">
+                {skew > 0 ? '+' : ''}
+                {formatNumber(skew, 1)}
+              </span>
+              <span className="text-slate">
+                ({typeof mean === 'number' ? formatNumber(mean, 1) : '—'} vs nat{' '}
+                {typeof nat === 'number' ? formatNumber(nat, 1) : '—'})
+              </span>
+              {typeof n === 'number' ? (
+                <span className="text-slate">n={formatN(n)}</span>
+              ) : null}
+              <span className="text-slate">
+                {sig ? '· meaningful' : '· within MOE'}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+// Horizontal axis-break zig-zag drawn ON the X-axis line (the bottom
+// edge of the plot area), just inside the Y-axis origin. Signals that
+// the diverging axis has been clipped — full +/-50 range is not shown.
+function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
+  const plotArea = usePlotArea();
+  if (!visible || !plotArea) return null;
+  const xBaseline = plotArea.x;
+  const yBaseline = plotArea.y + plotArea.height;
+  return (
+    <g
+      aria-label="X axis is zoomed (broken axis indicator)"
+      transform={`translate(${xBaseline + 2}, ${yBaseline})`}
+    >
+      <rect x={-1} y={-5} width={22} height={10} fill="#F6F3EE" />
+      <path
+        d="M 0 0 L 4 -4 L 8 4 L 12 -4 L 16 4 L 20 0"
+        stroke="#605A6B"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </g>
+  );
+}
+
 export function FindingPoliticalSkew() {
   const [groupRows, setGroupRows] = useState<GroupComparisonRow[] | null>(null);
   const [trendsRows, setTrendsRows] = useState<TrendRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const [questionTexts, setQuestionTexts] =
+    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [selectedWave, setSelectedWave] = useState<number>(6);
+  // Platform multiselect — filters the diverging bars. Numbers table
+  // stays whole-truth (all platforms x all waves).
+  const [chartPlatforms, setChartPlatforms] = useState<string[]>(
+    () => [...DEFAULT_CHART_PLATFORMS],
+  );
+  const toggleChartPlatform = (slug: string) => {
+    setChartPlatforms((curr) => {
+      if (curr.includes(slug)) return curr.filter((s) => s !== slug);
+      return [...curr, slug];
+    });
+  };
+  const resetChartPlatforms = () =>
+    setChartPlatforms([...DEFAULT_CHART_PLATFORMS]);
+  // X-axis zoom (T2-2 + T2-6). The political-ideology scale (rate_self)
+  // runs 0-100; the diverging axis here is (platform mean - national
+  // mean), so the full possible range is symmetric +/-50 — but in
+  // practice U.S. national mean sits near 50 and platform means stay
+  // within +/-15, so default to +/-50 and let users zoom in.
+  const [xMode, setXMode] =
+    useState<'full' | 'fit' | 'custom'>('full');
+  const [customAbs, setCustomAbs] = useState<number>(15);
+  // T2-3: single (default, per-wave snapshot) vs all (grouped diverging
+  // bar — one bar per wave per platform). All-waves mode color-codes
+  // bars by wave, not by significance; the tooltip still surfaces
+  // significance per bar.
+  const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    Promise.all([loadGroupComparisons(), loadTrends(), loadMeta()])
-      .then(([gc, trends, m]) => {
+    Promise.all([
+      loadGroupComparisons(),
+      loadTrends(),
+      loadMeta(),
+      loadQuestionTexts(),
+    ])
+      .then(([gc, trends, m, qt]) => {
         const platformGroupings = new Set(
           m.platforms.map((p) => `platform_user_${p.slug}`),
         );
@@ -132,6 +288,7 @@ export function FindingPoliticalSkew() {
         );
         setTrendsRows(trends.filter((r) => r.variable_name === NATIONAL_VAR));
         setMeta(m);
+        setQuestionTexts(qt);
       })
       .catch(setError);
   }, []);
@@ -162,6 +319,11 @@ export function FindingPoliticalSkew() {
     );
   }, [trendsRows, effectiveWave]);
 
+  const chartPlatformsSet = useMemo(
+    () => new Set(chartPlatforms),
+    [chartPlatforms],
+  );
+
   const chartData = useMemo<ChartDatum[]>(() => {
     if (!groupRows || !nationalRow) return [];
     if (nationalRow.metric_type !== 'mean') return [];
@@ -174,9 +336,18 @@ export function FindingPoliticalSkew() {
         ? nationalRow.weighted_se
         : nationalRow.se) ?? null;
     if (natMean === null || natSE === null) return [];
-    const waveRows = groupRows.filter(
-      (r) => r.wave === effectiveWave && !r.suppressed,
-    );
+    const waveRows = groupRows.filter((r) => {
+      if (r.wave !== effectiveWave) return false;
+      if (r.suppressed) return false;
+      const slug = r.grouping_var.replace(/^platform_user_/, '');
+      if (!chartPlatformsSet.has(slug)) return false;
+      // T2-7: drop chart rows with n < SMALL_N_FOR_CHART so small-n
+      // platforms like Bluesky (n=41) don't dominate the visual
+      // hierarchy with extreme but unreliable estimates. They still
+      // appear in the Numbers table below, flagged.
+      if ((r.n ?? 0) < SMALL_N_FOR_CHART) return false;
+      return true;
+    });
     const data: ChartDatum[] = [];
     for (const r of waveRows) {
       const mean =
@@ -201,6 +372,7 @@ export function FindingPoliticalSkew() {
         // ErrorBar on a diverging bar: half-width = 1.96 * SE_platform
         skewErr: [1.96 * se, 1.96 * se],
         platformMean: mean,
+        platformSE: se,
         platformCI: [lo, hi],
         nationalMean: natMean,
         n: r.n,
@@ -210,7 +382,108 @@ export function FindingPoliticalSkew() {
     // Sort: most liberal (lowest mean / largest negative skew) at the top.
     data.sort((a, b) => a.skew - b.skew);
     return data;
-  }, [groupRows, nationalRow, weighting, effectiveWave, platformLabelBySlug]);
+  }, [
+    groupRows,
+    nationalRow,
+    weighting,
+    effectiveWave,
+    platformLabelBySlug,
+    chartPlatformsSet,
+  ]);
+
+  // National row per wave (used by the all-waves grouped view).
+  const nationalRowByWave = useMemo(() => {
+    if (!trendsRows) return new Map<number, TrendRow>();
+    const m = new Map<number, TrendRow>();
+    for (const r of trendsRows) {
+      if (r.metric_type === 'mean') m.set(r.wave, r);
+    }
+    return m;
+  }, [trendsRows]);
+
+  // All-waves chart data: one row per selected platform with per-wave
+  // skew + CI + n + significance. Sorted by the latest available wave's
+  // skew ascending (most liberal at top), same convention as the
+  // single-wave chart.
+  const allWavesChartData = useMemo<AllWavesDatum[]>(() => {
+    if (!groupRows || availableWaves.length === 0) return [];
+    const slugs = [...chartPlatforms];
+    const rowsBySlug = new Map<string, AllWavesDatum>();
+    for (const slug of slugs) {
+      rowsBySlug.set(slug, {
+        platform_slug: slug,
+        platformLabel: platformLabelBySlug.get(slug) ?? slug,
+      });
+    }
+    for (const wave of availableWaves) {
+      const nat = nationalRowByWave.get(wave);
+      if (!nat || nat.metric_type !== 'mean') continue;
+      const natMean =
+        (weighting === 'weighted' ? nat.weighted_mean : nat.mean) ?? null;
+      const natSE =
+        (weighting === 'weighted' ? nat.weighted_se : nat.se) ?? null;
+      if (natMean === null || natSE === null) continue;
+      for (const slug of slugs) {
+        const r = groupRows.find(
+          (gr) =>
+            gr.grouping_var === `platform_user_${slug}` &&
+            gr.wave === wave &&
+            gr.group === 'User',
+        );
+        const datum = rowsBySlug.get(slug)!;
+        if (!r || r.suppressed || (r.n ?? 0) < SMALL_N_FOR_CHART) {
+          datum[`w${wave}_skew`] = null;
+          datum[`w${wave}_skewErr`] = null;
+          datum[`w${wave}_n`] = r?.n ?? null;
+          datum[`w${wave}_platformMean`] = null;
+          datum[`w${wave}_nationalMean`] = natMean;
+          datum[`w${wave}_significant`] = false;
+          continue;
+        }
+        const mean =
+          (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
+        const se =
+          (weighting === 'weighted' ? r.weighted_se : r.se) ?? null;
+        if (mean === null || se === null) {
+          datum[`w${wave}_skew`] = null;
+          datum[`w${wave}_skewErr`] = null;
+          datum[`w${wave}_n`] = r.n;
+          datum[`w${wave}_platformMean`] = null;
+          datum[`w${wave}_nationalMean`] = natMean;
+          datum[`w${wave}_significant`] = false;
+          continue;
+        }
+        const skew = mean - natMean;
+        const pooled = Math.sqrt(se * se + natSE * natSE);
+        datum[`w${wave}_skew`] = skew;
+        datum[`w${wave}_skewErr`] = [1.96 * se, 1.96 * se];
+        datum[`w${wave}_n`] = r.n;
+        datum[`w${wave}_platformMean`] = mean;
+        datum[`w${wave}_nationalMean`] = natMean;
+        datum[`w${wave}_significant`] = Math.abs(skew) > 1.96 * pooled;
+      }
+    }
+    const data = [...rowsBySlug.values()];
+    data.sort((a, b) => {
+      const waves = [...availableWaves].reverse();
+      for (const w of waves) {
+        const av = a[`w${w}_skew`];
+        const bv = b[`w${w}_skew`];
+        if (typeof av === 'number' && typeof bv === 'number') {
+          return av - bv;
+        }
+      }
+      return (a.platformLabel ?? '').localeCompare(b.platformLabel ?? '');
+    });
+    return data;
+  }, [
+    groupRows,
+    chartPlatforms,
+    availableWaves,
+    nationalRowByWave,
+    weighting,
+    platformLabelBySlug,
+  ]);
 
   if (error) {
     return (
@@ -242,14 +515,24 @@ export function FindingPoliticalSkew() {
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
 
-  // X-axis domain: symmetric around 0 so the diverging effect reads
-  // cleanly. Cap at +/-35 to keep the busy-platform end visible
-  // (Bluesky often pulls out to -30).
-  const maxAbs = Math.max(
-    5,
-    ...chartData.map((d) => Math.abs(d.skew) + d.skewErr[1] + 1),
-  );
-  const xMax = Math.ceil(maxAbs / 5) * 5;
+  // X-axis domain (T2-2 + T2-6). Always symmetric around 0 so the
+  // diverging effect reads cleanly. Full possible range is +/-50
+  // (since rate_self runs 0-100 and the axis is platform mean minus
+  // national mean). Fit mode hugs the visible CI envelope; custom
+  // mode lets the user set |max|.
+  const xMax: number = (() => {
+    if (xMode === 'full') return 50;
+    if (xMode === 'custom') {
+      const v = Math.max(1, Math.min(50, customAbs));
+      return v;
+    }
+    const fitAbs = Math.max(
+      5,
+      ...chartData.map((d) => Math.abs(d.skew) + d.skewErr[1] + 1),
+    );
+    return Math.min(50, Math.ceil(fitAbs / 5) * 5);
+  })();
+  const isZoomed = xMode !== 'full';
 
   // Build the auto-interpretation.
   const significant = chartData.filter((d) => d.significant);
@@ -312,18 +595,20 @@ export function FindingPoliticalSkew() {
         (weighting === 'weighted' ? earlierRow.weighted_value : earlierRow.value) ?? null;
       const ese =
         (weighting === 'weighted' ? earlierRow.weighted_se : earlierRow.se) ?? null;
+      // T2-8: use the platform's weighted_se directly from
+      // group_comparisons.json rather than back-computing SE from
+      // CI width. Avoids floating-point drift and matches the SE
+      // basis used everywhere else (error bars, color-significance).
       const verdict = describeChange(
         ev,
         ese,
         d.platformMean,
-        d.platformCI[1] === d.platformCI[0]
-          ? 0
-          : (d.platformCI[1] - d.platformCI[0]) / (2 * 1.96),
+        d.platformSE,
       );
       if (verdict !== 'stable' && ev !== null) {
         const dir = verdict === 'increased' ? 'more conservative' : 'more liberal';
         waveShiftSentences.push(
-          `${d.platformLabel}'s user base has shifted ${dir} between W${earliestWave} (${formatNumber(ev, 1)}) and W${effectiveWave} (${formatNumber(d.platformMean, 1)}) at the 95% level.`,
+          `${d.platformLabel}'s user base has shifted ${dir} between Wave ${earliestWave} (${formatNumber(ev, 1)}) and Wave ${effectiveWave} (${formatNumber(d.platformMean, 1)}) at the 95% level.`,
         );
       }
     }
@@ -369,10 +654,24 @@ export function FindingPoliticalSkew() {
   ]);
 
   const barHeight = 26;
-  const chartHeight = Math.max(260, chartData.length * barHeight + 60);
+  const singleWaveHeight = Math.max(260, chartData.length * barHeight + 60);
+  // All-waves: each platform's band holds N bars side-by-side.
+  // ~12px per bar + ~14px between platforms.
+  const allWavesHeight = Math.max(
+    320,
+    allWavesChartData.length *
+      (availableWaves.length * 12 + 14) +
+      80,
+  );
 
-  const chart = (
-    <ResponsiveContainer width="100%" height={chartHeight}>
+  const waveColor = (wave: number): string => {
+    const idx = availableWaves.indexOf(wave);
+    const palette = STRATA_PALETTES.qualitative8;
+    return palette[Math.max(0, idx) % palette.length];
+  };
+
+  const singleWaveChart = (
+    <ResponsiveContainer width="100%" height={singleWaveHeight}>
       <BarChart
         data={chartData}
         layout="vertical"
@@ -386,6 +685,7 @@ export function FindingPoliticalSkew() {
         <XAxis
           type="number"
           domain={[-xMax, xMax]}
+          allowDataOverflow
           tickFormatter={(v) => (v as number).toString()}
           stroke="#605A6B"
           fontFamily={CHART_FONTS.mono}
@@ -436,9 +736,122 @@ export function FindingPoliticalSkew() {
             strokeWidth={1}
           />
         </Bar>
+        <BrokenXAxisIndicator visible={isZoomed} />
       </BarChart>
     </ResponsiveContainer>
   );
+
+  // All-waves grouped diverging bar. Bars colored by wave
+  // (qualitative8); significance flagged in the tooltip rather than
+  // via fill, since wave-coding is the primary axis of comparison
+  // in this view.
+  const allWavesChart = (
+    <ResponsiveContainer width="100%" height={allWavesHeight}>
+      <BarChart
+        data={allWavesChartData}
+        layout="vertical"
+        margin={{ top: 16, right: 32, bottom: 24, left: 8 }}
+        barGap={1}
+        barCategoryGap="20%"
+      >
+        <CartesianGrid
+          stroke="#E7E1EC"
+          strokeDasharray="3 3"
+          horizontal={false}
+        />
+        <XAxis
+          type="number"
+          domain={[-xMax, xMax]}
+          allowDataOverflow
+          tickFormatter={(v) => (v as number).toString()}
+          stroke="#605A6B"
+          fontFamily={CHART_FONTS.mono}
+          fontSize={12}
+          label={{
+            value:
+              'Mean ideology − national mean (per wave)  ·  liberal ←   → conservative',
+            position: 'insideBottom',
+            offset: -10,
+            style: {
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              fill: '#605A6B',
+            },
+          }}
+        />
+        <YAxis
+          dataKey="platformLabel"
+          type="category"
+          width={120}
+          stroke="#605A6B"
+          fontFamily={CHART_FONTS.mono}
+          fontSize={12}
+        />
+        <Tooltip
+          cursor={{ fill: '#E7E1EC', opacity: 0.4 }}
+          content={(props) => (
+            <AllWavesPoliticalTooltip
+              {...props}
+              waves={availableWaves}
+            />
+          )}
+        />
+        <ReferenceLine x={0} stroke="#18161F" />
+        {availableWaves.map((w) => (
+          <Bar
+            key={w}
+            dataKey={`w${w}_skew`}
+            name={`Wave ${w}`}
+            fill={waveColor(w)}
+            radius={[2, 2, 2, 2]}
+            isAnimationActive={false}
+          >
+            <ErrorBar
+              dataKey={`w${w}_skewErr`}
+              direction="x"
+              width={3}
+              stroke="#605A6B"
+              strokeWidth={1}
+            />
+          </Bar>
+        ))}
+        <BrokenXAxisIndicator visible={isZoomed} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+
+  const allWavesLegend = (
+    <div
+      className="flex items-center justify-center gap-4 flex-wrap text-xs mt-2"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      {availableWaves.map((w) => {
+        const dates =
+          meta.waves.find((mw) => mw.wave === w)?.dates ?? '';
+        return (
+          <span key={w} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ backgroundColor: waveColor(w) }}
+            />
+            <span className="text-ink">Wave {w}</span>
+            <span className="text-slate">{waveDateRangeLabel(dates)}</span>
+          </span>
+        );
+      })}
+    </div>
+  );
+
+  const chart =
+    viewMode === 'all' ? (
+      <>
+        {allWavesChart}
+        {allWavesLegend}
+      </>
+    ) : (
+      singleWaveChart
+    );
 
   const waveSelector = (
     <div className="space-y-2">
@@ -472,7 +885,7 @@ export function FindingPoliticalSkew() {
                 }
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                W{w} ({waveDateRangeLabel(dates)})
+                {fullWaveLabel(w, dates)}
               </span>
             </label>
           );
@@ -481,26 +894,198 @@ export function FindingPoliticalSkew() {
     </div>
   );
 
-  // Numbers: simple table of platform x wave mean ideology.
-  const allWaves = [...availableWaves];
-  const allPlatforms = chartData.map((d) => d.platform_slug);
+  // Swatch lookup so the multiselect shows each visible platform with
+  // the same color its bar uses in the chart (blue/purple/red for
+  // liberal/moderate/conservative; gray-ish for within-MOE).
+  const swatchBySlug = new Map<string, string>();
+  for (const d of chartData) {
+    swatchBySlug.set(d.platform_slug, colorForSkew(d.skew, d.significant));
+  }
 
-  const tableRows = allPlatforms.map((slug) => {
+  const xAxisControls = (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        X axis
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">X axis zoom mode</legend>
+        {(['full', 'fit', 'custom'] as const).map((mode) => (
+          <label
+            key={mode}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="radio"
+              name="political-x-mode"
+              value={mode}
+              checked={xMode === mode}
+              onChange={() => setXMode(mode)}
+              className="accent-plum"
+            />
+            <span
+              className={xMode === mode ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {mode === 'full'
+                ? 'Full range (−50 to +50)'
+                : mode === 'fit'
+                  ? 'Fit to data'
+                  : 'Custom |max|'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {xMode === 'custom' ? (
+        <div
+          className="pt-1"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            |max|
+            <input
+              type="number"
+              min={1}
+              max={50}
+              step={1}
+              value={customAbs}
+              onChange={(e) => setCustomAbs(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  const viewModeToggle = (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        View
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">Chart view mode</legend>
+        {(['single', 'all'] as const).map((mode) => (
+          <label
+            key={mode}
+            className="flex items-center gap-2 cursor-pointer"
+          >
+            <input
+              type="radio"
+              name="political-view-mode"
+              value={mode}
+              checked={viewMode === mode}
+              onChange={() => setViewMode(mode)}
+              className="accent-plum"
+            />
+            <span
+              className={viewMode === mode ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {mode === 'single' ? 'Single wave' : 'All waves'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
+
+  const controlsAside = (
+    <div className="space-y-5">
+      <PlatformMultiselect
+        platforms={meta.platforms}
+        selected={chartPlatforms}
+        onToggle={toggleChartPlatform}
+        onReset={resetChartPlatforms}
+        swatchBySlug={swatchBySlug}
+      />
+      {viewModeToggle}
+      {viewMode === 'single' ? waveSelector : null}
+      {xAxisControls}
+    </div>
+  );
+
+  const chartFooter = isZoomed ? (
+    <div
+      className="flex items-center justify-between gap-3 flex-wrap text-xs"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      <span className="text-slate">
+        Note: X axis is zoomed. Full range (−50 to +50) not shown.
+      </span>
+      <button
+        type="button"
+        onClick={() => setXMode('full')}
+        className="text-mulberry hover:text-plum underline-offset-2 hover:underline"
+      >
+        Reset to full range
+      </button>
+    </div>
+  ) : null;
+
+  // Numbers: simple table of platform x wave mean ideology. Stays
+  // whole-truth — every platform with a political-ideology row, not
+  // just the multiselect's current chart selection.
+  const allWaves = [...availableWaves];
+  const allTablePlatforms = meta.platforms
+    .map((p) => p.slug)
+    .filter((slug) =>
+      groupRows.some(
+        (gr) => gr.grouping_var === `platform_user_${slug}`,
+      ),
+    );
+
+  // T2-7: each table cell carries both the value and the cell's n so
+  // we can render n<200 cells with a visible flag (italic + small
+  // "n=XX" badge) without dropping them from the table.
+  const SMALL_N = SMALL_N_FOR_CHART;
+  const tableRows = allTablePlatforms.map((slug) => {
     const label = platformLabelBySlug.get(slug) ?? slug;
-    const waveValues = allWaves.map((w) => {
+    const waveCells = allWaves.map((w) => {
       const r = groupRows.find(
         (gr) =>
           gr.grouping_var === `platform_user_${slug}` &&
           gr.wave === w &&
           gr.group === 'User',
       );
-      if (!r || r.suppressed) return null;
+      if (!r || r.suppressed) return { v: null, n: null, smallN: false };
       const v =
         (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
-      return v;
+      const n = r.n ?? null;
+      return { v, n, smallN: n !== null && n < SMALL_N };
     });
-    return { slug, label, waveValues };
+    return { slug, label, waveCells };
   });
+
+  // T2-7: platforms the user selected (or which would appear) but
+  // were dropped from the chart at n<SMALL_N in the selected wave.
+  const excludedFromChart: { label: string; n: number }[] = [];
+  for (const slug of chartPlatforms) {
+    const r = groupRows.find(
+      (gr) =>
+        gr.grouping_var === `platform_user_${slug}` &&
+        gr.wave === effectiveWave &&
+        gr.group === 'User' &&
+        !gr.suppressed,
+    );
+    if (r && (r.n ?? 0) < SMALL_N) {
+      excludedFromChart.push({
+        label: platformLabelBySlug.get(slug) ?? slug,
+        n: r.n ?? 0,
+      });
+    }
+  }
+  const excludedFromChartNote =
+    excludedFromChart.length > 0
+      ? ` Excluded from chart at n < ${SMALL_N} in Wave ${effectiveWave}: ${excludedFromChart
+          .map((e) => `${e.label} (n=${e.n})`)
+          .join(', ')}.`
+      : '';
 
   const numbers = (
     <>
@@ -519,7 +1104,7 @@ export function FindingPoliticalSkew() {
                   key={w}
                   className="text-right font-normal py-2 px-2"
                 >
-                  W{w}
+                  Wave {w}
                 </th>
               ))}
             </tr>
@@ -533,12 +1118,29 @@ export function FindingPoliticalSkew() {
                 >
                   {row.label}
                 </th>
-                {row.waveValues.map((v, i) => (
+                {row.waveCells.map((cell, i) => (
                   <td
                     key={i}
-                    className="text-right py-1.5 px-2 text-ink tabular-nums"
+                    className={
+                      'text-right py-1.5 px-2 text-ink tabular-nums ' +
+                      (cell.smallN ? 'italic text-slate' : '')
+                    }
+                    title={
+                      cell.smallN
+                        ? `n = ${cell.n} (below n=${SMALL_N} reliability floor)`
+                        : undefined
+                    }
                   >
-                    {typeof v === 'number' ? formatNumber(v, 1) : '—'}
+                    {typeof cell.v === 'number' ? (
+                      <>
+                        {formatNumber(cell.v, 1)}
+                        {cell.smallN ? (
+                          <sup className="ml-0.5 text-slate">†</sup>
+                        ) : null}
+                      </>
+                    ) : (
+                      '—'
+                    )}
                   </td>
                 ))}
               </tr>
@@ -555,29 +1157,49 @@ export function FindingPoliticalSkew() {
         selected wave is{' '}
         {formatNumber(chartData[0]?.nationalMean ?? 50, 1)}.
       </p>
+      <p
+        className="text-xs text-slate italic mt-1"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        <sup>†</sup> All numbers with this symbol are based on a small
+        sample size (n &lt; {SMALL_N}) in that wave and should be
+        interpreted with caution. They are excluded from the chart but
+        kept in the table for reference. Hover any flagged cell for
+        its exact n.
+      </p>
     </>
+  );
+
+  const surveyQuestion = formatSurveyQuestion(
+    surveyQuestionFor(OUTCOME, questionTexts, meta),
   );
 
   return (
     <StrataChartFrame
       eyebrow="Finding 07 · Platform comparison"
       title="Which platforms are most politically skewed?"
-      subtitle={`Mean self-reported political ideology (0 = very liberal, 100 = very conservative) of each platform's W${effectiveWave} (${selectedWaveDates}) U.S. adult user base, plotted as a divergence from the national mean of ${formatNumber(
-        chartData[0]?.nationalMean ?? 50,
-        1,
-      )}. The original spec called for a liberal/moderate/conservative composition stack, but the (platform user × ideology tertile) cross is not yet precomputed; mean ideology by user base is the closest available signal. Bars are colored blue when the user base is measurably liberal of the national mean, red when measurably conservative, and purple when within the 95% margin of error.`}
+      surveyQuestion={surveyQuestion || undefined}
+      subtitle={
+        viewMode === 'all'
+          ? `Mean self-reported political ideology (0 = very liberal, 100 = very conservative) of each platform's U.S. adult user base, plotted per wave as a divergence from that wave's national mean. Bars are color-coded by wave so a viewer can read each platform's trajectory across Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)} at a glance. Hover any bar for the per-wave value and whether it is statistically meaningful.`
+          : `Mean self-reported political ideology (0 = very liberal, 100 = very conservative) of each platform's ${fullWaveLabel(effectiveWave, selectedWaveDates)} U.S. adult user base, plotted as a divergence from the national mean of ${formatNumber(
+              chartData[0]?.nationalMean ?? 50,
+              1,
+            )}. The original spec called for a liberal/moderate/conservative composition stack, but the (platform user × ideology tertile) cross is not yet precomputed; mean ideology by user base is the closest available signal. Bars are colored blue when the user base is measurably liberal of the national mean, red when measurably conservative, and purple when within the 95% margin of error.`
+      }
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
-      controls={waveSelector}
+      controls={controlsAside}
+      chartFooter={chartFooter}
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel W${Math.min(...availableWaves)}–W${Math.max(...availableWaves)} (UAS514–UAS519). ${weightingLabel} estimates. Significance vs. the national mean uses pooled SE (sqrt(SE_p² + SE_nat²)); a platform is colored as "skewed" only if |platform mean − national mean| > 1.96 × pooled SE. Error bars on the chart are the platform-user 95% CI. National mean for the selected wave (${formatNumber(
+      methodologyFootnote={`Source: UAS panel Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)} (UAS514–UAS519). ${weightingLabel} estimates. Significance vs. the national mean uses pooled SE (sqrt(SE_p² + SE_nat²)); a platform is colored as "skewed" only if |platform mean − national mean| > 1.96 × pooled SE. Error bars on the chart are the platform-user 95% CI. National mean for the selected wave (${formatNumber(
         chartData[0]?.nationalMean ?? 50,
         1,
-      )}) is computed from trends.json (variable=rate_self). Precomputed JSON generated ${generatedAt}.`}
+      )}) is computed from trends.json (variable=rate_self).${excludedFromChartNote} Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

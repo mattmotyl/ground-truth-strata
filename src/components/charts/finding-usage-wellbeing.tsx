@@ -13,7 +13,12 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { loadCorrelations, loadMeta } from '@/lib/strata-data';
+import {
+  loadCorrelations,
+  loadMeta,
+  loadQuestionTexts,
+  type QuestionTextsJson,
+} from '@/lib/strata-data';
 import type {
   CorrelationRow,
   MetaJson,
@@ -22,8 +27,16 @@ import { CHART_FONTS, STRATA_PALETTES } from '@/lib/strata-charts';
 import {
   formatN,
   formatNumber,
-  waveDateRangeLabel,
+  fullWaveLabel,
 } from '@/lib/strata-formatters';
+import {
+  formatSurveyQuestion,
+  surveyQuestionFor,
+} from '@/lib/strata-survey';
+import {
+  DEFAULT_CHART_PLATFORMS,
+  PlatformMultiselect,
+} from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
 
@@ -125,10 +138,9 @@ function CorrelationTooltip({ active, payload }: BarTooltipProps) {
   );
 }
 
-// Same zig-zag glyph used on /trends (see BrokenAxisIndicator in
-// finding-platform-usage.tsx). Anchored to the bottom-left junction of
-// the plot area so it sits on the X-axis line where the value-axis
-// origin would be when the chart is zoomed off the full [-1, +1] range.
+// Horizontal axis-break zig-zag drawn ON the X-axis line (the bottom
+// edge of the plot area), just inside the Y-axis origin. Signals that
+// the Spearman ρ axis has been clipped from its full [-1, +1] range.
 function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
   const plotArea = usePlotArea();
   if (!visible || !plotArea) return null;
@@ -137,10 +149,11 @@ function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
   return (
     <g
       aria-label="X axis is zoomed (broken axis indicator)"
-      transform={`translate(${xBaseline - 5}, ${yBaseline - 22})`}
+      transform={`translate(${xBaseline + 2}, ${yBaseline})`}
     >
+      <rect x={-1} y={-5} width={22} height={10} fill="#F6F3EE" />
       <path
-        d="M 0 0 L 10 4 L 0 10 L 10 14 L 0 20"
+        d="M 0 0 L 4 -4 L 8 4 L 12 -4 L 16 4 L 20 0"
         stroke="#605A6B"
         strokeWidth="1.5"
         fill="none"
@@ -152,6 +165,8 @@ function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
 export function FindingUsageWellbeing() {
   const [rows, setRows] = useState<CorrelationRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const [questionTexts, setQuestionTexts] =
+    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [outcomeVar, setOutcomeVar] = useState<string>('ex003c');
@@ -170,11 +185,27 @@ export function FindingUsageWellbeing() {
   const [xMode, setXMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState<number>(-1);
   const [customMax, setCustomMax] = useState<number>(1);
+  // Platform multiselect — same DEFAULT_CHART_PLATFORMS as Finding 01.
+  // Filters which correlation rows appear in the chart. Numbers table
+  // mirrors the chart here because the table is built from chartData;
+  // the CSV stays whole-truth (all correlation rows for the wave).
+  const [chartPlatforms, setChartPlatforms] = useState<string[]>(
+    () => [...DEFAULT_CHART_PLATFORMS],
+  );
+  const toggleChartPlatform = (slug: string) => {
+    setChartPlatforms((curr) => {
+      if (curr.includes(slug)) return curr.filter((s) => s !== slug);
+      return [...curr, slug];
+    });
+  };
+  const resetChartPlatforms = () =>
+    setChartPlatforms([...DEFAULT_CHART_PLATFORMS]);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    Promise.all([loadCorrelations(), loadMeta()])
-      .then(([all, m]) => {
+    Promise.all([loadCorrelations(), loadMeta(), loadQuestionTexts()])
+      .then(([all, m, qt]) => {
+        setQuestionTexts(qt);
         // Keep only correlations between any time_per_day_min_<slug>
         // and any of our outcome candidates.
         const outcomeVars = new Set(OUTCOME_OPTIONS.map((o) => o.variable));
@@ -211,6 +242,11 @@ export function FindingUsageWellbeing() {
       ? requestedWave
       : availableWaves[availableWaves.length - 1] ?? 5;
 
+  const chartPlatformsSet = useMemo(
+    () => new Set(chartPlatforms),
+    [chartPlatforms],
+  );
+
   const chartData = useMemo<ChartDatum[]>(() => {
     if (!rows) return [];
     const data: ChartDatum[] = [];
@@ -231,6 +267,7 @@ export function FindingUsageWellbeing() {
       const p = r.p_value ?? 1;
       if (rho === null || n < 30) continue;
       const slug = timeVar.replace(/^time_per_day_min_/, '');
+      if (!chartPlatformsSet.has(slug)) continue;
       data.push({
         platform_slug: slug,
         platformLabel: platformLabelBySlug.get(slug) ?? slug,
@@ -242,7 +279,14 @@ export function FindingUsageWellbeing() {
     }
     data.sort((a, b) => b.r - a.r);
     return data;
-  }, [rows, selectedWave, outcomeVar, weighting, platformLabelBySlug]);
+  }, [
+    rows,
+    selectedWave,
+    outcomeVar,
+    weighting,
+    platformLabelBySlug,
+    chartPlatformsSet,
+  ]);
 
   if (error) {
     return (
@@ -302,43 +346,73 @@ export function FindingUsageWellbeing() {
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === selectedWave)?.dates ?? '';
 
-  // Interpretation copy. Per the project rule: name only statistically
-  // significant correlations and explicitly call out the "feeling
-  // worse" direction so a reader knows which sign means what.
-  const significant = chartData.filter((d) => d.significant);
-  const positiveSig = significant.filter((d) => d.r > 0);
-  const negativeSig = significant.filter((d) => d.r < 0);
-  const worseLabel =
-    selectedOutcome.direction === 'positive_is_worse'
-      ? 'more of the outcome (feeling worse)'
-      : 'more of the outcome (feeling better)';
-  const betterLabel =
-    selectedOutcome.direction === 'positive_is_worse'
-      ? 'less of the outcome (feeling better)'
-      : 'less of the outcome (feeling worse)';
-  const moreTimeMore =
-    positiveSig.length > 0
-      ? `On ${positiveSig.map((d) => `${d.platformLabel} (ρ=${formatNumber(d.r, 3)}, n=${formatN(d.n)})`).join(', ')}, more time per day is associated with ${worseLabel}.`
-      : `No platforms show a statistically meaningful positive correlation between time-per-day and this outcome.`;
-  const moreTimeLess =
-    negativeSig.length > 0
-      ? `On ${negativeSig.map((d) => `${d.platformLabel} (ρ=${formatNumber(d.r, 3)}, n=${formatN(d.n)})`).join(', ')}, more time per day is associated with ${betterLabel}.`
-      : `No platforms show a statistically meaningful negative correlation between time-per-day and this outcome.`;
-  const nonSigCount = chartData.length - significant.length;
-  const nonSigSentence =
-    nonSigCount > 0
-      ? `Correlations on the remaining ${nonSigCount} platform${nonSigCount === 1 ? '' : 's'} fall short of statistical significance (p ≥ 0.05) at this wave's sample sizes — interpret as "no detectable association".`
+  // T2-10 (revised handoff): interpretation leads with EFFECT SIZE,
+  // not p-value. Spearman ρ for social-media correlations is almost
+  // always small in absolute terms (|ρ| < 0.20), so we describe each
+  // platform's correlation by magnitude band first and only mention
+  // p-significance as a caveat. Per feedback_significance_rule.md,
+  // overstating tiny associations as "significant" reads as
+  // overinterpretation.
+  const effectBand = (r: number): 'none' | 'very-small' | 'small' | 'moderate' | 'strong' => {
+    const abs = Math.abs(r);
+    if (abs < 0.05) return 'none';
+    if (abs < 0.10) return 'very-small';
+    if (abs < 0.30) return 'small';
+    if (abs < 0.50) return 'moderate';
+    return 'strong';
+  };
+  const directionWord = (d: ChartDatum): string => {
+    // "more time → MORE outcome" depending on outcome variable sign and ρ sign.
+    const sign = d.r > 0 ? 'positive' : 'negative';
+    const worseDirection = selectedOutcome.direction === 'positive_is_worse';
+    if (sign === 'positive') {
+      return worseDirection
+        ? 'more time per day is associated with slightly worse wellbeing on this outcome'
+        : 'more time per day is associated with slightly better wellbeing on this outcome';
+    }
+    return worseDirection
+      ? 'more time per day is associated with slightly better wellbeing on this outcome'
+      : 'more time per day is associated with slightly worse wellbeing on this outcome';
+  };
+  const platformLine = (d: ChartDatum): string => {
+    const band = effectBand(d.r);
+    const sig = d.significant ? '' : ' — within sampling noise at this n';
+    const ρ = formatNumber(d.r, 3);
+    const n = formatN(d.n);
+    switch (band) {
+      case 'none':
+        return `${d.platformLabel} shows essentially no association (ρ=${ρ}, n=${n})${sig}.`;
+      case 'very-small':
+        return `${d.platformLabel} shows a very small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — close to zero, ${directionWord(d)}, though the effect is tiny.`;
+      case 'small':
+        return `${d.platformLabel} shows a small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}, though the effect is small.`;
+      case 'moderate':
+        return `${d.platformLabel} shows a moderate ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}.`;
+      case 'strong':
+        return `${d.platformLabel} shows a strong ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}.`;
+    }
+  };
+  const notableLines = chartData
+    .filter((d) => effectBand(d.r) !== 'none')
+    .map(platformLine);
+  const nullLines = chartData.filter((d) => effectBand(d.r) === 'none');
+  const notableSection =
+    notableLines.length > 0
+      ? notableLines.join(' ')
+      : 'No platforms show even a small association between time-per-day and this outcome.';
+  const nullSection =
+    nullLines.length > 0
+      ? `The remaining ${nullLines.length} platform${nullLines.length === 1 ? '' : 's'} (${nullLines.map((d) => d.platformLabel).join(', ')}) show essentially no association at this wave's sample size.`
       : '';
   const waveAvailabilityClause =
     availableWaves.length > 1
-      ? `Time-per-day correlations against this outcome are available in waves ${availableWaves.map((w) => `W${w}`).join(' and ')} in the precomputed JSON; W6 is excluded because UAS519 has zero respondents on the time-per-day item.`
-      : `Time-per-day correlations against this outcome are available only in W${selectedWave} in the precomputed JSON; other waves do not have overlapping respondents on both items.`;
-  const caveat = `Spearman ρ is bounded by [-1, +1]; correlations of |ρ| < 0.1 are typically considered small even when statistically meaningful. This is an observational survey: associations do not imply causation. ${waveAvailabilityClause}`;
+      ? `Time-per-day correlations against this outcome are available in ${availableWaves.map((w) => `Wave ${w}`).join(' and ')} in the precomputed JSON; Wave 6 is excluded because UAS519 has zero respondents on the time-per-day item.`
+      : `Time-per-day correlations against this outcome are available only in Wave ${selectedWave} in the precomputed JSON; other waves do not have overlapping respondents on both items.`;
+  const caveat = `Spearman ρ is bounded by [-1, +1]; for context, |ρ| < 0.10 is typically considered very small (often within sampling noise) and |ρ| < 0.30 is still small. This is an observational survey: associations do not imply causation. ${waveAvailabilityClause}`;
   const interpretationText = [
     `Outcome variable: ${selectedOutcome.label}. ${selectedOutcome.direction === 'positive_is_worse' ? 'Higher scores indicate WORSE wellbeing.' : 'Higher scores indicate BETTER wellbeing.'}`,
-    moreTimeMore,
-    moreTimeLess,
-    nonSigSentence,
+    notableSection,
+    nullSection,
     caveat,
   ]
     .filter(Boolean)
@@ -438,13 +512,29 @@ export function FindingUsageWellbeing() {
     </ResponsiveContainer>
   );
 
-  // Outcome variable selector, wave selector, and X-axis zoom controls
-  // share the left aside. The X-axis defaults to the full Spearman ρ
-  // range (-1, +1); see PHASE4_UI_SPEC "Axis and Scale Rules" —
-  // auto-fitting to data makes |ρ| ≈ 0.1 look like a large effect,
-  // which it isn't.
+  // Swatch for the multiselect — match the bar color (teal/amber for
+  // significant +/-, faded gray for non-significant). Only entries for
+  // currently-visible platforms.
+  const swatchBySlug = new Map<string, string>();
+  for (const d of chartData) {
+    swatchBySlug.set(d.platform_slug, colorForBar(d));
+  }
+
+  // Platform multiselect + outcome variable selector + wave selector +
+  // X-axis zoom controls all share the left aside. The X-axis defaults
+  // to the full Spearman ρ range (-1, +1); see PHASE4_UI_SPEC "Axis
+  // and Scale Rules" — auto-fitting to data makes |ρ| ≈ 0.1 look like
+  // a large effect, which it isn't.
   const controlsAside = (
     <div className="space-y-5">
+      <PlatformMultiselect
+        platforms={meta.platforms}
+        selected={chartPlatforms}
+        onToggle={toggleChartPlatform}
+        onReset={resetChartPlatforms}
+        swatchBySlug={swatchBySlug}
+      />
+
       {availableWaves.length > 1 ? (
         <div className="space-y-2">
           <p
@@ -477,7 +567,7 @@ export function FindingUsageWellbeing() {
                     }
                     style={{ fontFamily: 'var(--font-mono)' }}
                   >
-                    W{w} ({waveDateRangeLabel(dates)})
+                    {fullWaveLabel(w, dates)}
                   </span>
                 </label>
               );
@@ -675,14 +765,34 @@ export function FindingUsageWellbeing() {
     </>
   );
 
+  // F08 plots a correlation between TWO variables: a composite
+  // time-per-day-in-minutes measure (built from us019_hours +
+  // us019_minutes; see strata-composites.ts) and the selected
+  // wellbeing/loneliness outcome. Surface both as a single bold
+  // header — predictor first, outcome second — so a reader sees
+  // exactly what's being correlated.
+  const timeInfo = surveyQuestionFor(
+    'time_per_day_minutes',
+    questionTexts,
+    meta,
+  );
+  const outcomeInfo = surveyQuestionFor(outcomeVar, questionTexts, meta);
+  const surveyQuestion = [
+    timeInfo ? `Predictor — ${formatSurveyQuestion(timeInfo)}` : '',
+    outcomeInfo ? `Outcome — ${formatSurveyQuestion(outcomeInfo)}` : '',
+  ]
+    .filter(Boolean)
+    .join('  ·  ');
+
   return (
     <StrataChartFrame
       eyebrow="Finding 08 · Correlations"
       title="Does using social media more mean feeling worse?"
-      subtitle={`Spearman ρ between time-per-day on each platform and a wellbeing/loneliness outcome at W${selectedWave} (${selectedWaveDates}). ${
+      surveyQuestion={surveyQuestion || undefined}
+      subtitle={`Spearman ρ between time-per-day on each platform and a wellbeing/loneliness outcome at ${fullWaveLabel(selectedWave, selectedWaveDates)}. ${
         availableWaves.length > 1
-          ? `Available in W${availableWaves.join(' and W')} for this outcome — switch waves in the controls.`
-          : `Available only in W${selectedWave} for this outcome (other waves lack overlapping respondents).`
+          ? `Available in ${availableWaves.map((w) => `Wave ${w}`).join(' and ')} for this outcome — switch waves in the controls.`
+          : `Available only in Wave ${selectedWave} for this outcome (other waves lack overlapping respondents).`
       } ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored only when the underlying p-value is below 0.05.`}
       weighting={weighting}
       onWeightingChange={setWeighting}
@@ -693,7 +803,7 @@ export function FindingUsageWellbeing() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel W${selectedWave} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). ${weightingLabel} ρ shown. Significance: p < 0.05 from the Spearman test of independence. Faded bars are not statistically meaningful at the 95% level. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
+      methodologyFootnote={`Source: UAS panel Wave ${selectedWave} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). ${weightingLabel} ρ shown. Significance: p < 0.05 from the Spearman test of independence. Faded bars are not statistically meaningful at the 95% level. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

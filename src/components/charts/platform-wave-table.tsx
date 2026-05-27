@@ -174,7 +174,7 @@ export function PlatformWaveTable({
                   scope="col"
                   className="text-right font-normal py-2 px-2"
                 >
-                  <div className="text-ink leading-tight">W{w}</div>
+                  <div className="text-ink leading-tight">Wave {w}</div>
                   <div className="text-[10px] text-slate leading-tight">
                     {months}
                   </div>

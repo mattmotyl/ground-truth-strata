@@ -1,0 +1,1091 @@
+{
+  "generated_at": "2026-05-27T04:12:08.406Z",
+  "variables": {
+    "us001": {
+      "question_text": "[In the past 28 days/4 weeks], which of the following online services have you used? Check the box next to all that apply.",
+      "construct": "Platforms Used (multiselect)",
+      "clean_variable_name": "platforms_used",
+      "is_platform_indexed": false
+    },
+    "us001_other": {
+      "question_text": "Which online communications services that were not listed have you used [in the past 28 days/4 weeks]?",
+      "construct": "Platforms Used — Other (free text)",
+      "clean_variable_name": "platforms_used_other",
+      "is_platform_indexed": false
+    },
+    "us002": {
+      "question_text": "Please indicate how often you have used [platform] [in the past 28 days/4 weeks].",
+      "construct": "Platform Use Frequency",
+      "clean_variable_name": "platform_use_frequency",
+      "is_platform_indexed": true
+    },
+    "us003": {
+      "question_text": "[In the past 28 days/4 weeks/Since the last time you answered on], have you personally witnessed or experienced something that affected you negatively on [platform]?",
+      "construct": "Negative Personal Experience on Platform",
+      "clean_variable_name": "neg_exp_personal",
+      "is_platform_indexed": true
+    },
+    "us004": {
+      "question_text": "What was the impact of your negative experience(s) with [platform]? Check the box next to all that apply.",
+      "construct": "Impact of Negative Personal Experience (multiselect)",
+      "clean_variable_name": "neg_exp_personal_impact",
+      "is_platform_indexed": true
+    },
+    "us004_other": {
+      "question_text": "Free-text follow-up to us004 when 'Other' is selected.",
+      "construct": "Impact of Negative Personal Experience — Other (free text)",
+      "clean_variable_name": "neg_exp_personal_impact_other",
+      "is_platform_indexed": true
+    },
+    "us005": {
+      "question_text": "Did your experience(s) on [platform] relate to any of these topics? Check the box next to all that apply.",
+      "construct": "Negative Personal Experience Topics (multiselect)",
+      "clean_variable_name": "neg_exp_personal_topics",
+      "is_platform_indexed": true
+    },
+    "us006": {
+      "question_text": "In a sentence or two, please describe one experience on [platform] that personally affected you negatively.",
+      "construct": "Description of Negative Personal Experience",
+      "clean_variable_name": "neg_exp_personal_desc",
+      "is_platform_indexed": true
+    },
+    "us007": {
+      "question_text": "[In the past 28 days/4 weeks/Since the last time you answered on], have you witnessed or experienced content that you would consider bad for the world on [platform] (examples could include content that is misleading, hateful, or unnecessarily divisive)?",
+      "construct": "Bad-for-the-World Content Witnessed",
+      "clean_variable_name": "bad_world_witnessed",
+      "is_platform_indexed": true
+    },
+    "us008": {
+      "question_text": "What negative impact do you feel your experience(s) with [platform] could have on the world? Check the box next to all that apply.",
+      "construct": "Bad-for-the-World Impact (multiselect)",
+      "clean_variable_name": "bad_world_impact",
+      "is_platform_indexed": true
+    },
+    "us008_other": {
+      "question_text": "Free-text follow-up to us008 when 'Other' is selected.",
+      "construct": "Bad-for-the-World Impact — Other (free text)",
+      "clean_variable_name": "bad_world_impact_other",
+      "is_platform_indexed": true
+    },
+    "us009": {
+      "question_text": "In a few words, please describe which group(s) would be the likely target of this increase in fear, anger, divisiveness, or hate on [platform]?",
+      "construct": "Bad-for-the-World Target Groups (free text)",
+      "clean_variable_name": "bad_world_targets_desc",
+      "is_platform_indexed": true
+    },
+    "us016": {
+      "question_text": "Did your experience(s) on [platform] relate to any of these topics? Check the box next to all that apply.",
+      "construct": "Bad-for-the-World Topics (multiselect)",
+      "clean_variable_name": "bad_world_topics",
+      "is_platform_indexed": true
+    },
+    "us017": {
+      "question_text": "In a sentence or two, please describe one experience on [platform] with content that you would consider bad for the world.",
+      "construct": "Description of Bad-for-the-World Experience (free text)",
+      "clean_variable_name": "bad_world_desc",
+      "is_platform_indexed": true
+    },
+    "us010": {
+      "question_text": "[In the past 28 days/4 weeks/Since the last time you answered on], have you experienced a meaningful connection with others on [platform] (examples could include exchanging emotional support or bonding over shared experiences)?",
+      "construct": "Meaningful Connection on Platform",
+      "clean_variable_name": "meaningful_connection",
+      "is_platform_indexed": true
+    },
+    "us011": {
+      "question_text": "In a sentence or two, please describe one experience on [platform] where you meaningfully connected with others. Please include who you connected with.",
+      "construct": "Description of Meaningful Connection (free text)",
+      "clean_variable_name": "meaningful_connection_desc",
+      "is_platform_indexed": true
+    },
+    "us012": {
+      "question_text": "[In the past 28 days/4 weeks/Since the last time you answered on], have you learned something that was useful or that helped you understand something important on [platform]?",
+      "construct": "Learned Something Useful on Platform",
+      "clean_variable_name": "learned_useful",
+      "is_platform_indexed": true
+    },
+    "us013": {
+      "question_text": "In a sentence or two, please describe one experience on [platform] where you learned something useful or which helped you understand something important. Please include what you learned.",
+      "construct": "Description of Useful Learning (free text)",
+      "clean_variable_name": "learned_useful_desc",
+      "is_platform_indexed": true
+    },
+    "us014": {
+      "question_text": "[In the past 28 days], have you wanted to post something or make a comment on any online service and then refrained?",
+      "construct": "Refrained From Posting",
+      "clean_variable_name": "refrained_from_posting",
+      "is_platform_indexed": false
+    },
+    "us015": {
+      "question_text": "In a sentence or two, please state why you refrained.",
+      "construct": "Reason for Refraining (free text)",
+      "clean_variable_name": "refrained_from_posting_reason",
+      "is_platform_indexed": false
+    },
+    "us018a": {
+      "question_text": "Using [platform] is something ...that I do automatically",
+      "construct": "Platform Habit/Attitude — that I do automatically",
+      "clean_variable_name": "habit_automatic",
+      "is_platform_indexed": true
+    },
+    "us018b": {
+      "question_text": "Using [platform] is something ...that I do without thinking",
+      "construct": "Platform Habit/Attitude — that I do without thinking",
+      "clean_variable_name": "habit_without_thinking",
+      "is_platform_indexed": true
+    },
+    "us018c": {
+      "question_text": "Using [platform] is something ...that has a positive effect on me",
+      "construct": "Platform Habit/Attitude — that has a positive effect on me",
+      "clean_variable_name": "habit_positive_effect",
+      "is_platform_indexed": true
+    },
+    "us018d": {
+      "question_text": "Using [platform] is something ...that has a negative effect on me",
+      "construct": "Platform Habit/Attitude — that has a negative effect on me",
+      "clean_variable_name": "habit_negative_effect",
+      "is_platform_indexed": true
+    },
+    "us018e": {
+      "question_text": "Using [platform] is something ...that I spend too much time using",
+      "construct": "Platform Habit/Attitude — that I spend too much time using",
+      "clean_variable_name": "habit_too_much_time",
+      "is_platform_indexed": true
+    },
+    "us018f": {
+      "question_text": "Using [platform] is something ...that facilitates my learning and growth",
+      "construct": "Platform Habit/Attitude — that facilitates my learning and growth",
+      "clean_variable_name": "habit_learning_growth",
+      "is_platform_indexed": true
+    },
+    "us018g": {
+      "question_text": "Using [platform] is something ...that strengthens and supports my relationships",
+      "construct": "Platform Habit/Attitude — that strengthens and supports my relationships",
+      "clean_variable_name": "habit_relationships",
+      "is_platform_indexed": true
+    },
+    "us019_hours": {
+      "question_text": "On average, how much time per day did you spend using [platform] over the past 4 weeks? (Hours portion.)",
+      "construct": "Time Per Day on Platform — Hours",
+      "clean_variable_name": "time_per_day_hours_part",
+      "is_platform_indexed": true
+    },
+    "us019_minutes": {
+      "question_text": "On average, how much time per day did you spend using [platform] over the past 4 weeks? (Minutes portion.)",
+      "construct": "Time Per Day on Platform — Minutes",
+      "clean_variable_name": "time_per_day_minutes_part",
+      "is_platform_indexed": true
+    },
+    "us019_time_min": {
+      "question_text": "Total minutes per day spent on the platform, derived from us019_hours * 60 + us019_minutes.",
+      "construct": "Time Per Day on Platform — Total Minutes (derived)",
+      "clean_variable_name": "time_per_day_minutes",
+      "is_platform_indexed": true
+    },
+    "us020": {
+      "question_text": "Please indicate how often you have had in-person interactions in the past 4 weeks.",
+      "construct": "In-Person Interaction Frequency",
+      "clean_variable_name": "inperson_frequency",
+      "is_platform_indexed": false
+    },
+    "us021": {
+      "question_text": "In the past 4 weeks, have you experienced a meaningful connection with others during your in-person interactions?",
+      "construct": "In-Person Meaningful Connection",
+      "clean_variable_name": "inperson_meaningful_connection",
+      "is_platform_indexed": false
+    },
+    "us022": {
+      "question_text": "In the past 4 weeks, have you learned something that was useful or that helped you understand something important during your in-person interactions?",
+      "construct": "In-Person Learned Useful",
+      "clean_variable_name": "inperson_learned_useful",
+      "is_platform_indexed": false
+    },
+    "us023": {
+      "question_text": "In the past 4 weeks, have you witnessed or experienced something that you would consider bad for the world during your in-person interactions?",
+      "construct": "In-Person Bad-for-the-World Experience",
+      "clean_variable_name": "inperson_bad_world",
+      "is_platform_indexed": false
+    },
+    "us024": {
+      "question_text": "In the past 4 weeks, have you personally witnessed or experienced something that affected you negatively during your in-person interactions?",
+      "construct": "In-Person Negative Personal Experience",
+      "clean_variable_name": "inperson_neg_experience",
+      "is_platform_indexed": false
+    },
+    "us025": {
+      "question_text": "Did your experience(s) on [platform] relate to any of these topics? (Asked after us010=Yes; topic codes for the meaningful-connection experience.) Check the box next to all that apply.",
+      "construct": "Meaningful Connection Topics (multiselect, platform-indexed)",
+      "clean_variable_name": "meaningful_connection_topics",
+      "is_platform_indexed": true
+    },
+    "us026": {
+      "question_text": "Did your experience(s) on [platform] relate to any of these topics? (Asked after us012=Yes; topic codes for the useful-learning experience.) Check the box next to all that apply.",
+      "construct": "Learned-Useful Topics (multiselect, platform-indexed)",
+      "clean_variable_name": "learned_useful_topics",
+      "is_platform_indexed": true
+    },
+    "gms001": {
+      "question_text": "I primarily used social media on the following devices (Select all that apply):",
+      "construct": "Social Media Context — Devices (multiselect)",
+      "clean_variable_name": "context_devices",
+      "is_platform_indexed": false
+    },
+    "gms001_other": {
+      "question_text": "Please specify which other unlisted device you used social media on.",
+      "construct": "Social Media Context — Devices Other (free text)",
+      "clean_variable_name": "context_devices_other",
+      "is_platform_indexed": false
+    },
+    "gms002": {
+      "question_text": "I primarily used social media around the following people (Select all that apply):",
+      "construct": "Social Media Context — People (multiselect)",
+      "clean_variable_name": "context_people",
+      "is_platform_indexed": false
+    },
+    "gms003": {
+      "question_text": "I primarily used social media in the following locations (Select all that apply):",
+      "construct": "Social Media Context — Locations (multiselect)",
+      "clean_variable_name": "context_locations",
+      "is_platform_indexed": false
+    },
+    "gms004": {
+      "question_text": "I primarily used social media while also performing the following OFFLINE activities (Select all that apply):",
+      "construct": "Social Media Context — Offline Activities (multiselect)",
+      "clean_variable_name": "context_offline_activities",
+      "is_platform_indexed": false
+    },
+    "gms005": {
+      "question_text": "I primarily used social media when I was in the following types of situations (Select all that apply):",
+      "construct": "Social Media Context — Situations (multiselect)",
+      "clean_variable_name": "context_situations",
+      "is_platform_indexed": false
+    },
+    "ai_concerned": {
+      "question_text": "How concerned or not concerned are you about the increased use of artificial intelligence computer programs in daily life?",
+      "construct": "AI Concern (general)",
+      "clean_variable_name": "ai_concern",
+      "is_platform_indexed": false
+    },
+    "ai_excited": {
+      "question_text": "How excited or not excited are you about the increased use of artificial intelligence computer programs in daily life?",
+      "construct": "AI Excitement (general)",
+      "clean_variable_name": "ai_excitement",
+      "is_platform_indexed": false
+    },
+    "ai_used": {
+      "question_text": "In the past 28 days, have you used any of the following AI services (e.g., ChatGPT, Stable Diffusion)?",
+      "construct": "AI Services Used (multiselect)",
+      "clean_variable_name": "ai_used_types",
+      "is_platform_indexed": false
+    },
+    "ai_used_exp": {
+      "question_text": "In a sentence or two, please describe one experience where you used an AI service. What did you use it for, what were the results, and how did you feel about the experience?",
+      "construct": "AI Used — Experience Description",
+      "clean_variable_name": "ai_used_exp_desc",
+      "is_platform_indexed": false
+    },
+    "ai_effect_a": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on the education of our youth?",
+      "construct": "AI Effect — Education of Youth",
+      "clean_variable_name": "ai_effect_youth_education",
+      "is_platform_indexed": false
+    },
+    "ai_effect_b": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on people's relationships with family and friends?",
+      "construct": "AI Effect — Family/Friend Relationships",
+      "clean_variable_name": "ai_effect_family_friends",
+      "is_platform_indexed": false
+    },
+    "ai_effect_c": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on people's psychological well-being?",
+      "construct": "AI Effect — Psychological Well-Being",
+      "clean_variable_name": "ai_effect_psych_wellbeing",
+      "is_platform_indexed": false
+    },
+    "ai_effect_d": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on the military?",
+      "construct": "AI Effect — Military",
+      "clean_variable_name": "ai_effect_military",
+      "is_platform_indexed": false
+    },
+    "ai_effect_e": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on health care?",
+      "construct": "AI Effect — Health Care",
+      "clean_variable_name": "ai_effect_healthcare",
+      "is_platform_indexed": false
+    },
+    "ai_effect_f": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on minorities and vulnerable groups?",
+      "construct": "AI Effect — Minorities/Vulnerable Groups",
+      "clean_variable_name": "ai_effect_minorities",
+      "is_platform_indexed": false
+    },
+    "ai_effect_g": {
+      "question_text": "Do you feel more excited or more concerned about... The effects of artificial intelligence computer programs on job opportunities for people?",
+      "construct": "AI Effect — Job Opportunities",
+      "clean_variable_name": "ai_effect_jobs",
+      "is_platform_indexed": false
+    },
+    "ai_other_concerns": {
+      "question_text": "Do you have concerns about the increasing use of technology in daily life that were not asked about? Please describe them in a sentence or two.",
+      "construct": "AI/Tech — Other Concerns (free text)",
+      "clean_variable_name": "ai_other_concerns_desc",
+      "is_platform_indexed": false
+    },
+    "ai_ideas": {
+      "question_text": "In a sentence or two, what ideas do you have for making technology better for you and/or for society?",
+      "construct": "AI/Tech — Ideas for Better Tech (free text)",
+      "clean_variable_name": "ai_ideas_desc",
+      "is_platform_indexed": false
+    },
+    "q_ai1": {
+      "question_text": "In the past 4 weeks, have you used applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat?",
+      "construct": "AI Tool Used — Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat)",
+      "clean_variable_name": "ai_tool_used_1",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_1": {
+      "question_text": "You said earlier that you had used applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat) (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_1",
+      "is_platform_indexed": false
+    },
+    "q_ai10_1": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat)) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_1",
+      "is_platform_indexed": false
+    },
+    "q_ai11_1": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat was to you.",
+      "construct": "AI Tool Usefulness Rating — Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat) (battery)",
+      "clean_variable_name": "ai_tool_usefulness_1",
+      "is_platform_indexed": false
+    },
+    "q_ai12_1": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat)) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_1",
+      "is_platform_indexed": false
+    },
+    "q_ai13_1": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of applications that use AI to generate human-like text or code, such as ChatGPT, Bard, or Bing Chat was to you.",
+      "construct": "AI Tool Harmfulness Rating — Text/Code Generation (e.g., ChatGPT, Bard, Bing Chat) (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_1",
+      "is_platform_indexed": false
+    },
+    "q_ai2": {
+      "question_text": "In the past 4 weeks, have you used applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion?",
+      "construct": "AI Tool Used — Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion)",
+      "clean_variable_name": "ai_tool_used_2",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_2": {
+      "question_text": "You said earlier that you had used applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion) (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_2",
+      "is_platform_indexed": false
+    },
+    "q_ai10_2": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion)) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_2",
+      "is_platform_indexed": false
+    },
+    "q_ai11_2": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion was to you.",
+      "construct": "AI Tool Usefulness Rating — Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion) (battery)",
+      "clean_variable_name": "ai_tool_usefulness_2",
+      "is_platform_indexed": false
+    },
+    "q_ai12_2": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion)) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_2",
+      "is_platform_indexed": false
+    },
+    "q_ai13_2": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of applications that use AI to generate images or video from a text description, such as Midjourney, DALL-E, or Stable Diffusion was to you.",
+      "construct": "AI Tool Harmfulness Rating — Image/Video Generation (e.g., Midjourney, DALL-E, Stable Diffusion) (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_2",
+      "is_platform_indexed": false
+    },
+    "q_ai3": {
+      "question_text": "In the past 4 weeks, have you used a search engine, such as Google or Bing?",
+      "construct": "AI Tool Used — Search Engine (e.g., Google, Bing)",
+      "clean_variable_name": "ai_tool_used_3",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_3": {
+      "question_text": "You said earlier that you had used a search engine, such as Google or Bing. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — Search Engine (e.g., Google, Bing) (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_3",
+      "is_platform_indexed": false
+    },
+    "q_ai10_3": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with a search engine, such as Google or Bing was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (Search Engine (e.g., Google, Bing)) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_3",
+      "is_platform_indexed": false
+    },
+    "q_ai11_3": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of a search engine, such as Google or Bing was to you.",
+      "construct": "AI Tool Usefulness Rating — Search Engine (e.g., Google, Bing) (battery)",
+      "clean_variable_name": "ai_tool_usefulness_3",
+      "is_platform_indexed": false
+    },
+    "q_ai12_3": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with a search engine, such as Google or Bing was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (Search Engine (e.g., Google, Bing)) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_3",
+      "is_platform_indexed": false
+    },
+    "q_ai13_3": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of a search engine, such as Google or Bing was to you.",
+      "construct": "AI Tool Harmfulness Rating — Search Engine (e.g., Google, Bing) (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_3",
+      "is_platform_indexed": false
+    },
+    "q_ai4": {
+      "question_text": "In the past 4 weeks, have you used AI-assisted self-driving cars or trucks?",
+      "construct": "AI Tool Used — AI Self-Driving Cars/Trucks",
+      "clean_variable_name": "ai_tool_used_4",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_4": {
+      "question_text": "You said earlier that you had used AI-assisted self-driving cars or trucks. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — AI Self-Driving Cars/Trucks (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_4",
+      "is_platform_indexed": false
+    },
+    "q_ai10_4": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with AI-assisted self-driving cars or trucks was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (AI Self-Driving Cars/Trucks) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_4",
+      "is_platform_indexed": false
+    },
+    "q_ai11_4": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of AI-assisted self-driving cars or trucks was to you.",
+      "construct": "AI Tool Usefulness Rating — AI Self-Driving Cars/Trucks (battery)",
+      "clean_variable_name": "ai_tool_usefulness_4",
+      "is_platform_indexed": false
+    },
+    "q_ai12_4": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with AI-assisted self-driving cars or trucks was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (AI Self-Driving Cars/Trucks) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_4",
+      "is_platform_indexed": false
+    },
+    "q_ai13_4": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of AI-assisted self-driving cars or trucks was to you.",
+      "construct": "AI Tool Harmfulness Rating — AI Self-Driving Cars/Trucks (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_4",
+      "is_platform_indexed": false
+    },
+    "q_ai5": {
+      "question_text": "In the past 4 weeks, have you used AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking?",
+      "construct": "AI Tool Used — AI-Assisted Robots",
+      "clean_variable_name": "ai_tool_used_5",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_5": {
+      "question_text": "You said earlier that you had used AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — AI-Assisted Robots (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_5",
+      "is_platform_indexed": false
+    },
+    "q_ai10_5": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (AI-Assisted Robots) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_5",
+      "is_platform_indexed": false
+    },
+    "q_ai11_5": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking was to you.",
+      "construct": "AI Tool Usefulness Rating — AI-Assisted Robots (battery)",
+      "clean_variable_name": "ai_tool_usefulness_5",
+      "is_platform_indexed": false
+    },
+    "q_ai12_5": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (AI-Assisted Robots) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_5",
+      "is_platform_indexed": false
+    },
+    "q_ai13_5": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of AI-assisted robots that can perform tasks like sorting, packing, moving objects, cleaning, or caretaking was to you.",
+      "construct": "AI Tool Harmfulness Rating — AI-Assisted Robots (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_5",
+      "is_platform_indexed": false
+    },
+    "q_ai6": {
+      "question_text": "In the past 4 weeks, have you used applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing?",
+      "construct": "AI Tool Used — AI Organizational Decision Automation",
+      "clean_variable_name": "ai_tool_used_6",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_6": {
+      "question_text": "You said earlier that you had used applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing. What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — AI Organizational Decision Automation (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_6",
+      "is_platform_indexed": false
+    },
+    "q_ai10_6": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (AI Organizational Decision Automation) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_6",
+      "is_platform_indexed": false
+    },
+    "q_ai11_6": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing was to you.",
+      "construct": "AI Tool Usefulness Rating — AI Organizational Decision Automation (battery)",
+      "clean_variable_name": "ai_tool_usefulness_6",
+      "is_platform_indexed": false
+    },
+    "q_ai12_6": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (AI Organizational Decision Automation) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_6",
+      "is_platform_indexed": false
+    },
+    "q_ai13_6": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of applications that use AI to automate organizational decision processes, such as job interviews, scheduling, or hiring/firing was to you.",
+      "construct": "AI Tool Harmfulness Rating — AI Organizational Decision Automation (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_6",
+      "is_platform_indexed": false
+    },
+    "q_ai7": {
+      "question_text": "In the past 4 weeks, have you used a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens)?",
+      "construct": "AI Tool Used — Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens)",
+      "clean_variable_name": "ai_tool_used_7",
+      "is_platform_indexed": false
+    },
+    "q_ai8a_7": {
+      "question_text": "You said earlier that you had used a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens). What did you use it for? Please select all that apply.",
+      "construct": "AI Tool Purposes — Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens) (multiselect)",
+      "clean_variable_name": "ai_tool_purposes_7",
+      "is_platform_indexed": false
+    },
+    "q_ai10_7": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens) was or was not useful.",
+      "construct": "AI Tool Usefulness — Why (Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens)) (free text)",
+      "clean_variable_name": "ai_tool_useful_desc_7",
+      "is_platform_indexed": false
+    },
+    "q_ai11_7": {
+      "question_text": "For each of the activities you selected, please rate how useful or not useful your use of a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens) was to you.",
+      "construct": "AI Tool Usefulness Rating — Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens) (battery)",
+      "clean_variable_name": "ai_tool_usefulness_7",
+      "is_platform_indexed": false
+    },
+    "q_ai12_7": {
+      "question_text": "In a sentence or two, please describe why your experience(s) with a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens) was or was not harmful.",
+      "construct": "AI Tool Harmfulness — Why (Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens)) (free text)",
+      "clean_variable_name": "ai_tool_harmful_desc_7",
+      "is_platform_indexed": false
+    },
+    "q_ai13_7": {
+      "question_text": "For each of the activities you selected, please rate how harmful or not harmful your use of a headset that creates a mixed reality (AR/VR) experience (e.g. Meta's Oculus Quest, Apple's Vision Pro, Microsoft's HoloLens) was to you.",
+      "construct": "AI Tool Harmfulness Rating — Mixed Reality / AR/VR Headset (e.g., Meta Oculus, Apple Vision Pro, Microsoft HoloLens) (battery)",
+      "clean_variable_name": "ai_tool_harmfulness_7",
+      "is_platform_indexed": false
+    },
+    "q_ai13": {
+      "question_text": "How excited or not excited are you about the increased use of mixed reality (AR/VR) experiences (e.g. Meta's Oculus, Apple's Vision Pro, Microsoft's HoloLens) in daily life?",
+      "construct": "AI/Mixed Reality Excitement (general)",
+      "clean_variable_name": "ai_xr_excitement",
+      "is_platform_indexed": false
+    },
+    "q_ai14": {
+      "question_text": "How concerned or not concerned are you about the increased use of mixed reality (AR/VR) experiences (e.g. Meta's Oculus, Apple's Vision Pro, Microsoft's HoloLens) in daily life?",
+      "construct": "AI/Mixed Reality Concern (general)",
+      "clean_variable_name": "ai_xr_concern",
+      "is_platform_indexed": false
+    },
+    "sc001a": {
+      "question_text": "Using social media is a waste of time for me.",
+      "construct": "Social Media Belief — Using social media is a waste of time for me",
+      "clean_variable_name": "sm_waste_of_time",
+      "is_platform_indexed": false
+    },
+    "sc001b": {
+      "question_text": "Using social media strengthens and supports my relationships.",
+      "construct": "Social Media Belief — Using social media strengthens and supports my relationships",
+      "clean_variable_name": "sm_strengthens_relationships",
+      "is_platform_indexed": false
+    },
+    "sc001c": {
+      "question_text": "Using social media facilitates my learning and growth.",
+      "construct": "Social Media Belief — Using social media facilitates my learning and growth",
+      "clean_variable_name": "sm_learning_growth",
+      "is_platform_indexed": false
+    },
+    "sc001d": {
+      "question_text": "I'm good at managing the ways I use social media.",
+      "construct": "Social Media Belief — I'm good at managing the ways I use social media",
+      "clean_variable_name": "sm_managing_well",
+      "is_platform_indexed": false
+    },
+    "sc001e": {
+      "question_text": "I'm in control of how I use social media.",
+      "construct": "Social Media Belief — I'm in control of how I use social media",
+      "clean_variable_name": "sm_in_control",
+      "is_platform_indexed": false
+    },
+    "sc001f": {
+      "question_text": "I find it hard to resist the pull of social media.",
+      "construct": "Social Media Belief — I find it hard to resist the pull of social media",
+      "clean_variable_name": "sm_hard_to_resist",
+      "is_platform_indexed": false
+    },
+    "ex001": {
+      "question_text": "I wake up at night to check my social media feed(s).",
+      "construct": "Wake to Check Social Media",
+      "clean_variable_name": "sm_wake_to_check",
+      "is_platform_indexed": false
+    },
+    "ex002a": {
+      "question_text": "My use of social media has made me feel more connected to... My family",
+      "construct": "Social Media Connectedness — My family",
+      "clean_variable_name": "sm_connected_family",
+      "is_platform_indexed": false
+    },
+    "ex002b": {
+      "question_text": "My use of social media has made me feel more connected to... My friends",
+      "construct": "Social Media Connectedness — My friends",
+      "clean_variable_name": "sm_connected_friends",
+      "is_platform_indexed": false
+    },
+    "ex002c": {
+      "question_text": "My use of social media has made me feel more connected to... My neighbors and others in my community",
+      "construct": "Social Media Connectedness — My neighbors and others in my community",
+      "clean_variable_name": "sm_connected_neighbors",
+      "is_platform_indexed": false
+    },
+    "ls002a": {
+      "question_text": "I am satisfied with my physical health.",
+      "construct": "Life Satisfaction — physical health",
+      "clean_variable_name": "life_sat_physical",
+      "is_platform_indexed": false
+    },
+    "ls002b": {
+      "question_text": "I am satisfied with my financial situation.",
+      "construct": "Life Satisfaction — financial situation",
+      "clean_variable_name": "life_sat_financial",
+      "is_platform_indexed": false
+    },
+    "ls002c": {
+      "question_text": "I am satisfied with my social life.",
+      "construct": "Life Satisfaction — social life",
+      "clean_variable_name": "life_sat_social",
+      "is_platform_indexed": false
+    },
+    "ls002d": {
+      "question_text": "I am satisfied with my mental health.",
+      "construct": "Life Satisfaction — mental health",
+      "clean_variable_name": "life_sat_mental",
+      "is_platform_indexed": false
+    },
+    "ls002e": {
+      "question_text": "I am satisfied with the amount of leisure time I have.",
+      "construct": "Life Satisfaction — the amount of leisure time I have",
+      "clean_variable_name": "life_sat_leisure",
+      "is_platform_indexed": false
+    },
+    "ls002f": {
+      "question_text": "I am satisfied with my job or other daily activities.",
+      "construct": "Life Satisfaction — job or other daily activities",
+      "clean_variable_name": "life_sat_job",
+      "is_platform_indexed": false
+    },
+    "ls002g": {
+      "question_text": "I am satisfied with my family life.",
+      "construct": "Life Satisfaction — family life",
+      "clean_variable_name": "life_sat_family",
+      "is_platform_indexed": false
+    },
+    "ls002h": {
+      "question_text": "I feel happy most of the time.",
+      "construct": "Life Satisfaction — happy most of the time",
+      "clean_variable_name": "life_sat_happy",
+      "is_platform_indexed": false
+    },
+    "ls002i": {
+      "question_text": "I feel negative most of the time.",
+      "construct": "Life Satisfaction — negative most of the time",
+      "clean_variable_name": "life_sat_negative_feeling",
+      "is_platform_indexed": false
+    },
+    "ls002j": {
+      "question_text": "My life is going well.",
+      "construct": "Life Satisfaction — life is going well",
+      "clean_variable_name": "life_sat_going_well",
+      "is_platform_indexed": false
+    },
+    "ls002k": {
+      "question_text": "In most ways, my life is close to my ideal.",
+      "construct": "Life Satisfaction — In most ways",
+      "clean_variable_name": "life_sat_close_to_ideal",
+      "is_platform_indexed": false
+    },
+    "ls002l": {
+      "question_text": "I am satisfied with my life.",
+      "construct": "Life Satisfaction — life",
+      "clean_variable_name": "life_sat_overall",
+      "is_platform_indexed": false
+    },
+    "ex003a": {
+      "question_text": "How often do you feel that you lack companionship: Hardly ever, some of the time, or often?",
+      "construct": "Loneliness — Lack Companionship",
+      "clean_variable_name": "loneliness_companionship",
+      "is_platform_indexed": false
+    },
+    "ex003b": {
+      "question_text": "How often do you feel left out?",
+      "construct": "Loneliness — Left Out",
+      "clean_variable_name": "loneliness_left_out",
+      "is_platform_indexed": false
+    },
+    "ex003c": {
+      "question_text": "How often do you feel isolated from others?",
+      "construct": "Loneliness — Isolated",
+      "clean_variable_name": "loneliness_isolated",
+      "is_platform_indexed": false
+    },
+    "ds001a": {
+      "question_text": "I felt down-hearted and blue.",
+      "construct": "Depression/Anxiety — Down-Hearted",
+      "clean_variable_name": "depanx_downhearted",
+      "is_platform_indexed": false
+    },
+    "ds001b": {
+      "question_text": "I found it difficult to work up the initiative to do things.",
+      "construct": "Depression/Anxiety — Lacked Initiative",
+      "clean_variable_name": "depanx_initiative",
+      "is_platform_indexed": false
+    },
+    "ds001c": {
+      "question_text": "I felt scared without any good reason.",
+      "construct": "Depression/Anxiety — Scared",
+      "clean_variable_name": "depanx_scared",
+      "is_platform_indexed": false
+    },
+    "ds001d": {
+      "question_text": "I was worried about situations in which I might panic and make a fool of myself.",
+      "construct": "Depression/Anxiety — Panic Worry",
+      "clean_variable_name": "depanx_panic_worry",
+      "is_platform_indexed": false
+    },
+    "ds001e": {
+      "question_text": "I found it hard to wind down.",
+      "construct": "Depression/Anxiety — Hard to Wind Down",
+      "clean_variable_name": "depanx_wind_down",
+      "is_platform_indexed": false
+    },
+    "ds001f": {
+      "question_text": "I found myself getting agitated.",
+      "construct": "Depression/Anxiety — Agitated",
+      "clean_variable_name": "depanx_agitated",
+      "is_platform_indexed": false
+    },
+    "te001a": {
+      "question_text": "Technology is an important part of my identity.",
+      "construct": "Tech Identity — Important Part",
+      "clean_variable_name": "tech_identity_important",
+      "is_platform_indexed": false
+    },
+    "te001b": {
+      "question_text": "Using new technologies is an important part of who I am.",
+      "construct": "Tech Identity — New Tech",
+      "clean_variable_name": "tech_identity_new_tech",
+      "is_platform_indexed": false
+    },
+    "te001c": {
+      "question_text": "Being up to date with the newest technologies is a reflection of who I am.",
+      "construct": "Tech Identity — Up to Date",
+      "clean_variable_name": "tech_identity_up_to_date",
+      "is_platform_indexed": false
+    },
+    "te001d": {
+      "question_text": "I am the type of person who has the most recent technologies.",
+      "construct": "Tech Identity — Has Recent",
+      "clean_variable_name": "tech_identity_has_recent",
+      "is_platform_indexed": false
+    },
+    "te001e": {
+      "question_text": "Being good with technology is an important part of my identity.",
+      "construct": "Tech Identity — Good With Tech",
+      "clean_variable_name": "tech_identity_good_with",
+      "is_platform_indexed": false
+    },
+    "ex004a": {
+      "question_text": "How much should major technology companies be regulated by the government?",
+      "construct": "Tech Regulation Level",
+      "clean_variable_name": "regulation_tech_companies",
+      "is_platform_indexed": false
+    },
+    "ex004b": {
+      "question_text": "Do you think technology companies should do more, do less, or keep doing what they are now to protect the integrity of elections?",
+      "construct": "Tech Election-Integrity Effort",
+      "clean_variable_name": "regulation_elections",
+      "is_platform_indexed": false
+    },
+    "ex004c": {
+      "question_text": "Do you think technology companies should do more, do less, or keep doing what they are now to protect users from harmful experiences online?",
+      "construct": "Tech User-Protection Effort",
+      "clean_variable_name": "regulation_protect_users",
+      "is_platform_indexed": false
+    },
+    "ex005a": {
+      "question_text": "How much do you oppose or support the following playing an important role in shaping and developing AI? — Government",
+      "construct": "AI Governance Role — Government",
+      "clean_variable_name": "ai_role_government",
+      "is_platform_indexed": false
+    },
+    "ex005b": {
+      "question_text": "How much do you oppose or support the following playing an important role in shaping and developing AI? — Corporations",
+      "construct": "AI Governance Role — Corporations",
+      "clean_variable_name": "ai_role_corporations",
+      "is_platform_indexed": false
+    },
+    "ex005c": {
+      "question_text": "How much do you oppose or support the following playing an important role in shaping and developing AI? — Universities",
+      "construct": "AI Governance Role — Universities",
+      "clean_variable_name": "ai_role_universities",
+      "is_platform_indexed": false
+    },
+    "ex006a": {
+      "question_text": "Companies should be free to do whatever they think is best with the data they collect",
+      "construct": "AI Governance Belief — Free Data Use",
+      "clean_variable_name": "ai_data_free_use",
+      "is_platform_indexed": false
+    },
+    "ex006b": {
+      "question_text": "Companies should be required to make anonymized user data available to independent researchers and auditors",
+      "construct": "AI Governance Belief — Independent Audit",
+      "clean_variable_name": "ai_data_independent_audit",
+      "is_platform_indexed": false
+    },
+    "ex006c": {
+      "question_text": "How much do you agree with the idea that society should invest in the development of new superintelligent AI systems that perform better than humans on almost any task?",
+      "construct": "AI Governance Belief — Superintelligent Invest",
+      "clean_variable_name": "ai_super_invest",
+      "is_platform_indexed": false
+    },
+    "ex006d": {
+      "question_text": "If companies do develop new superintelligent AI systems that perform better than humans on almost any task, it is critical that there be processes for all people / the general public to have input into the development and potential uses of such systems.",
+      "construct": "AI Governance Belief — Public Input on Super AI",
+      "clean_variable_name": "ai_super_public_input",
+      "is_platform_indexed": false
+    },
+    "ins001a": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — The US government",
+      "construct": "Institutional Trust — US Government",
+      "clean_variable_name": "trust_us_government",
+      "is_platform_indexed": false
+    },
+    "ins001b": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — Journalists",
+      "construct": "Institutional Trust — Journalists",
+      "clean_variable_name": "trust_journalists",
+      "is_platform_indexed": false
+    },
+    "ins001c": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — Network Television news (e.g. ABC, NBC, CBS)",
+      "construct": "Institutional Trust — Network TV News",
+      "clean_variable_name": "trust_network_tv_news",
+      "is_platform_indexed": false
+    },
+    "ins001d": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — The US presidency",
+      "construct": "Institutional Trust — US Presidency",
+      "clean_variable_name": "trust_us_presidency",
+      "is_platform_indexed": false
+    },
+    "ins001e": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — The police",
+      "construct": "Institutional Trust — Police",
+      "clean_variable_name": "trust_police",
+      "is_platform_indexed": false
+    },
+    "ins001f": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — The Centers for Disease Control and Prevention (CDC)",
+      "construct": "Institutional Trust — CDC",
+      "clean_variable_name": "trust_cdc",
+      "is_platform_indexed": false
+    },
+    "ins001g": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — Social media companies",
+      "construct": "Institutional Trust — Social Media Companies",
+      "clean_variable_name": "trust_social_media_companies",
+      "is_platform_indexed": false
+    },
+    "ins001h": {
+      "question_text": "Please tell me how much confidence you, yourself, have in each of the following United States Institutions — a great deal, quite a lot, some, very little, or none? — Technology companies",
+      "construct": "Institutional Trust — Tech Companies",
+      "clean_variable_name": "trust_tech_companies",
+      "is_platform_indexed": false
+    },
+    "citizenus": {
+      "question_text": "Are you a citizen of the United States?",
+      "construct": "US Citizenship",
+      "clean_variable_name": "is_us_citizen",
+      "is_platform_indexed": false
+    },
+    "statereside": {
+      "question_text": "In what state are you currently residing?",
+      "construct": "State of Residence",
+      "clean_variable_name": "state_of_residence",
+      "is_platform_indexed": false
+    },
+    "gender": {
+      "question_text": "Gender — value preloaded from the UAS panel tracker rather than asked in each wave.",
+      "construct": "Gender (panel preload)",
+      "clean_variable_name": "gender",
+      "is_platform_indexed": false
+    },
+    "age": {
+      "question_text": "Age in years — preloaded from the UAS panel tracker.",
+      "construct": "Age (panel preload)",
+      "clean_variable_name": "age",
+      "is_platform_indexed": false
+    },
+    "race": {
+      "question_text": "Race — preloaded from the UAS panel tracker. Combined with hisplatino during cleaning to produce a unified race/ethnicity category.",
+      "construct": "Race (panel preload)",
+      "clean_variable_name": "race",
+      "is_platform_indexed": false
+    },
+    "hisplatino": {
+      "question_text": "Hispanic/Latino identity flag — preloaded from the UAS panel tracker. Combined with race during cleaning.",
+      "construct": "Hispanic/Latino Identity (panel preload)",
+      "clean_variable_name": "hispanic_latino",
+      "is_platform_indexed": false
+    },
+    "education": {
+      "question_text": "Educational attainment — preloaded from the UAS panel tracker.",
+      "construct": "Education (panel preload)",
+      "clean_variable_name": "education",
+      "is_platform_indexed": false
+    },
+    "hhincome": {
+      "question_text": "Household income — preloaded from the UAS panel tracker.",
+      "construct": "Household Income (panel preload)",
+      "clean_variable_name": "hhincome",
+      "is_platform_indexed": false
+    },
+    "maritalstatus": {
+      "question_text": "Marital status — preloaded from the UAS panel tracker.",
+      "construct": "Marital Status (panel preload)",
+      "clean_variable_name": "marital_status",
+      "is_platform_indexed": false
+    },
+    "primary_respondent": {
+      "question_text": "Whether this respondent is the primary respondent for their household (per UAS panel metadata).",
+      "construct": "Primary Respondent Flag (panel meta)",
+      "clean_variable_name": "primary_respondent",
+      "is_platform_indexed": false
+    },
+    "bornus": {
+      "question_text": "Whether respondent was born in the United States — preloaded from the UAS panel tracker.",
+      "construct": "Born in US (panel preload)",
+      "clean_variable_name": "is_born_us",
+      "is_platform_indexed": false
+    },
+    "stateborn": {
+      "question_text": "State (or country) of birth — preloaded from the UAS panel tracker.",
+      "construct": "State of Birth (panel preload)",
+      "clean_variable_name": "state_of_birth",
+      "is_platform_indexed": false
+    },
+    "language": {
+      "question_text": "Survey language preference recorded by the UAS panel tracker.",
+      "construct": "Survey Language (panel meta)",
+      "clean_variable_name": "survey_language",
+      "is_platform_indexed": false
+    },
+    "dateofbirth_year": {
+      "question_text": "Year of birth — preloaded from the UAS panel tracker (more precise than the bucketed `age` field).",
+      "construct": "Year of Birth (panel preload)",
+      "clean_variable_name": "year_of_birth",
+      "is_platform_indexed": false
+    },
+    "agerange": {
+      "question_text": "Age range bucket — preloaded from the UAS panel tracker.",
+      "construct": "Age Range Bucket (panel preload)",
+      "clean_variable_name": "age_range",
+      "is_platform_indexed": false
+    },
+    "regis": {
+      "question_text": "Regardless of whether you voted in the November 8 2022 election, were you registered to vote using your current address (or by absentee) in time to cast a ballot in the election if you had chosen to do so?",
+      "construct": "Voter Registration in Time",
+      "clean_variable_name": "voter_registered",
+      "is_platform_indexed": false
+    },
+    "partyreg": {
+      "question_text": "Are you registered as:",
+      "construct": "Party Registration",
+      "clean_variable_name": "party_registration",
+      "is_platform_indexed": false
+    },
+    "party_affil": {
+      "question_text": "Regardless of if or how you are registered to vote, are you more closely aligned with...",
+      "construct": "Party Affiliation",
+      "clean_variable_name": "party_affiliation",
+      "is_platform_indexed": false
+    },
+    "lean_affil": {
+      "question_text": "Generally speaking, do you lean more toward affiliating with Democrats or with Republicans?",
+      "construct": "Party Lean (Independents/Unaligned)",
+      "clean_variable_name": "party_lean",
+      "is_platform_indexed": false
+    },
+    "rate_self": {
+      "question_text": "On a scale from 0 to 100 where 0 is the most liberal and 100 is the most conservative, what number would you give to yourself?",
+      "construct": "Political Ideology — Self (0-100)",
+      "clean_variable_name": "political_ideology_self",
+      "is_platform_indexed": false
+    },
+    "scim_therm_con": {
+      "question_text": "Please indicate how you feel toward conservatives using the scale below. 10 means that you feel very favorably or warm toward them, 0 that you feel very unfavorable or cold, and 5 is neutral.",
+      "construct": "Feeling Thermometer — Conservatives",
+      "clean_variable_name": "feeling_therm_conservatives",
+      "is_platform_indexed": false
+    },
+    "scim_therm_lib": {
+      "question_text": "Please indicate how you feel toward liberals using the scale below. 10 means that you feel very favorably or warm toward them, 0 that you feel very unfavorable or cold, and 5 is neutral.",
+      "construct": "Feeling Thermometer — Liberals",
+      "clean_variable_name": "feeling_therm_liberals",
+      "is_platform_indexed": false
+    },
+    "scim_friends_con": {
+      "question_text": "How comfortable are you having friends who are conservative? 10 means that you feel extremely comfortable, 0 means that you do not feel comfortable at all.",
+      "construct": "Comfort Having Conservative Friends",
+      "clean_variable_name": "comfort_conservative_friends",
+      "is_platform_indexed": false
+    },
+    "scim_friends_lib": {
+      "question_text": "How comfortable are you having friends who are liberal? 10 means that you feel extremely comfortable, 0 means that you do not feel comfortable at all.",
+      "construct": "Comfort Having Liberal Friends",
+      "clean_variable_name": "comfort_liberal_friends",
+      "is_platform_indexed": false
+    },
+    "vote2024": {
+      "question_text": "Regardless of whether you voted in the presidential election in November, which of the two major party candidates did you prefer to have as the President of the United States for the next four years?",
+      "construct": "2024 Presidential Preference",
+      "clean_variable_name": "vote_2024_preference",
+      "is_platform_indexed": false
+    },
+    "cs_001": {
+      "question_text": "Could you tell us how interesting or uninteresting you found the questions in this survey?",
+      "construct": "Survey Interest",
+      "clean_variable_name": "survey_interest",
+      "is_platform_indexed": false
+    },
+    "cs_003": {
+      "question_text": "Do you have any other comments on the survey? Please type these in the box below.",
+      "construct": "Survey Comments (free text)",
+      "clean_variable_name": "survey_comments",
+      "is_platform_indexed": false
+    }
+  }
+}

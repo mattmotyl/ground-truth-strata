@@ -38,8 +38,32 @@ export function formatWaveLabel(
   wave: number,
   dates?: string | null,
 ): string {
-  if (dates) return `W${wave} · ${dates}`;
-  return `W${wave}`;
+  if (dates) return `Wave ${wave} · ${dates}`;
+  return `Wave ${wave}`;
+}
+
+// T2-6: normalize a meta.json `dates` string ("March 2 - May 7, 2023")
+// to the canonical display form with an en-dash separator and full
+// month names ("March 2 – May 7, 2023"). The hyphen-minus in the
+// source data becomes a typographic en-dash.
+export function fullWaveDateRange(
+  dates: string | null | undefined,
+): string {
+  if (!dates) return '';
+  return dates.replace(/\s*-\s*/, ' – ');
+}
+
+// T2-6: canonical wave label for radio selectors, footnotes,
+// interpretation text, tooltips, and citations:
+//   "Wave 1 (March 2 – May 7, 2023)"
+// Use this everywhere except X-axis ticks and tight table column
+// headers, where a shorter form is required for layout reasons.
+export function fullWaveLabel(
+  wave: number,
+  dates: string | null | undefined,
+): string {
+  const range = fullWaveDateRange(dates);
+  return range ? `Wave ${wave} (${range})` : `Wave ${wave}`;
 }
 
 // Parses meta.json's `waves[].dates` like "March 2 - May 7, 2023" or
@@ -57,7 +81,7 @@ export function shortWaveLabel(
   wave: number,
   dates: string | null | undefined,
 ): string {
-  if (!dates) return `W${wave}`;
+  if (!dates) return `Wave ${wave}`;
   // Find the FIRST month name in the string — that's the wave start month.
   let startMonth: string | null = null;
   for (const m of MONTH_NAMES) {
@@ -66,14 +90,14 @@ export function shortWaveLabel(
       break;
     }
   }
-  if (!startMonth) return `W${wave}`;
+  if (!startMonth) return `Wave ${wave}`;
   // Find the year associated with the start month: if the dates string
   // spans years (e.g., "November 6, 2023 - February 18, 2024"), the
   // year right after the start-month date is the one we want.
   const startMonthIdx = dates.indexOf(startMonth);
   const segmentAfterStart = dates.slice(startMonthIdx);
   const startYearMatch = segmentAfterStart.match(/\b(\d{4})\b/);
-  if (!startYearMatch) return `W${wave}`;
+  if (!startYearMatch) return `Wave ${wave}`;
   const shortMonth = MONTH_SHORT_BY_NAME.get(startMonth) ?? startMonth;
   const shortYear = startYearMatch[1].slice(2);
   return `${shortMonth} '${shortYear}`;

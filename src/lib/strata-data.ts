@@ -72,6 +72,22 @@ let _conditional: Promise<ConditionalBreakdownRow[]> | null = null;
 let _groupComparisons: Promise<GroupComparisonRow[]> | null = null;
 let _correlations: Promise<CorrelationRow[]> | null = null;
 let _contextualEvents: Promise<ContextualEventsJson> | null = null;
+let _questionTexts: Promise<QuestionTextsJson> | null = null;
+
+// Question-text dictionary served from public/data/question-texts.json,
+// generated from docs/data-dictionary.csv by scripts/build-question-texts.mjs.
+// Lets the UI display the verbatim survey question above each chart.
+export interface QuestionTextEntry {
+  question_text: string;
+  construct: string | null;
+  clean_variable_name: string | null;
+  is_platform_indexed: boolean;
+}
+
+export interface QuestionTextsJson {
+  generated_at: string;
+  variables: Record<string, QuestionTextEntry>;
+}
 
 export function loadMeta(): Promise<MetaJson> {
   return (_meta ??= fetchJson<MetaJson>('meta.json').then((meta) => ({
@@ -138,6 +154,12 @@ export function loadContextualEvents(): Promise<ContextualEventsJson> {
   ));
 }
 
+export function loadQuestionTexts(): Promise<QuestionTextsJson> {
+  return (_questionTexts ??= fetchJson<QuestionTextsJson>(
+    'question-texts.json',
+  ));
+}
+
 // =====================================================================
 // Convenience accessors over meta.json
 // =====================================================================
@@ -187,4 +209,5 @@ export function __resetStrataCaches(): void {
   _groupComparisons = null;
   _correlations = null;
   _contextualEvents = null;
+  _questionTexts = null;
 }

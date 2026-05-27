@@ -14,6 +14,8 @@ import {
 import {
   loadGroupComparisons,
   loadMeta,
+  loadQuestionTexts,
+  type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
   GroupComparisonRow,
@@ -27,6 +29,10 @@ import {
   formatPercent,
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
+import {
+  formatSurveyQuestion,
+  surveyQuestionFor,
+} from '@/lib/strata-survey';
 import { StrataChartFrame } from './strata-chart-frame';
 import { type Weighting } from './weighted-toggle';
 
@@ -103,7 +109,7 @@ function GenderTooltip({ active, payload, label }: BarTooltipProps) {
               className="inline-block h-2 w-2 rounded-sm shrink-0"
               style={{ backgroundColor: p.color }}
             />
-            <span className="text-ink/85 flex-1">W{wave}</span>
+            <span className="text-ink/85 flex-1">Wave {wave}</span>
             <span className="text-ink font-medium">
               {formatPercent(value)}
             </span>
@@ -123,13 +129,15 @@ function GenderTooltip({ active, payload, label }: BarTooltipProps) {
 export function FindingGenderNegativeExperience() {
   const [rows, setRows] = useState<GroupComparisonRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
+  const [questionTexts, setQuestionTexts] =
+    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [weighting, setWeighting] = useState<Weighting>('weighted');
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    Promise.all([loadGroupComparisons(), loadMeta()])
-      .then(([all, m]) => {
+    Promise.all([loadGroupComparisons(), loadMeta(), loadQuestionTexts()])
+      .then(([all, m, qt]) => {
         setRows(
           all.filter(
             (r) =>
@@ -139,6 +147,7 @@ export function FindingGenderNegativeExperience() {
           ),
         );
         setMeta(m);
+        setQuestionTexts(qt);
       })
       .catch(setError);
   }, []);
@@ -223,7 +232,7 @@ export function FindingGenderNegativeExperience() {
     weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const wavesSpan =
     waves.length > 0
-      ? `W${Math.min(...waves)}–W${Math.max(...waves)}`
+      ? `Wave ${Math.min(...waves)}–Wave ${Math.max(...waves)}`
       : '—';
 
   // --------------------------------------------------------------
@@ -255,12 +264,12 @@ export function FindingGenderNegativeExperience() {
     const wPct = `${(w.v * 100).toFixed(1)}%`;
     if (gap === 'stable') {
       interpretationSentences.push(
-        `In W${wave}, the gender gap is not statistically meaningful at the 95% level (Men ${mPct}, Women ${wPct}).`,
+        `In Wave ${wave}, the gender gap is not statistically meaningful at the 95% level (Men ${mPct}, Women ${wPct}).`,
       );
     } else {
       const higher = gap === 'increased' ? 'Women' : 'Men';
       interpretationSentences.push(
-        `In W${wave}, ${higher} report this outcome more often (Men ${mPct} vs. Women ${wPct}); the gap exceeds the 95% margin of error.`,
+        `In Wave ${wave}, ${higher} report this outcome more often (Men ${mPct} vs. Women ${wPct}); the gap exceeds the 95% margin of error.`,
       );
     }
   }
@@ -275,7 +284,7 @@ export function FindingGenderNegativeExperience() {
       if (verdict !== 'stable' && e.v !== null && l.v !== null) {
         const direction = verdict === 'increased' ? 'rose' : 'fell';
         interpretationSentences.push(
-          `Among ${group}, the rate ${direction} from W${earliest} (${(e.v * 100).toFixed(1)}%) to W${latest} (${(l.v * 100).toFixed(1)}%) — exceeds the 95% margin of error.`,
+          `Among ${group}, the rate ${direction} from Wave ${earliest} (${(e.v * 100).toFixed(1)}%) to Wave ${latest} (${(l.v * 100).toFixed(1)}%) — exceeds the 95% margin of error.`,
         );
       }
     }
@@ -335,7 +344,7 @@ export function FindingGenderNegativeExperience() {
           tickMargin={8}
         />
         <YAxis
-          domain={[0, 0.3]}
+          domain={[0, 1]}
           tickFormatter={(v) => `${Math.round((v as number) * 100)}%`}
           stroke="#605A6B"
           fontFamily={CHART_FONTS.mono}
@@ -384,7 +393,7 @@ export function FindingGenderNegativeExperience() {
               className="inline-block h-2.5 w-2.5 rounded-sm"
               style={{ backgroundColor: waveColor(wave) }}
             />
-            <span className="text-ink">W{wave}</span>
+            <span className="text-ink">Wave {wave}</span>
             <span className="text-slate">{waveDateRangeLabel(dates)}</span>
           </span>
         );
@@ -404,7 +413,7 @@ export function FindingGenderNegativeExperience() {
             <th className="text-left font-normal py-2 pr-2">Group</th>
             {waves.map((w) => (
               <th key={w} className="text-right font-normal py-2 px-2">
-                W{w}
+                Wave {w}
               </th>
             ))}
             {waves.map((w) => (
@@ -412,7 +421,7 @@ export function FindingGenderNegativeExperience() {
                 key={`${w}-n`}
                 className="text-right font-normal py-2 px-2 text-slate"
               >
-                n W{w}
+                n Wave {w}
               </th>
             ))}
           </tr>
@@ -478,11 +487,16 @@ export function FindingGenderNegativeExperience() {
     </>
   );
 
+  const surveyQuestion = formatSurveyQuestion(
+    surveyQuestionFor(OUTCOME, questionTexts, meta),
+  );
+
   return (
     <StrataChartFrame
       eyebrow="Finding 06 · Demographic group differences"
       title="Do men and women experience platforms differently?"
       subtitle={`Share of U.S. adults reporting a recent in-person ${OUTCOME_LABEL}, by gender, across ${wavesSpan}. Negative-experience items broken out by gender are not platform-indexed in the precomputed JSON, so this view uses the in-person counterpart (us024) as the closest available proxy.`}
+      surveyQuestion={surveyQuestion || undefined}
       weighting={weighting}
       onWeightingChange={setWeighting}
       chart={

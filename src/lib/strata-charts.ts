@@ -30,7 +30,37 @@ export const STRATA_PALETTES = {
     '#FF8C00', // orange
     '#4DB6AC', // mint
   ] as const,
+  // Qualitative 16-color palette — extends qualitative8 with eight
+  // additional hues so the platform multiselect can show up to 16
+  // distinct lines/bars. Colors 9-16 are paired with a dashed stroke
+  // pattern on line charts (see strokePatternForIndex) so visitors
+  // with red/green colorblindness can still tell them apart.
+  qualitative16: [
+    '#4B2E63', // 1  plum
+    '#00897B', // 2  teal
+    '#FFC107', // 3  amber
+    '#2196F3', // 4  blue
+    '#F44336', // 5  red
+    '#7B1FA2', // 6  purple
+    '#FF8C00', // 7  orange
+    '#4DB6AC', // 8  mint
+    '#B08CC7', // 9  lilac
+    '#1565C0', // 10 navy
+    '#00ACC1', // 11 cyan
+    '#C2185B', // 12 magenta
+    '#6D4C41', // 13 brown
+    '#455A64', // 14 slate-gray
+    '#5E35B1', // 15 deep violet
+    '#827717', // 16 olive
+  ] as const,
 } as const;
+
+// Line chart stroke pattern for the i-th series (0-indexed). Lines
+// 0-7 use solid strokes; lines 8-15 use dashed strokes so a
+// colorblind-friendly secondary cue is always available.
+export function strokeDashForIndex(i: number): string | undefined {
+  return i < 8 ? undefined : '6 4';
+}
 
 export const CHART_FONTS = {
   body: 'var(--font-sans), DM Sans, sans-serif',
