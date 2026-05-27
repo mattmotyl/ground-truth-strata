@@ -17,6 +17,7 @@ suppressPackageStartupMessages({
 })
 
 source(here::here("r", "precompute", "utils", "exclusions.R"))
+source(here::here("r", "precompute", "utils", "transforms.R"))
 
 # ── Output exclusions ──────────────────────────────────────────────
 # These exclusions apply to JSON output only. They do NOT affect the
@@ -88,6 +89,8 @@ tryCatch({
   }
   cat("Reading", rds_path, "\n")
   cleaned <- readRDS(rds_path)
+  cleaned <- apply_reverse_coding(cleaned)
+  cleaned <- derive_loneliness(cleaned)
 
   cat("Reading docs/data-dictionary.json\n")
   dict <- read_json(here("docs", "data-dictionary.json"))
@@ -434,6 +437,58 @@ tryCatch({
                     if (!is.null(v$construct)) v$construct else ""))
       }
     }
+  }
+
+  # ---- Append derived variables (Step D) ----
+  # Variables that aren't in the dictionary but are computed at
+  # data-load time by r/precompute/utils/transforms.R. They need
+  # synthetic meta records so downstream build scripts (which iterate
+  # meta$variables) pick them up via the same scope predicates that
+  # govern dict variables.
+  #
+  # Convention: derived records have `is_derived = TRUE` and a
+  # `question_text` field carrying the human-readable definition of
+  # the derived value. Dict-sourced records do NOT carry these fields
+  # (the canonical question text for dict variables lives in
+  # question-texts.json, built separately from data-dictionary.csv).
+  # Consumers should treat missing `is_derived` as FALSE.
+  if ("ex003_lonely" %in% all_cols) {
+    waves_lonely <- waves_present_for_cols("ex003_lonely")
+    ex003_lonely_rec <- list(
+      variable_name             = "ex003_lonely",
+      clean_variable_name       = "ex003_lonely",
+      cleaned_column            = "ex003_lonely",
+      expansion_columns         = NULL,
+      aggregation_note          = paste(
+        "Derived in r/precompute/utils/transforms.R::derive_loneliness().",
+        "Binary: 1 if as.integer(ex003a) + as.integer(ex003b) +",
+        "as.integer(ex003c) >= 6, else 0. UCLA 3-item loneliness",
+        "scoring; available W2, W5, W6 only."
+      ),
+      construct                 = "Loneliness (UCLA 3-item, binary)",
+      domain                    = "LONELINESS",
+      response_type             = "BINARY_YESNO",
+      response_options          = list("0" = "Not lonely",
+                                       "1" = "Lonely"),
+      is_platform_indexed       = FALSE,
+      dict_is_platform_indexed  = FALSE,
+      platform_codes_applicable = NULL,
+      is_reverse_coded          = FALSE,
+      out_of_range_codes        = NULL,
+      waves_present_in_dict     = I(integer(0)),
+      waves_present_in_data     = I(waves_lonely),
+      data_availability         = "in_cleaned_csv",
+      presence_discrepancy      = NULL,
+      excluded_from_outputs     = FALSE,
+      exclusion_reason          = NULL,
+      is_derived                = TRUE,
+      question_text             = "Lonely (sum of ex003a + ex003b + ex003c >= 6)"
+    )
+    variables_out[[length(variables_out) + 1]] <- ex003_lonely_rec
+    cat(sprintf("Appended derived variable: ex003_lonely (waves_present_in_data = [%s])\n",
+                paste(waves_lonely, collapse = ",")))
+  } else {
+    cat("[WARN] ex003_lonely not found in cleaned tibble; transforms.R::derive_loneliness may not have run. Skipping the derived meta record.\n")
   }
 
   # ---- Summary diagnostics ----

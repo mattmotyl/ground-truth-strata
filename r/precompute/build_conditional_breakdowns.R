@@ -32,6 +32,66 @@ suppressPackageStartupMessages({
 source(here("r", "precompute", "utils", "cell_filter.R"))
 source(here("r", "precompute", "utils", "weighting.R"))
 source(here("r", "precompute", "utils", "coercion.R"))
+source(here("r", "precompute", "utils", "transforms.R"))
+
+# ── Output exclusions ──────────────────────────────────────────────
+# These exclusions apply to JSON output only. They do NOT affect the
+# cleaned .rds files or the R cleaning scripts.
+# Re-including any of these in a future release is a one-line change.
+#
+# IMPORTANT: this is the conditional-breakdowns build script. The six
+# conditional follow-up items (us004, us005, us008, us016, us025,
+# us026) are EXPLICITLY THE CONTENT of this file — EXCLUDED_VARIABLES
+# is intentionally NOT applied here (per handoff Step 7b). The
+# constants block is present for documentation parity with the other
+# precompute scripts and for any future domain/suffix/type-based
+# filters that may need to apply to this output.
+
+EXCLUDED_DOMAINS <- c(
+  "AI_ATTITUDES"        # W4+ data unavailable; W1-W3 alone would mislead
+)
+
+EXCLUDED_VARIABLES <- c(
+  # Time-spent items — sparse (us019 absent W6; W4-W5 only)
+  "us019_hours", "us019_minutes",
+
+  # Conditional follow-up items — only valid in conditional_breakdowns.json.
+  # These are asked only of respondents who answered the parent question
+  # affirmatively (e.g., us004 only if us003 = yes). Including them in
+  # general correlations/trends would compute estimates on a selected
+  # subgroup, not the full sample, producing misleading results.
+  "us004", "us005",     # negative experience: impact + topic
+  "us008", "us016",     # bad for world: impact + topic
+  "us025", "us026",     # meaningful connection + useful: topic
+
+  # In-person experience items (us020-us024) intentionally included.
+  # These are the in-person counterparts to platform-indexed experience
+  # items (us002/us003/us007/us010/us012) and appear only in W5-W6.
+  # Build scripts derive waves_present_in_data from the cleaned tibble
+  # so only W5-W6 rows will be emitted — no change needed elsewhere.
+
+  # Administrative / sampling variables
+  "citizenus", "statereside", "primary_respondent",
+  "bornus", "stateborn", "language", "dateofbirth_year",
+  "regis", "cs_001"
+)
+
+# Variables excluded from specific outputs only — not globally excluded.
+# us001 (platform use, binary) is excluded from trends.json and
+# group_comparisons.json because platform_rates.json already covers
+# usage rates. It is INCLUDED in correlations.json — see Step 1a.
+EXCLUDED_VARIABLES_TRENDS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_GROUP_COMPARISONS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_CORRELATIONS <- EXCLUDED_VARIABLES  # us001 intentionally kept
+
+EXCLUDED_SUFFIXES <- c(
+  "_other"              # free-text 'other specify' captures — out of scope
+)
+
+EXCLUDED_TYPES <- c(
+  "STRING_OPEN"         # catches any open-text variables not already excluded
+)
+# ── End exclusions ─────────────────────────────────────────────────
 
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
 ts        <- format(Sys.time(), "%Y%m%d_%H%M%S")
@@ -53,6 +113,8 @@ tryCatch({
   cleaned <- readRDS(rds_path)
   cat("Reading", meta_path, "\n")
   meta <- read_json(meta_path)
+  cleaned <- apply_reverse_coding(cleaned)
+  cleaned <- derive_loneliness(cleaned)
 
   all_cols <- colnames(cleaned)
 
@@ -134,6 +196,11 @@ tryCatch({
         opt_label <- if (as.character(opt_code) %in% names(opt_labels))
                        opt_labels[[as.character(opt_code)]]
                      else NA_character_
+        # Unweighted estimates intentionally excluded from JSON output (Step 7b).
+        # Retained in `est` / `gated` R objects for spot-check validation only.
+        # To restore: add value, se, ci_lower, ci_upper back to this list().
+        # `n` (the conditioned-on subset size, parent=YES count) and
+        # `weighted_n_eff` are both kept.
         rows[[length(rows) + 1]] <- list(
           construct         = cd$prefix,
           child_variable    = cd$child_dict,
@@ -144,10 +211,6 @@ tryCatch({
           wave              = as.integer(w),
           option_index      = as.integer(opt_code),
           option_label      = opt_label,
-          value             = gated$prop,
-          se                = gated$se,
-          ci_lower          = gated$ci_lower,
-          ci_upper          = gated$ci_upper,
           n                 = gated$n,
           weighted_value    = gated$weighted_prop,
           weighted_se       = gated$weighted_se,
