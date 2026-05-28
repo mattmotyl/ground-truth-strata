@@ -6,6 +6,7 @@
 import type {
   ConditionalBreakdownRow,
   ConditionalConstruct,
+  GroupComparisonRow,
   LikertBucket,
   PlatformDemographicRow,
   PlatformRateMetric,
@@ -20,6 +21,7 @@ import type {
   DemographicVarConfig,
   ExperienceItemConfig,
   HabitItemConfig,
+  WellbeingItemConfig,
 } from './platform-report-labels';
 
 // One point on a single-platform trend line. value/ci are proportions
@@ -378,4 +380,125 @@ export function platformConditionalHeatmap(
   }));
 
   return { options: rowsOut, waves, max };
+}
+
+// =====================================================================
+// §4 wellbeing outcomes among a platform's users (group_comparisons.json,
+// grouping_var platform_user_<slug>, group "User").
+// =====================================================================
+
+// Distinct waves present for a platform's wellbeing rows, ascending —
+// drives the §4 table columns. ls002 spans W1–6; ex003_lonely only
+// W2/5/6 (no rows elsewhere → blank cells, not suppression).
+export function wellbeingWaves(
+  rows: GroupComparisonRow[],
+  platformSlug: string,
+): number[] {
+  const gv = `platform_user_${platformSlug}`;
+  const waves = new Set<number>();
+  for (const r of rows) {
+    if (r.grouping_var === gv && r.group === 'User') waves.add(r.wave);
+  }
+  return [...waves].sort((a, b) => a - b);
+}
+
+// Build the §4 wellbeing table. Emits the same TableGroup[] the
+// WithinVariableTable consumes — binary outcomes get Lonely / Not lonely
+// sub-rows (the latter the complement of the rate, CI flipped); bucketed
+// ls002 items get Agrees / Neutral / Disagrees, relabeled for the
+// reverse-coded item (ls002i) to the wellbeing-positive framing.
+export function platformWellbeingTable(
+  rows: GroupComparisonRow[],
+  platformSlug: string,
+  items: ReadonlyArray<WellbeingItemConfig>,
+  waves: number[],
+): TableGroup[] {
+  const gv = `platform_user_${platformSlug}`;
+  const idx = new Map<string, GroupComparisonRow>();
+  for (const r of rows) {
+    if (r.grouping_var !== gv || r.group !== 'User') continue;
+    idx.set(`${r.outcome}|${r.bucket ?? '_'}|${r.wave}`, r);
+  }
+
+  const cell = (
+    r: GroupComparisonRow | undefined,
+    wave: number,
+    complement = false,
+  ): TableCell => {
+    if (!r || r.suppressed || r.weighted_value === null) {
+      return {
+        wave,
+        value: null,
+        ciLow: null,
+        ciHigh: null,
+        n: r?.n ?? null,
+        suppressed: true,
+      };
+    }
+    if (complement) {
+      return {
+        wave,
+        value: 1 - r.weighted_value,
+        // Complement of [lo, hi] is [1 - hi, 1 - lo].
+        ciLow: r.weighted_ci_upper !== null ? 1 - r.weighted_ci_upper : null,
+        ciHigh: r.weighted_ci_lower !== null ? 1 - r.weighted_ci_lower : null,
+        n: r.n,
+        suppressed: false,
+      };
+    }
+    return {
+      wave,
+      value: r.weighted_value,
+      ciLow: r.weighted_ci_lower,
+      ciHigh: r.weighted_ci_upper,
+      n: r.n,
+      suppressed: false,
+    };
+  };
+
+  return items.map((item) => {
+    if (item.kind === 'binary') {
+      return {
+        groupingVar: item.outcome,
+        variableLabel: item.label,
+        rows: [
+          {
+            categoryLabel: 'Lonely',
+            categoryValue: 'lonely',
+            cells: waves.map((w) => cell(idx.get(`${item.outcome}|_|${w}`), w)),
+          },
+          {
+            categoryLabel: 'Not lonely',
+            categoryValue: 'not_lonely',
+            cells: waves.map((w) =>
+              cell(idx.get(`${item.outcome}|_|${w}`), w, true),
+            ),
+          },
+        ],
+      };
+    }
+    const order: ReadonlyArray<{ bucket: LikertBucket; label: string }> =
+      item.reverseCoded
+        ? [
+            { bucket: 'agree', label: 'Doesn’t feel negative' },
+            { bucket: 'neutral', label: 'Neutral' },
+            { bucket: 'disagree', label: 'Feels negative' },
+          ]
+        : [
+            { bucket: 'agree', label: 'Agrees' },
+            { bucket: 'neutral', label: 'Neutral' },
+            { bucket: 'disagree', label: 'Disagrees' },
+          ];
+    return {
+      groupingVar: item.outcome,
+      variableLabel: item.label,
+      rows: order.map((o) => ({
+        categoryLabel: o.label,
+        categoryValue: o.bucket,
+        cells: waves.map((w) =>
+          cell(idx.get(`${item.outcome}|${o.bucket}|${w}`), w),
+        ),
+      })),
+    };
+  });
 }

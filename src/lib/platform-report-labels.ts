@@ -154,3 +154,36 @@ export const EXPERIENCE_ITEMS: ReadonlyArray<ExperienceItemConfig> = [
     followUps: [],
   },
 ];
+
+// §4 wellbeing outcomes (group_comparisons.json, grouping_var
+// platform_user_<slug>, group "User"). `kind` drives the sub-rows:
+// binary → Lonely / Not lonely; bucketed → Agrees / Neutral / Disagrees.
+// `reverseCoded` (ls002i only) flips the bucket labels to the
+// wellbeing-positive framing — handled in the adapter, not the table.
+export interface WellbeingItemConfig {
+  outcome: string;
+  label: string;
+  kind: 'binary' | 'bucketed';
+  reverseCoded?: boolean;
+}
+
+export const WELLBEING_ITEMS: ReadonlyArray<WellbeingItemConfig> = [
+  { outcome: 'ex003_lonely', label: 'Loneliness', kind: 'binary' },
+  { outcome: 'ls002l', label: 'Satisfied with life overall', kind: 'bucketed' },
+  { outcome: 'ls002j', label: 'Life is going well', kind: 'bucketed' },
+  { outcome: 'ls002k', label: 'Life is close to ideal', kind: 'bucketed' },
+  { outcome: 'ls002a', label: 'Satisfied with physical health', kind: 'bucketed' },
+  { outcome: 'ls002d', label: 'Satisfied with mental health', kind: 'bucketed' },
+  { outcome: 'ls002c', label: 'Satisfied with social life', kind: 'bucketed' },
+  { outcome: 'ls002g', label: 'Satisfied with family life', kind: 'bucketed' },
+  { outcome: 'ls002b', label: 'Satisfied with financial situation', kind: 'bucketed' },
+  { outcome: 'ls002e', label: 'Satisfied with leisure time', kind: 'bucketed' },
+  { outcome: 'ls002f', label: 'Satisfied with job/daily activities', kind: 'bucketed' },
+  { outcome: 'ls002h', label: 'Feels happy most of the time', kind: 'bucketed' },
+  {
+    outcome: 'ls002i',
+    label: 'Feels negative most of the time',
+    kind: 'bucketed',
+    reverseCoded: true,
+  },
+];

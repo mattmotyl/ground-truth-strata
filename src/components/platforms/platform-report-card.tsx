@@ -23,6 +23,7 @@ import {
 import { SectionUsage } from './section-usage';
 import { SectionDemographics } from './section-demographics';
 import { SectionExperiences } from './section-experiences';
+import { SectionWellbeing } from './section-wellbeing';
 import { SectionHabits } from './section-habits';
 import { ReportSection } from './report-section';
 
@@ -35,12 +36,6 @@ const JUMP_LINKS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'wellbeing', label: 'Wellbeing' },
   { id: 'habits', label: 'Habits' },
 ];
-
-const PLACEHOLDER_BODY = (
-  <p className="text-sm text-slate py-6">
-    This section lands in an upcoming build of the report card.
-  </p>
-);
 
 export function PlatformReportCard() {
   const [rows, setRows] = useState<PlatformRateRow[] | null>(null);
@@ -199,12 +194,11 @@ export function PlatformReportCard() {
           platformLabel={platformLabel}
         />
 
-        <ReportSection
-          id="wellbeing"
-          title={`How do ${platformLabel} users feel?`}
-        >
-          {PLACEHOLDER_BODY}
-        </ReportSection>
+        <SectionWellbeing
+          meta={meta}
+          platformSlug={activeSlug}
+          platformLabel={platformLabel}
+        />
 
         <SectionHabits
           rows={rows}
