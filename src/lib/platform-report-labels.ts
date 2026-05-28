@@ -3,6 +3,8 @@
 // names and category order. Labels follow PHASE4_UI_SPEC.md; the registry
 // grows as later sections (wellbeing, habits) land.
 
+import type { PlatformRateMetric } from './strata-types';
+
 // One demographic breakdown variable shown in the §2 "Who uses
 // [Platform]?" table: its JSON grouping_var, display label, and the
 // ordered categories (group_value → display label) in row order.
@@ -79,4 +81,21 @@ export const DEMOGRAPHIC_VARS: ReadonlyArray<DemographicVarConfig> = [
       { value: 'Conservative', label: 'Conservative' },
     ],
   },
+];
+
+// §5 platform habit/attitude scale items (us018a–g, Waves 4–6). Bars use
+// these short phrasings; `metric` is the platform_rates.json metric name.
+export interface HabitItemConfig {
+  metric: PlatformRateMetric;
+  label: string;
+}
+
+export const HABIT_ITEMS: ReadonlyArray<HabitItemConfig> = [
+  { metric: 'us018a_mean', label: 'Uses it without thinking' },
+  { metric: 'us018b_mean', label: 'Thinks about using it a lot' },
+  { metric: 'us018c_mean', label: 'Has a positive feeling about using it' },
+  { metric: 'us018d_mean', label: 'Has a negative feeling about using it' },
+  { metric: 'us018e_mean', label: 'Spends more time than intended' },
+  { metric: 'us018f_mean', label: 'Learns things from using it' },
+  { metric: 'us018g_mean', label: 'Feels connected to others from using it' },
 ];

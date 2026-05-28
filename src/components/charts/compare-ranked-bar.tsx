@@ -117,6 +117,61 @@ function BarCiLabels({
   );
 }
 
+// Word-wrap a category label into at most two lines so long labels (e.g.
+// the §5 habit-scale phrasings) stay legible. Short labels (platform
+// names on /compare) fit on one line and are returned unchanged.
+function wrapLabel(text: string, maxChars: number): string[] {
+  if (text.length <= maxChars) return [text];
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let cur = '';
+  for (const w of words) {
+    if (cur && (cur + ' ' + w).length > maxChars) {
+      lines.push(cur);
+      cur = w;
+    } else {
+      cur = cur ? cur + ' ' + w : w;
+    }
+  }
+  if (cur) lines.push(cur);
+  if (lines.length > 2) return [lines[0], lines.slice(1).join(' ')];
+  return lines;
+}
+
+interface RankedYTickProps {
+  maxChars: number;
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+}
+
+// Custom YAxis tick: vertically-centered, up to two wrapped lines.
+function RankedYTick({ maxChars, x = 0, y = 0, payload }: RankedYTickProps) {
+  const value = payload?.value;
+  if (typeof value !== 'string') return null;
+  const lines = wrapLabel(value, maxChars);
+  const lineH = 12;
+  const startDy = -((lines.length - 1) * lineH) / 2;
+  return (
+    <g transform={`translate(${x},${y})`}>
+      {lines.map((ln, i) => (
+        <text
+          key={i}
+          x={-3}
+          y={0}
+          dy={startDy + i * lineH + 4}
+          textAnchor="end"
+          fontFamily="var(--font-mono)"
+          fontSize={12}
+          fill="#18161F"
+        >
+          {ln}
+        </text>
+      ))}
+    </g>
+  );
+}
+
 interface BarTooltipProps {
   active?: boolean;
   payload?: readonly {
@@ -155,6 +210,10 @@ interface CompareRankedBarProps {
   // Caption rendered under the chart (e.g. "% who agree").
   axisLabel: string;
   valueFormat?: (v: number | null | undefined) => string;
+  // Width reserved for the category-label (Y) axis. Defaults to 120 for
+  // short platform labels; pass a larger value for long category labels
+  // (e.g. §5 habit-scale items), which also wrap onto two lines.
+  yAxisWidth?: number;
 }
 
 export function CompareRankedBar({
@@ -164,6 +223,7 @@ export function CompareRankedBar({
   isZoomed,
   axisLabel,
   valueFormat = formatPercent,
+  yAxisWidth = 120,
 }: CompareRankedBarProps) {
   const data: ChartDatum[] = series
     .filter((d) => !d.suppressed && d.value !== null)
@@ -232,11 +292,11 @@ export function CompareRankedBar({
           <YAxis
             dataKey="label"
             type="category"
-            width={120}
+            width={yAxisWidth}
             stroke="#605A6B"
             fontFamily={CHART_FONTS.mono}
             fontSize={12}
-            tick={{ fill: '#18161F' }}
+            tick={<RankedYTick maxChars={Math.max(8, Math.floor(yAxisWidth / 8))} />}
           />
           <Tooltip
             cursor={{ fill: '#E7E1EC', opacity: 0.4 }}

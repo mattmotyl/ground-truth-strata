@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { SectionUsage } from './section-usage';
 import { SectionDemographics } from './section-demographics';
+import { SectionHabits } from './section-habits';
 import { ReportSection } from './report-section';
 
 const DEFAULT_SLUG = 'facebook';
@@ -204,12 +205,12 @@ export function PlatformReportCard() {
           {PLACEHOLDER_BODY}
         </ReportSection>
 
-        <ReportSection
-          id="habits"
-          title={`How habitual is ${platformLabel} use?`}
-        >
-          {PLACEHOLDER_BODY}
-        </ReportSection>
+        <SectionHabits
+          rows={rows}
+          meta={meta}
+          platformSlug={activeSlug}
+          platformLabel={platformLabel}
+        />
       </div>
     </div>
   );

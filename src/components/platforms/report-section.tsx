@@ -28,6 +28,9 @@ interface ReportSectionProps {
   seeMore?: SeeMoreLink | SeeMoreLink[];
   actions?: ReactNode;
   exportRef?: RefObject<HTMLDivElement | null>;
+  // Optional interactive controls (e.g. §5 wave + response-type pickers).
+  // Rendered ABOVE the exported card so they stay out of PNG captures.
+  controls?: ReactNode;
 }
 
 export function ReportSection({
@@ -40,6 +43,7 @@ export function ReportSection({
   seeMore,
   actions,
   exportRef,
+  controls,
 }: ReportSectionProps) {
   const links = seeMore
     ? Array.isArray(seeMore)
@@ -49,6 +53,7 @@ export function ReportSection({
 
   return (
     <section id={id} className="scroll-mt-36 space-y-3">
+      {controls ? <div>{controls}</div> : null}
       <div
         ref={exportRef}
         className="rounded-md border border-mist bg-white p-5 space-y-3"

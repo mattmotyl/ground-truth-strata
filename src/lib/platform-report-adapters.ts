@@ -4,11 +4,19 @@
 // added here per sub-commit as each section lands.
 
 import type {
+  LikertBucket,
   PlatformDemographicRow,
   PlatformRateMetric,
   PlatformRateRow,
 } from './strata-types';
-import type { DemographicVarConfig } from './platform-report-labels';
+import {
+  sortComparisonSeries,
+  type ComparisonSeries,
+} from './compare-adapters';
+import type {
+  DemographicVarConfig,
+  HabitItemConfig,
+} from './platform-report-labels';
 
 // One point on a single-platform trend line. value/ci are proportions
 // (0–1) for rate metrics; a suppressed or absent wave is null so the line
@@ -149,4 +157,74 @@ export function platformDemographicsToTable(
       }),
     })),
   }));
+}
+
+// =====================================================================
+// §5 platform habit/attitude scale (us018a–g, Waves 4–6).
+// =====================================================================
+
+// Pivot the seven us018 habit metrics for one (platform × wave × response
+// band) into a ranked ComparisonSeries — one datum per habit item, sorted
+// descending. `platform_slug` is repurposed as the metric key so
+// CompareRankedBar (a generic ranked bar) can render the items as bars;
+// `label` is the item's plain-English phrasing.
+export function platformHabitsToSeries(
+  rows: PlatformRateRow[],
+  platformSlug: string,
+  wave: number,
+  bucket: LikertBucket,
+  items: ReadonlyArray<HabitItemConfig>,
+): ComparisonSeries {
+  const series: ComparisonSeries = items.map((item) => {
+    const r = rows.find(
+      (row) =>
+        row.platform_slug === platformSlug &&
+        row.metric === item.metric &&
+        row.wave === wave &&
+        row.bucket === bucket,
+    );
+    if (!r || r.suppressed) {
+      return {
+        platform_slug: item.metric,
+        label: item.label,
+        value: null,
+        ciLow: null,
+        ciHigh: null,
+        n: r?.n ?? null,
+        suppressed: true,
+      };
+    }
+    return {
+      platform_slug: item.metric,
+      label: item.label,
+      value: r.weighted_value,
+      ciLow: r.weighted_ci_lower,
+      ciHigh: r.weighted_ci_upper,
+      n: r.n,
+      suppressed: false,
+    };
+  });
+  return sortComparisonSeries(series);
+}
+
+// Waves where the platform has at least one non-suppressed us018 bucket
+// row for the given response band — drives the §5 wave selector's
+// availability (the rest are ghosted). us018 was only asked W4–W6.
+export function habitWavesWithData(
+  rows: PlatformRateRow[],
+  platformSlug: string,
+  bucket: LikertBucket,
+): number[] {
+  const waves = new Set<number>();
+  for (const r of rows) {
+    if (
+      r.platform_slug === platformSlug &&
+      r.metric.startsWith('us018') &&
+      r.bucket === bucket &&
+      !r.suppressed
+    ) {
+      waves.add(r.wave);
+    }
+  }
+  return [...waves].sort((a, b) => a - b);
 }
