@@ -11,6 +11,7 @@ import { formatCI, formatN, formatPercent } from '@/lib/strata-formatters';
 interface SinglePlatformHeatmapProps {
   table: HeatmapTable;
   datesByWave: ReadonlyMap<number, string>;
+  ariaLabel?: string;
 }
 
 const MONO = { fontFamily: 'var(--font-mono)' } as const;
@@ -18,11 +19,12 @@ const MONO = { fontFamily: 'var(--font-mono)' } as const;
 export function SinglePlatformHeatmap({
   table,
   datesByWave,
+  ariaLabel,
 }: SinglePlatformHeatmapProps) {
   const scaleMax = table.max > 0 ? table.max : 1;
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-xs border-collapse">
+      <table className="w-full text-xs border-collapse" aria-label={ariaLabel}>
         <thead>
           <tr className="text-slate text-left border-b border-mist">
             <th className="py-1.5 pr-3 font-normal" style={MONO}>

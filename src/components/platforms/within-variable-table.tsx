@@ -34,6 +34,7 @@ interface WithinVariableTableProps {
   valueFormat?: (v: number | null | undefined) => string;
   variableHeader?: string;
   categoryHeader?: string;
+  ariaLabel?: string;
 }
 
 export function WithinVariableTable({
@@ -43,10 +44,11 @@ export function WithinVariableTable({
   valueFormat = formatPercent,
   variableHeader = 'Variable',
   categoryHeader = 'Category',
+  ariaLabel,
 }: WithinVariableTableProps) {
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
+      <table className="w-full text-sm border-collapse" aria-label={ariaLabel}>
         <thead>
           <tr className="text-slate text-left border-b border-mist">
             <th

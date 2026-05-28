@@ -150,3 +150,28 @@
     font-family: var(--font-mono), ui-monospace, monospace;
   }
 }
+
+/* =====================================================================
+ * Print (Save as PDF) fixes.
+ * Some print rasterizers drop SVG content inside a generated <clipPath>
+ * (Recharts clips bars/lines to the plot area with a useId-based id),
+ * leaving the axes but no bars/lines. Charts here are never zoomed past
+ * their domain, so dropping the clip in print is safe and makes the data
+ * render. print-color-adjust preserves chart fills and heatmap cell
+ * shading, which browsers otherwise strip when printing.
+ * ===================================================================== */
+@media print {
+  /* Scope strictly to Recharts chart internals so non-Recharts clip-path
+   * usage is untouched. This unclips the bar/line groups Recharts clips
+   * to the plot area; the broken-axis glyph has no clip-path and is
+   * unaffected (clip-path: none can only reveal, never hide). */
+  .recharts-surface [clip-path] {
+    clip-path: none !important;
+  }
+  .recharts-wrapper,
+  .recharts-surface,
+  table {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

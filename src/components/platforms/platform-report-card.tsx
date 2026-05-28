@@ -113,7 +113,7 @@ export function PlatformReportCard() {
                 label: p.label,
               }))}
             >
-              <SelectTrigger className="min-w-44 bg-white">
+              <SelectTrigger className="min-w-44 bg-white" aria-label="Select platform">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

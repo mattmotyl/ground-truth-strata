@@ -103,7 +103,11 @@ export function SectionDemographics({
           No demographic data available for {platformLabel}.
         </p>
       ) : (
-        <WithinVariableTable groups={groups} waveColumns={waveColumns} />
+        <WithinVariableTable
+          groups={groups}
+          waveColumns={waveColumns}
+          ariaLabel={`Demographic composition of ${platformLabel} users by survey wave`}
+        />
       )}
     </ReportSection>
   );

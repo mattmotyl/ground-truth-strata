@@ -147,7 +147,11 @@ export function SectionWellbeing({
             No wellbeing data available for {platformLabel}.
           </p>
         ) : (
-          <WithinVariableTable groups={groups} waveColumns={waveColumns} />
+          <WithinVariableTable
+            groups={groups}
+            waveColumns={waveColumns}
+            ariaLabel={`Wellbeing of ${platformLabel} users by survey wave`}
+          />
         )}
       </div>
     </ReportSection>

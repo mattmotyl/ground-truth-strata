@@ -160,7 +160,7 @@ export function PlatformTrendLine({
       <ResponsiveContainer width="100%" height={chartHeight}>
         <ComposedChart
           data={rows}
-          margin={{ top: 12, right: 16, bottom: compact ? 8 : 24, left: 4 }}
+          margin={{ top: 12, right: compact ? 28 : 44, bottom: compact ? 8 : 24, left: 4 }}
         >
           <CartesianGrid stroke="#E7E1EC" strokeDasharray="3 3" />
           <XAxis

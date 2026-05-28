@@ -259,6 +259,7 @@ export function SectionExperiences({
                       <SinglePlatformHeatmap
                         table={table}
                         datesByWave={datesByWave}
+                        ariaLabel={`${fu.title} on ${platformLabel}, by survey wave`}
                       />
                     )}
                   </div>

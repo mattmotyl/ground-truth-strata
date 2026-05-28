@@ -111,6 +111,7 @@ export function SectionHabits({
                 checked={selected}
                 disabled={!avail}
                 onChange={() => setWaveChoice(w)}
+                aria-label={fullWaveLabel(w, datesByWave.get(w))}
                 className="sr-only"
               />
               W{w}
