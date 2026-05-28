@@ -3,12 +3,16 @@
 import { useEffect, useState } from 'react';
 import {
   loadMeta,
+  loadPlatformDemographics,
   loadPlatformRates,
   loadQuestionTexts,
   type QuestionTextsJson,
 } from '@/lib/strata-data';
-import type { MetaJson, PlatformRateRow } from '@/lib/strata-types';
-import { fullWaveLabel } from '@/lib/strata-formatters';
+import type {
+  MetaJson,
+  PlatformDemographicRow,
+  PlatformRateRow,
+} from '@/lib/strata-types';
 import {
   Select,
   SelectContent,
@@ -17,13 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { SectionUsage } from './section-usage';
+import { SectionDemographics } from './section-demographics';
 import { ReportSection } from './report-section';
 
 const DEFAULT_SLUG = 'facebook';
 
-// Jump-nav entries. Sections land sub-commit by sub-commit; for now only
-// Usage is populated and the rest render as placeholder shells so the
-// page skeleton and anchor links are reviewable end to end.
 const JUMP_LINKS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'usage', label: 'Usage' },
   { id: 'demographics', label: 'Demographics' },
@@ -43,12 +45,14 @@ export function PlatformReportCard() {
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
+  // platform_demographics.json (~900 KB) loads alongside the base data
+  // but in its own request, so §1 renders without waiting on it.
+  const [demoRows, setDemoRows] = useState<PlatformDemographicRow[] | null>(
+    null,
+  );
   const [error, setError] = useState<Error | null>(null);
 
   const [slug, setSlug] = useState<string>(DEFAULT_SLUG);
-  // Wave is user-overridable; null means "fall back to the latest wave
-  // the selected platform has data for" (computed below per platform).
-  const [waveOverride, setWaveOverride] = useState<number | null>(null);
 
   useEffect(() => {
     Promise.all([loadPlatformRates(), loadMeta(), loadQuestionTexts()])
@@ -58,6 +62,10 @@ export function PlatformReportCard() {
         setQuestionTexts(qt);
       })
       .catch(setError);
+  }, []);
+
+  useEffect(() => {
+    loadPlatformDemographics().then(setDemoRows).catch(setError);
   }, []);
 
   if (error) {
@@ -90,80 +98,36 @@ export function PlatformReportCard() {
   const platformLabel =
     platforms.find((p) => p.slug === activeSlug)?.label ?? activeSlug;
 
-  const datesByWave = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-
-  // Waves the selected platform has any row for, ascending.
-  const availableWaves = [
-    ...new Set(
-      rows.filter((r) => r.platform_slug === activeSlug).map((r) => r.wave),
-    ),
-  ].sort((a, b) => a - b);
-
-  // Effective wave: the user's choice when it's available for this
-  // platform, otherwise the latest available wave.
-  const latestWave = availableWaves[availableWaves.length - 1] ?? null;
-  const effectiveWave =
-    waveOverride !== null && availableWaves.includes(waveOverride)
-      ? waveOverride
-      : latestWave;
-
   return (
     <div className="flex flex-col">
-      {/* Sticky controls: platform picker + wave picker + jump nav. */}
+      {/* Sticky controls: platform picker + jump nav. (Sections set their
+          own wave scope; there is no global wave selector.) */}
       <div className="sticky top-0 z-30 border-b border-mist bg-paper/95 backdrop-blur">
         <div className="mx-auto max-w-6xl px-6 py-4 space-y-3">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <label className="flex items-center gap-2 text-sm text-slate">
-              <span style={{ fontFamily: 'var(--font-mono)' }}>
-                Viewing data for:
-              </span>
-              <Select
-                value={activeSlug}
-                onValueChange={(v) => {
-                  setSlug(v as string);
-                  setWaveOverride(null);
-                }}
-                items={platforms.map((p) => ({
-                  value: p.slug,
-                  label: p.label,
-                }))}
-              >
-                <SelectTrigger className="min-w-44 bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {platforms.map((p) => (
-                    <SelectItem key={p.slug} value={p.slug}>
-                      {p.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-
-            <label className="flex items-center gap-2 text-sm text-slate">
-              <span style={{ fontFamily: 'var(--font-mono)' }}>Wave:</span>
-              <Select
-                value={effectiveWave}
-                onValueChange={(v) => setWaveOverride(v as number)}
-                items={availableWaves.map((w) => ({
-                  value: w,
-                  label: fullWaveLabel(w, datesByWave.get(w)),
-                }))}
-              >
-                <SelectTrigger className="min-w-64 bg-white">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableWaves.map((w) => (
-                    <SelectItem key={w} value={w}>
-                      {fullWaveLabel(w, datesByWave.get(w))}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-          </div>
+          <label className="flex items-center gap-2 text-sm text-slate">
+            <span style={{ fontFamily: 'var(--font-mono)' }}>
+              Viewing data for:
+            </span>
+            <Select
+              value={activeSlug}
+              onValueChange={(v) => setSlug(v as string)}
+              items={platforms.map((p) => ({
+                value: p.slug,
+                label: p.label,
+              }))}
+            >
+              <SelectTrigger className="min-w-44 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {platforms.map((p) => (
+                  <SelectItem key={p.slug} value={p.slug}>
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </label>
 
           <nav
             aria-label="Jump to section"
@@ -208,9 +172,23 @@ export function PlatformReportCard() {
           platformLabel={platformLabel}
         />
 
-        <ReportSection id="demographics" title={`Who uses ${platformLabel}?`}>
-          {PLACEHOLDER_BODY}
-        </ReportSection>
+        {demoRows ? (
+          <SectionDemographics
+            rows={demoRows}
+            meta={meta}
+            platformSlug={activeSlug}
+            platformLabel={platformLabel}
+          />
+        ) : (
+          <ReportSection id="demographics" title={`Who uses ${platformLabel}?`}>
+            <p
+              className="text-sm text-slate py-6"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Loading demographics…
+            </p>
+          </ReportSection>
+        )}
 
         <ReportSection
           id="experiences"
