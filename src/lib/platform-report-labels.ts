@@ -3,7 +3,7 @@
 // names and category order. Labels follow PHASE4_UI_SPEC.md; the registry
 // grows as later sections (wellbeing, habits) land.
 
-import type { PlatformRateMetric } from './strata-types';
+import type { ConditionalConstruct, PlatformRateMetric } from './strata-types';
 
 // One demographic breakdown variable shown in the §2 "Who uses
 // [Platform]?" table: its JSON grouping_var, display label, and the
@@ -98,4 +98,59 @@ export const HABIT_ITEMS: ReadonlyArray<HabitItemConfig> = [
   { metric: 'us018e_mean', label: 'Spends more time than intended' },
   { metric: 'us018f_mean', label: 'Learns things from using it' },
   { metric: 'us018g_mean', label: 'Feels connected to others from using it' },
+];
+
+// §3 experience rates (us003/007/010/012). The 2×2 grid renders these in
+// order. `colorIntent` picks the mini-line color (warm = harm, cool =
+// positive). `followUps` are the conditional-breakdown drill tables shown
+// below the grid — only negative-experience and bad-for-world have them.
+export interface ExperienceFollowUp {
+  construct: ConditionalConstruct;
+  title: string;
+}
+
+export interface ExperienceItemConfig {
+  metric: PlatformRateMetric;
+  label: string;
+  colorIntent: 'warm' | 'cool';
+  followUps: ReadonlyArray<ExperienceFollowUp>;
+}
+
+export const EXPERIENCE_ITEMS: ReadonlyArray<ExperienceItemConfig> = [
+  {
+    metric: 'nux_rate',
+    label: 'Negative personal experiences',
+    colorIntent: 'warm',
+    followUps: [
+      { construct: 'nuxtopic', title: 'Topics involved in negative experiences' },
+      { construct: 'nuximpact', title: 'How these experiences impacted users' },
+    ],
+  },
+  {
+    metric: 'bftw_rate',
+    label: 'Content considered bad for the world',
+    colorIntent: 'warm',
+    followUps: [
+      {
+        construct: 'bftwtopic',
+        title: 'Topics of content considered bad for the world',
+      },
+      {
+        construct: 'bftwimpact',
+        title: 'Expected impacts of bad-for-world content',
+      },
+    ],
+  },
+  {
+    metric: 'mcxn_rate',
+    label: 'Meaningful connections',
+    colorIntent: 'cool',
+    followUps: [],
+  },
+  {
+    metric: 'useful_rate',
+    label: 'Learning something useful',
+    colorIntent: 'cool',
+    followUps: [],
+  },
 ];

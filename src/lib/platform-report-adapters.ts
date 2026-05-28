@@ -4,6 +4,8 @@
 // added here per sub-commit as each section lands.
 
 import type {
+  ConditionalBreakdownRow,
+  ConditionalConstruct,
   LikertBucket,
   PlatformDemographicRow,
   PlatformRateMetric,
@@ -13,8 +15,10 @@ import {
   sortComparisonSeries,
   type ComparisonSeries,
 } from './compare-adapters';
+import { describeChange, type ChangeDescription } from './strata-formatters';
 import type {
   DemographicVarConfig,
+  ExperienceItemConfig,
   HabitItemConfig,
 } from './platform-report-labels';
 
@@ -27,6 +31,9 @@ export interface TrendPoint {
   value: number | null;
   ciLow: number | null;
   ciHigh: number | null;
+  // weighted_se is carried so the §3 W1→W6 trend indicator can apply the
+  // significance-aware describeChange() rule. PlatformTrendLine ignores it.
+  se: number | null;
   n: number | null;
 }
 
@@ -57,6 +64,7 @@ export function platformMetricTrend(
         value: null,
         ciLow: null,
         ciHigh: null,
+        se: null,
         n: row?.n ?? null,
       };
     }
@@ -66,6 +74,7 @@ export function platformMetricTrend(
       value: row.weighted_value,
       ciLow: row.weighted_ci_lower,
       ciHigh: row.weighted_ci_upper,
+      se: row.weighted_se,
       n: row.n,
     };
   });
@@ -227,4 +236,146 @@ export function habitWavesWithData(
     }
   }
   return [...waves].sort((a, b) => a - b);
+}
+
+// =====================================================================
+// §3 experience rates over time + conditional follow-up heatmaps.
+// =====================================================================
+
+// One experience metric's trend for a platform: the per-wave points
+// (for the mini line chart), the latest non-null value (the big number),
+// and the W1→W6 significance-aware direction (the ↑/↓/→ indicator).
+export interface ExperienceTrend {
+  metric: PlatformRateMetric;
+  label: string;
+  colorIntent: 'warm' | 'cool';
+  points: TrendPoint[];
+  latestWave: number | null;
+  latestValue: number | null;
+  trend: ChangeDescription;
+}
+
+export function platformExperienceTrends(
+  rows: PlatformRateRow[],
+  platformSlug: string,
+  items: ReadonlyArray<ExperienceItemConfig>,
+  waves: number[],
+  waveDatesByWave: ReadonlyMap<number, string>,
+): ExperienceTrend[] {
+  return items.map((item) => {
+    const points = platformMetricTrend(
+      rows,
+      platformSlug,
+      item.metric,
+      waves,
+      waveDatesByWave,
+    );
+    const withData = points.filter((p) => p.value !== null);
+    const first = withData[0] ?? null;
+    const last = withData[withData.length - 1] ?? null;
+    // Significance-aware direction over the full observed span (first →
+    // last wave with data), per strata-formatters.describeChange().
+    const trend = describeChange(
+      first?.value,
+      first?.se,
+      last?.value,
+      last?.se,
+    );
+    return {
+      metric: item.metric,
+      label: item.label,
+      colorIntent: item.colorIntent,
+      points,
+      latestWave: last?.wave ?? null,
+      latestValue: last?.value ?? null,
+      trend,
+    };
+  });
+}
+
+// A single-platform conditional-breakdown heatmap: response options as
+// rows, waves as columns, % of affected users per cell. `max` is the
+// largest non-null value across all cells, used to scale the warm color
+// ramp.
+export interface HeatmapTableRow {
+  optionLabel: string;
+  cells: TableCell[];
+}
+
+export interface HeatmapTable {
+  options: HeatmapTableRow[];
+  waves: number[];
+  max: number;
+}
+
+// Waves a (platform × construct) appears in, ascending — drives the
+// follow-up heatmap's columns.
+export function conditionalWavesForConstruct(
+  rows: ConditionalBreakdownRow[],
+  platformSlug: string,
+  construct: ConditionalConstruct,
+): number[] {
+  return [
+    ...new Set(
+      rows
+        .filter(
+          (r) =>
+            r.platform_slug === platformSlug && r.construct === construct,
+        )
+        .map((r) => r.wave),
+    ),
+  ].sort((a, b) => a - b);
+}
+
+export function platformConditionalHeatmap(
+  rows: ConditionalBreakdownRow[],
+  platformSlug: string,
+  construct: ConditionalConstruct,
+  waves: number[],
+): HeatmapTable {
+  const forCP = rows.filter(
+    (r) => r.platform_slug === platformSlug && r.construct === construct,
+  );
+  // Distinct options, ordered by option_index.
+  const optIndex = new Map<string, number>();
+  for (const r of forCP) {
+    if (!optIndex.has(r.option_label)) optIndex.set(r.option_label, r.option_index);
+  }
+  const options = [...optIndex.entries()]
+    .sort((a, b) => a[1] - b[1])
+    .map(([label]) => label);
+
+  const cellIndex = new Map<string, ConditionalBreakdownRow>();
+  for (const r of forCP) cellIndex.set(`${r.option_label}|${r.wave}`, r);
+
+  let max = 0;
+  const rowsOut: HeatmapTableRow[] = options.map((opt) => ({
+    optionLabel: opt,
+    cells: waves.map((wave) => {
+      const r = cellIndex.get(`${opt}|${wave}`);
+      if (!r || r.suppressed) {
+        return {
+          wave,
+          value: null,
+          ciLow: null,
+          ciHigh: null,
+          n: r?.n ?? null,
+          suppressed: true,
+        };
+      }
+      if (r.weighted_value !== null && r.weighted_value > max) {
+        max = r.weighted_value;
+      }
+      return {
+        wave,
+        value: r.weighted_value,
+        ciLow: r.weighted_ci_lower,
+        ciHigh: r.weighted_ci_upper,
+        n: r.n,
+        suppressed: false,
+      };
+    }),
+  }));
+
+  return { options: rowsOut, waves, max };
 }

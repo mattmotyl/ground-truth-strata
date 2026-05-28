@@ -169,9 +169,9 @@ export function PlatformTrendLine({
             fontFamily={CHART_FONTS.mono}
             fontSize={11}
             interval={0}
-            height={compact ? 28 : 48}
+            height={compact ? 36 : 48}
             tickMargin={6}
-            tick={compact ? { fontSize: 10, fill: '#605A6B' } : <TwoLineXTick />}
+            tick={<TwoLineXTick />}
           />
           <YAxis
             domain={yDomain}

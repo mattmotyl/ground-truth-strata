@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { SectionUsage } from './section-usage';
 import { SectionDemographics } from './section-demographics';
+import { SectionExperiences } from './section-experiences';
 import { SectionHabits } from './section-habits';
 import { ReportSection } from './report-section';
 
@@ -191,12 +192,12 @@ export function PlatformReportCard() {
           </ReportSection>
         )}
 
-        <ReportSection
-          id="experiences"
-          title={`What do people experience on ${platformLabel}?`}
-        >
-          {PLACEHOLDER_BODY}
-        </ReportSection>
+        <SectionExperiences
+          rows={rows}
+          meta={meta}
+          platformSlug={activeSlug}
+          platformLabel={platformLabel}
+        />
 
         <ReportSection
           id="wellbeing"
