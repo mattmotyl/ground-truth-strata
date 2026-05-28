@@ -246,7 +246,13 @@ export function getPlatformOutcomeComparison(
       n: r.n,
       weighted_n_eff: r.weighted_n_eff,
       suppressed: r.suppressed,
-    }));
+    }))
+    // loadGroupComparisons() filters EXCLUDED_PLATFORM_SLUGS on
+    // `r.platform_slug`, which is null for these platform_user_* rows —
+    // so platform_user_none / platform_user_something_else slip through.
+    // Filter the DERIVED slug here so the helper never returns excluded
+    // platforms regardless of which adapter calls it.
+    .filter((d) => !EXCLUDED_PLATFORM_SLUGS.has(d.platform_slug));
 }
 
 // =====================================================================
