@@ -61,6 +61,7 @@ next-env.d.ts
 # (matches the broader Strata convention of keeping audit artifacts
 # under M:\MM\Websites\strata-local\audit\)
 .playwright-mcp/
+*.png
 
 # Environment variables
 .env
