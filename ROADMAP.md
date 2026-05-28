@@ -32,3 +32,12 @@ release.
 - **/explore two-variable scatter with regression line.** A variable
   picker that plots any two variables against each other with a fitted
   regression line. Deferred alongside the correlation heatmap above.
+- **/platforms — Usage frequency distribution section.** Listed in the
+  original PHASE4_UI_SPEC /platforms checklist but dropped from the
+  T3-B5 build scope. Would show the us002 frequency-of-use distribution
+  for the selected platform.
+- **/platforms — Time spent per day section (W4–W5).** Also in the
+  original checklist, dropped from T3-B5 scope. us019 time-per-day is
+  sparse (W4–W5 only) and excluded from JSON output via
+  EXCLUDED_VARIABLES, so this would need the data path reconsidered
+  before it can be built.
