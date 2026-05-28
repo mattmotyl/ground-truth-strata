@@ -188,6 +188,68 @@ export function loadQuestionTexts(): Promise<QuestionTextsJson> {
 }
 
 // =====================================================================
+// Theme C (/compare) accessor — per-platform wellbeing outcomes
+// =====================================================================
+
+// One platform's value for a wellbeing outcome among that platform's
+// USERS. Shape matches PHASE4_UI_SPEC.md (Theme C helper signature).
+export interface PlatformOutcomeDatum {
+  platform_slug: string;
+  weighted_value: number | null;
+  weighted_se: number | null;
+  weighted_ci_lower: number | null;
+  weighted_ci_upper: number | null;
+  n: number | null;
+  weighted_n_eff: number | null;
+  suppressed: boolean;
+}
+
+// Theme C reads respondent-level wellbeing outcomes (ex003_lonely,
+// ls002a-l) split by whether the respondent USES each platform. Those
+// rows live in group_comparisons.json under grouping_var
+// "platform_user_<slug>" with group ∈ {User, Non-user}. This pulls the
+// "User" side for one (outcome, wave, bucket) and derives platform_slug
+// from the grouping_var.
+//
+//   bucket == null/undefined → binary/continuous rows (e.g.
+//     ex003_lonely rate rows, which carry no bucket field)
+//   bucket == 'agree' | 'disagree' | 'neutral' → that Likert bucket row
+//     (ls002a-l bucketed items)
+//
+// Caller passes the already-loaded rows from loadGroupComparisons() so
+// this stays a pure transform (no fetch). Consumed by the Theme C
+// adapter in Part 2.
+export function getPlatformOutcomeComparison(
+  rows: GroupComparisonRow[],
+  outcome: string,
+  wave: number,
+  bucket?: string | null,
+): PlatformOutcomeDatum[] {
+  const wantBucket = bucket ?? null;
+  return rows
+    .filter(
+      (r) =>
+        r.outcome === outcome &&
+        r.wave === wave &&
+        r.group === 'User' &&
+        r.grouping_var.startsWith('platform_user_') &&
+        (wantBucket === null
+          ? (r.bucket ?? null) === null
+          : r.bucket === wantBucket),
+    )
+    .map((r) => ({
+      platform_slug: r.grouping_var.replace(/^platform_user_/, ''),
+      weighted_value: r.weighted_value,
+      weighted_se: r.weighted_se,
+      weighted_ci_lower: r.weighted_ci_lower,
+      weighted_ci_upper: r.weighted_ci_upper,
+      n: r.n,
+      weighted_n_eff: r.weighted_n_eff,
+      suppressed: r.suppressed,
+    }));
+}
+
+// =====================================================================
 // Convenience accessors over meta.json
 // =====================================================================
 
