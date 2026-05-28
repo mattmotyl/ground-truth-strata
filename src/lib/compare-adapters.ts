@@ -13,6 +13,7 @@
 import type {
   GroupComparisonRow,
   LikertBucket,
+  PlatformDemographicRow,
   PlatformRateMetric,
   PlatformRateRow,
 } from './strata-types';
@@ -170,6 +171,81 @@ export function availableWavesForOutcome(
     if (bucket === null ? (r.bucket ?? null) === null : r.bucket === bucket) {
       set.add(r.wave);
     }
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+// ── Theme D model (platform_demographics.json) ───────────────────────
+// Composition data is multi-segment per platform, so it can't use the
+// single-value ComparisonSeries. Each platform carries one value per
+// demographic group_value.
+export interface StackedSegmentValue {
+  value: number | null; // proportion 0..1
+  ciLow: number | null;
+  ciHigh: number | null;
+  n: number | null;
+  suppressed: boolean;
+}
+
+export interface StackedDatum {
+  platform_slug: string;
+  label: string;
+  segments: Record<string, StackedSegmentValue>; // keyed by group_value
+}
+
+export type StackedSeries = StackedDatum[];
+
+// Builds the per-platform composition for one (grouping_var, wave),
+// sorted by `sortByValue` (the leading segment) descending. Suppressed
+// group levels keep a null value — the chart omits them, so a bar may
+// total < 100% (per-group suppression; see PlatformDemographicRow note).
+export function platformDemographicsToStacked(
+  rows: PlatformDemographicRow[],
+  groupingVar: string,
+  wave: number,
+  platformsSet: ReadonlySet<string>,
+  labelBySlug: ReadonlyMap<string, string>,
+  sortByValue: string,
+): StackedSeries {
+  const byPlatform = new Map<string, StackedDatum>();
+  for (const r of rows) {
+    if (r.grouping_var !== groupingVar) continue;
+    if (r.wave !== wave) continue;
+    if (!platformsSet.has(r.platform_slug)) continue;
+    let d = byPlatform.get(r.platform_slug);
+    if (!d) {
+      d = {
+        platform_slug: r.platform_slug,
+        label: labelBySlug.get(r.platform_slug) ?? r.platform_label,
+        segments: {},
+      };
+      byPlatform.set(r.platform_slug, d);
+    }
+    d.segments[r.group_value] = {
+      value: r.suppressed ? null : r.weighted_value,
+      ciLow: r.suppressed ? null : r.weighted_ci_lower,
+      ciHigh: r.suppressed ? null : r.weighted_ci_upper,
+      n: r.n,
+      suppressed: r.suppressed,
+    };
+  }
+  const series = [...byPlatform.values()];
+  series.sort((a, b) => {
+    const av = a.segments[sortByValue]?.value ?? -Infinity;
+    const bv = b.segments[sortByValue]?.value ?? -Infinity;
+    if (av !== bv) return bv - av;
+    return a.label.localeCompare(b.label);
+  });
+  return series;
+}
+
+export function availableWavesForDemographic(
+  rows: PlatformDemographicRow[],
+  groupingVar: string,
+): number[] {
+  const set = new Set<number>();
+  for (const r of rows) {
+    if (r.grouping_var === groupingVar) set.add(r.wave);
   }
   return [...set].sort((a, b) => a - b);
 }

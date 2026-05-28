@@ -5,10 +5,10 @@ import { getTheme, type CompareTheme, type ThemeId } from '@/lib/compare-themes'
 // Step 1 (theme) + Step 2 (question) picker for /compare.
 //
 // Layout: Step 1 theme buttons in the left column, Step 2 radio list to
-// their right. The Step-2 area reserves a min-height sized to the
-// tallest theme (7 questions) so switching themes never shifts the chart
-// below — per the spec's "content below the picker does not shift" rule.
-// On narrow viewports the two steps stack (Step 2 below Step 1).
+// their right. The picker band sizes to the taller of the two columns
+// for the current theme — no fixed min-height (an earlier reserved
+// height left a large empty gap above the chart for short question
+// lists). On narrow viewports the two steps stack (Step 2 below Step 1).
 //
 // Themes flagged `available: false` (C and D until Part 2) render as
 // disabled buttons with a "soon" hint so the full theme set is visible.
@@ -81,8 +81,9 @@ export function TwoStepPicker({
             </div>
           </div>
 
-          {/* Step 2 — questions (reserved min-height prevents shift) */}
-          <div className="flex-1 space-y-3 lg:min-h-[18rem]">
+          {/* Step 2 — questions. Sizes to the current theme's list (no
+              fixed min-height — that left a large gap for short lists). */}
+          <div className="flex-1 space-y-3">
             <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
               Step 2 · Pick a question
             </p>

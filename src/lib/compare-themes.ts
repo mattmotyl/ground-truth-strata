@@ -68,6 +68,89 @@ export interface CompareTheme {
   questions: CompareQuestion[];
 }
 
+// ── Theme D demographic-composition config ───────────────────────────
+// Stacked-bar segments per grouping_var: their stack order, display
+// labels, and how to color them. Values match platform_demographics.json
+// group_value strings verbatim. Platforms are sorted by the leading
+// (first) segment's share, descending.
+export interface DemographicSegment {
+  value: string; // exact group_value in platform_demographics.json
+  label: string;
+}
+
+export interface DemographicConfig {
+  // 'political' → fixed blue/purple/red; 'qualitative' → qualitative16.
+  colorMode: 'political' | 'qualitative';
+  // Stack order (also the sort key: platforms sort by segments[0]).
+  segments: DemographicSegment[];
+}
+
+export const DEMOGRAPHIC_CONFIGS: Record<string, DemographicConfig> = {
+  political_ideology_group: {
+    colorMode: 'political',
+    segments: [
+      { value: 'Liberal', label: 'Liberal' },
+      { value: 'Moderate', label: 'Moderate' },
+      { value: 'Conservative', label: 'Conservative' },
+    ],
+  },
+  gender: {
+    colorMode: 'qualitative',
+    segments: [
+      { value: 'Women', label: 'Women' },
+      { value: 'Men', label: 'Men' },
+    ],
+  },
+  age: {
+    colorMode: 'qualitative',
+    segments: [
+      { value: '18-29', label: '18–29' },
+      { value: '30-44', label: '30–44' },
+      { value: '45-59', label: '45–59' },
+      { value: '60+', label: '60+' },
+    ],
+  },
+  education: {
+    colorMode: 'qualitative',
+    segments: [
+      {
+        value: 'Grade School / Some High School',
+        label: 'Grade School / Some High School',
+      },
+      { value: 'High School Diploma', label: 'High School Diploma' },
+      { value: 'Some College', label: 'Some College' },
+      {
+        value: 'College Degree / Post-grad',
+        label: 'College Degree / Post-grad',
+      },
+    ],
+  },
+  hhincome: {
+    colorMode: 'qualitative',
+    segments: [
+      { value: '<30,000', label: '<$30k' },
+      { value: '30,000-59,999', label: '$30k–60k' },
+      { value: '60,000-99,999', label: '$60k–100k' },
+      { value: '100,000-149,999', label: '$100k–150k' },
+      { value: '>150,000', label: '>$150k' },
+    ],
+  },
+  race: {
+    // Descending population size (Matt-specified fixed order).
+    colorMode: 'qualitative',
+    segments: [
+      { value: 'White, non-Hispanic', label: 'White' },
+      { value: 'Hispanic', label: 'Hispanic' },
+      { value: 'Black, non-Hispanic', label: 'Black' },
+      { value: 'Asian, non-Hispanic', label: 'Asian' },
+      {
+        value: 'Other/Multiple races, non-Hispanic',
+        label: 'Other / Multiple',
+      },
+    ],
+  },
+};
+
 // ── Theme A — Experiences on Platforms (platform_rates.json) ─────────
 const THEME_A: CompareTheme = {
   id: 'A',
@@ -297,15 +380,76 @@ const THEME_C: CompareTheme = {
 };
 
 // ── Theme D — Who Uses Each Platform (platform_demographics.json) ────
-// Part 2: stacked horizontal bars over platform_demographics.json
-// (grouping_var per question). Political composition reads
-// grouping_var === "political_ideology_group" — platform_demographics
-// is the single source of truth per the P3-C decision. Stubbed here.
+// Stacked horizontal bars; `variable` is the grouping_var (also the key
+// into DEMOGRAPHIC_CONFIGS). platform_demographics.json is the single
+// source of truth for political composition (P3-C decision). No survey
+// question (these are panel-provided), no response-type/x-axis controls.
 const THEME_D: CompareTheme = {
   id: 'D',
   label: 'Who Uses Each Platform',
-  available: false,
-  questions: [],
+  available: true,
+  questions: [
+    {
+      key: 'political-composition',
+      label: 'Political composition',
+      title: 'Political Composition of Platform Users',
+      variable: 'political_ideology_group',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' }, // unused (stacked)
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+    {
+      key: 'gender',
+      label: 'Gender',
+      title: 'Gender Composition of Platform Users',
+      variable: 'gender',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' },
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+    {
+      key: 'age',
+      label: 'Age group',
+      title: 'Age Composition of Platform Users',
+      variable: 'age',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' },
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+    {
+      key: 'education',
+      label: 'Education',
+      title: 'Education Composition of Platform Users',
+      variable: 'education',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' },
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+    {
+      key: 'income',
+      label: 'Income',
+      title: 'Income Composition of Platform Users',
+      variable: 'hhincome',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' },
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+    {
+      key: 'race',
+      label: 'Race/ethnicity',
+      title: 'Racial/Ethnic Composition of Platform Users',
+      variable: 'race',
+      source: 'platform_demographics',
+      coloring: { mode: 'magnitude', scale: 'cool' },
+      responseTypeApplies: false,
+      chartType: 'stackedBar',
+    },
+  ],
 };
 
 export const COMPARE_THEMES: CompareTheme[] = [

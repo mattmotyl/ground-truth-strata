@@ -33,6 +33,16 @@ interface StrataChartFrameProps {
   // the Numbers block — used by Finding 01 for the "Note: X hidden"
   // message and zoom controls.
   chartFooter?: ReactNode;
+  // When true, the eyebrow / title / subtitle render INSIDE the chart
+  // card (per the PHASE4_UI_SPEC chart anatomy: Title / Subtitle /
+  // Chart / Source Note), and the article header is suppressed. Used by
+  // /compare so the whole anatomy is self-contained and PNG-exported.
+  // Legacy callers omit it and keep the header-above-card layout.
+  titleInCard?: boolean;
+  // Optional source note rendered inside the card, beneath the chart
+  // (only meaningful with titleInCard). Distinct from methodologyFootnote
+  // which renders outside the card next to the action buttons.
+  sourceNote?: ReactNode;
 }
 
 export function StrataChartFrame({
@@ -52,28 +62,38 @@ export function StrataChartFrame({
   controls,
   surveyQuestion,
   chartFooter,
+  titleInCard = false,
+  sourceNote,
 }: StrataChartFrameProps) {
+  const titleBlock = (
+    <div className="space-y-1.5">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {eyebrow}
+      </p>
+      <h1
+        className={
+          titleInCard
+            ? 'text-2xl sm:text-3xl text-plum'
+            : 'text-3xl sm:text-4xl text-plum'
+        }
+        style={{ fontFamily: 'var(--font-serif)' }}
+      >
+        {title}
+      </h1>
+      {subtitle ? (
+        <p className="text-base text-ink/80 leading-relaxed max-w-3xl">
+          {subtitle}
+        </p>
+      ) : null}
+    </div>
+  );
+
   return (
     <article className="mx-auto max-w-6xl px-6 py-10 space-y-6">
-      <header className="space-y-2">
-        <p
-          className="text-xs text-slate uppercase tracking-wide"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          {eyebrow}
-        </p>
-        <h1
-          className="text-3xl sm:text-4xl text-plum"
-          style={{ fontFamily: 'var(--font-serif)' }}
-        >
-          {title}
-        </h1>
-        {subtitle ? (
-          <p className="text-base text-ink/80 leading-relaxed max-w-3xl">
-            {subtitle}
-          </p>
-        ) : null}
-      </header>
+      {!titleInCard ? <header>{titleBlock}</header> : null}
 
       <div
         className={`grid gap-6 items-start ${
@@ -89,6 +109,7 @@ export function StrataChartFrame({
             ref={chartRef}
             className="rounded-md border border-mist bg-white p-4 space-y-3"
           >
+            {titleInCard ? titleBlock : null}
             {surveyQuestion ? (
               <h2
                 className="text-base sm:text-lg font-semibold text-ink leading-snug"
@@ -98,6 +119,14 @@ export function StrataChartFrame({
               </h2>
             ) : null}
             {chart}
+            {sourceNote ? (
+              <p
+                className="text-xs text-slate leading-relaxed pt-3 border-t border-mist"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {sourceNote}
+              </p>
+            ) : null}
           </div>
 
           {chartFooter}
