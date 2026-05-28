@@ -68,7 +68,7 @@ const FINDINGS: Finding[] = [
     blurb:
       'Correlation between platform use frequency and loneliness / wellbeing.',
     chart: 'Diverging bar from national average',
-    href: '/correlations?finding=usage-wellbeing',
+    href: '/explore?finding=usage-wellbeing',
   },
 ];
 

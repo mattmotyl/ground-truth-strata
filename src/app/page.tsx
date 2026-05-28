@@ -131,7 +131,7 @@ export default function HomePage() {
             </Link>
             , and{' '}
             <Link
-              href="/correlations"
+              href="/explore"
               className="text-mulberry hover:text-plum"
             >
               correlations

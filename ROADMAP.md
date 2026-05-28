@@ -23,3 +23,12 @@ release.
 - **Grayscale-friendly fallback** for significance-colored bars.
 - **Loading states / Suspense fallbacks** for the large JSON files
   beyond the current plain "Loading…" text.
+- **/explore full correlation heatmap / corrplot scaffold.** The
+  /explore route currently shows only Finding 08. A full pairwise
+  correlation heatmap (Chart Type #5/#9 in CHART_COMPONENT_MAP.md,
+  sourced from correlations.json) is deferred — it was the larger half
+  of the original T3-B4 spec, split out so the rename could ship on its
+  own.
+- **/explore two-variable scatter with regression line.** A variable
+  picker that plots any two variables against each other with a fitted
+  regression line. Deferred alongside the correlation heatmap above.

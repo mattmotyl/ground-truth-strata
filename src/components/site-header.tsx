@@ -8,7 +8,7 @@ const NAV = [
   { href: '/platforms', label: 'Platforms' },
   { href: '/compare', label: 'Compare' },
   { href: '/groups', label: 'Groups' },
-  { href: '/correlations', label: 'Correlations' },
+  { href: '/explore', label: 'Explore' },
   { href: '/about', label: 'About' },
 ];
 
