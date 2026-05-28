@@ -1,5 +1,6 @@
 'use client';
 
+import { type ReactNode } from 'react';
 import { getTheme, type CompareTheme, type ThemeId } from '@/lib/compare-themes';
 
 // Step 1 (theme) + Step 2 (question) picker for /compare.
@@ -19,6 +20,10 @@ interface TwoStepPickerProps {
   activeQuestion: string;
   onThemeChange: (id: ThemeId) => void;
   onQuestionChange: (key: string) => void;
+  // Optional third column (rightward expansion) — used by Theme A for
+  // the drill-down buttons. Rendered only when provided, so themes
+  // without follow-ups leave no empty space.
+  extra?: ReactNode;
 }
 
 const EYEBROW =
@@ -30,6 +35,7 @@ export function TwoStepPicker({
   activeQuestion,
   onThemeChange,
   onQuestionChange,
+  extra,
 }: TwoStepPickerProps) {
   const questions = getTheme(activeTheme).questions;
 
@@ -81,43 +87,67 @@ export function TwoStepPicker({
             </div>
           </div>
 
-          {/* Step 2 — questions. Sizes to the current theme's list (no
-              fixed min-height — that left a large gap for short lists). */}
-          <div className="flex-1 space-y-3">
-            <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
-              Step 2 · Pick a question
-            </p>
-            {questions.length === 0 ? (
-              <p className="text-sm text-slate italic">
-                This theme arrives in the next build.
+          {/* Step 2 + Step 3 grouped tightly so the Drill Into column
+              sits immediately beside Step 2 (no wide gap). Step 2 sizes
+              to its list — not flex-1. */}
+          <div className="flex flex-col gap-6 sm:flex-row sm:gap-8">
+            <div className="space-y-3">
+              <p
+                className={EYEBROW}
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                Step 2 · Pick a question
               </p>
-            ) : (
-              <fieldset className="flex flex-col gap-1.5 text-sm">
-                <legend className="sr-only">Select a question</legend>
-                {questions.map((q) => {
-                  const isActive = q.key === activeQuestion;
-                  return (
-                    <label
-                      key={q.key}
-                      className="flex items-center gap-2 cursor-pointer"
-                    >
-                      <input
-                        type="radio"
-                        name={`compare-question-${activeTheme}`}
-                        value={q.key}
-                        checked={isActive}
-                        onChange={() => onQuestionChange(q.key)}
-                        className="accent-plum"
-                      />
-                      <span className={isActive ? 'text-ink' : 'text-slate'}>
-                        {q.label}
-                      </span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-            )}
+              {questions.length === 0 ? (
+                <p className="text-sm text-slate italic">
+                  This theme arrives in the next build.
+                </p>
+              ) : (
+                <fieldset className="flex flex-col gap-1.5 text-sm">
+                  <legend className="sr-only">Select a question</legend>
+                  {questions.map((q) => {
+                    const isActive = q.key === activeQuestion;
+                    return (
+                      <label
+                        key={q.key}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <input
+                          type="radio"
+                          name={`compare-question-${activeTheme}`}
+                          value={q.key}
+                          checked={isActive}
+                          onChange={() => onQuestionChange(q.key)}
+                          className="accent-plum"
+                        />
+                        <span
+                          className={isActive ? 'text-ink' : 'text-slate'}
+                        >
+                          {q.label}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </fieldset>
+              )}
+            </div>
+
+            {/* Step 3 (optional) — Theme A drill buttons, adjacent to
+                Step 2. Absent entirely when no follow-ups apply. */}
+            {extra ? <div className="space-y-3">{extra}</div> : null}
           </div>
+
+          {/* Decorative illustration — fills the empty space on the
+              right of the picker band. Always shown while the band is
+              open; unaffected by drill-down state. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/compare-illustration.webp"
+            alt=""
+            aria-hidden
+            className="hidden lg:block lg:ml-auto lg:self-center shrink-0"
+            style={{ width: 180, opacity: 0.7 }}
+          />
         </div>
       </div>
     </div>

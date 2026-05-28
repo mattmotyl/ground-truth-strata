@@ -43,6 +43,9 @@ interface StrataChartFrameProps {
   // (only meaningful with titleInCard). Distinct from methodologyFootnote
   // which renders outside the card next to the action buttons.
   sourceNote?: ReactNode;
+  // Optional element rendered directly above the title block (e.g. the
+  // "← Back to …" breadcrumb shown during a Theme A drill-down).
+  breadcrumb?: ReactNode;
 }
 
 export function StrataChartFrame({
@@ -64,9 +67,11 @@ export function StrataChartFrame({
   chartFooter,
   titleInCard = false,
   sourceNote,
+  breadcrumb,
 }: StrataChartFrameProps) {
   const titleBlock = (
     <div className="space-y-1.5">
+      {breadcrumb ? <div className="mb-1">{breadcrumb}</div> : null}
       <p
         className="text-xs text-slate uppercase tracking-wide"
         style={{ fontFamily: 'var(--font-mono)' }}

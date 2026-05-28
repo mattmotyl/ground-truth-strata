@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import {
   getPlatformOutcomeComparison,
+  loadConditionalBreakdowns,
   loadGroupComparisons,
   loadMeta,
   loadPlatformDemographics,
@@ -11,6 +12,7 @@ import {
   type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
+  ConditionalBreakdownRow,
   GroupComparisonRow,
   LikertBucket,
   MetaJson,
@@ -18,15 +20,18 @@ import type {
   PlatformRateRow,
 } from '@/lib/strata-types';
 import {
+  availableWavesForConstruct,
   availableWavesForDemographic,
   availableWavesForMetric,
   availableWavesForOutcome,
   comparisonColorScaleMax,
+  conditionalBreakdownsToHeatmap,
   magnitudeColor,
   platformDemographicsToStacked,
   platformOutcomeToSeries,
   platformRatesToSeries,
   type ComparisonSeries,
+  type HeatmapData,
   type StackedSeries,
 } from '@/lib/compare-adapters';
 import {
@@ -34,6 +39,7 @@ import {
   DEMOGRAPHIC_CONFIGS,
   getTheme,
   type CompareQuestion,
+  type FollowUp,
   type ThemeId,
 } from '@/lib/compare-themes';
 import { STRATA_PALETTES } from '@/lib/strata-charts';
@@ -55,6 +61,7 @@ import {
   CompareStackedBar,
   type StackSegmentDef,
 } from '@/components/charts/compare-stacked-bar';
+import { CompareHeatmap } from '@/components/charts/compare-heatmap';
 import { StrataChartFrame } from '@/components/charts/strata-chart-frame';
 import {
   DEFAULT_CHART_PLATFORMS,
@@ -226,6 +233,12 @@ export function CompareExplorer() {
   const [demoRows, setDemoRows] = useState<PlatformDemographicRow[] | null>(
     null,
   );
+  // conditional_breakdowns.json (~1.2 MB) — lazy-loaded on first Theme A
+  // drill-down. `drilldown` holds the active follow-up (null = no drill).
+  const [condRows, setCondRows] = useState<ConditionalBreakdownRow[] | null>(
+    null,
+  );
+  const [drilldown, setDrilldown] = useState<FollowUp | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
@@ -252,6 +265,13 @@ export function CompareExplorer() {
       loadPlatformDemographics().then(setDemoRows).catch(setError);
     }
   }, [theme, demoRows]);
+
+  // Lazy-load conditional breakdowns on the first Theme A drill-down.
+  useEffect(() => {
+    if (drilldown && condRows === null) {
+      loadConditionalBreakdowns().then(setCondRows).catch(setError);
+    }
+  }, [drilldown, condRows]);
 
   const activeTheme = getTheme(theme);
   const activeQuestion =
@@ -354,13 +374,70 @@ export function CompareExplorer() {
   const xDomain = computeXDomain(xMode, customMin, customMax, series);
   const isZoomed = xMode !== 'full';
 
+  // ── Theme A drill-down (heatmap) derived state ──────────────────────
+  const constructWaves =
+    drilldown && condRows
+      ? availableWavesForConstruct(condRows, drilldown.construct)
+      : [];
+  const constructHasWave = constructWaves.includes(effectiveWave);
+  const heatmapData: HeatmapData | null =
+    drilldown && condRows && constructHasWave
+      ? conditionalBreakdownsToHeatmap(
+          condRows,
+          drilldown.construct,
+          effectiveWave,
+          platformsSet,
+          labelBySlug,
+        )
+      : null;
+  const condLoading = drilldown != null && condRows === null;
+
+  // Drill-into buttons (picker third column) — Theme A only, and only
+  // for questions that declare follow-ups.
+  const followUps = theme === 'A' ? activeQuestion.followUps ?? [] : [];
+  const drillButtons =
+    followUps.length > 0 ? (
+      <div className="space-y-2">
+        <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
+          Drill into
+        </p>
+        <div className="flex flex-col gap-2">
+          {followUps.map((fu) => {
+            const active = drilldown?.construct === fu.construct;
+            return (
+              <button
+                key={fu.construct}
+                type="button"
+                title={fu.tooltip}
+                aria-pressed={active}
+                onClick={() => setDrilldown(fu)}
+                className={
+                  'text-left text-sm rounded-md border px-3 py-1.5 transition-colors ' +
+                  (active
+                    ? 'border-plum bg-plum/5 text-plum font-medium'
+                    : 'border-mist text-ink hover:border-mulberry hover:text-plum')
+                }
+              >
+                {fu.buttonLabel}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
   // ── handlers ───────────────────────────────────────────────────────
   const handleThemeChange = (id: ThemeId) => {
     setTheme(id);
+    setDrilldown(null); // drill-down is per-question
     // Reset to the new theme's first question; platforms / wave /
     // responseType persist.
     const first = getTheme(id).questions[0];
     if (first) setQuestionKey(first.key);
+  };
+  const handleQuestionChange = (key: string) => {
+    setQuestionKey(key);
+    setDrilldown(null); // exiting a question exits its drill-down
   };
   const togglePlatform = (slug: string) => {
     setPlatforms((curr) =>
@@ -395,7 +472,8 @@ export function CompareExplorer() {
         activeTheme={theme}
         activeQuestion={activeQuestion.key}
         onThemeChange={handleThemeChange}
-        onQuestionChange={setQuestionKey}
+        onQuestionChange={handleQuestionChange}
+        extra={drillButtons}
       />
       {!baseReady || waitingForData ? (
         <div
@@ -421,6 +499,12 @@ export function CompareExplorer() {
           availableWaves={availableWaves}
           swatchBySlug={swatchBySlug}
           chartRef={chartRef}
+          drilldown={drilldown}
+          heatmapData={heatmapData}
+          constructHasWave={constructHasWave}
+          constructWaves={constructWaves}
+          condLoading={condLoading}
+          onBack={() => setDrilldown(null)}
           // controls state + setters
           platforms={platforms}
           onTogglePlatform={togglePlatform}
@@ -472,6 +556,13 @@ interface CompareChartProps {
   customMax: number;
   onCustomMin: (n: number) => void;
   onCustomMax: (n: number) => void;
+  // Theme A drill-down (heatmap). drilldown === null → normal chart.
+  drilldown: FollowUp | null;
+  heatmapData: HeatmapData | null;
+  constructHasWave: boolean;
+  constructWaves: number[];
+  condLoading: boolean;
+  onBack: () => void;
 }
 
 function CompareChart(props: CompareChartProps) {
@@ -504,9 +595,16 @@ function CompareChart(props: CompareChartProps) {
     customMax,
     onCustomMin,
     onCustomMax,
+    drilldown,
+    heatmapData,
+    constructHasWave,
+    constructWaves,
+    condLoading,
+    onBack,
   } = props;
 
   const isStacked = question.chartType === 'stackedBar';
+  const isDrill = drilldown != null;
 
   const waveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
@@ -516,11 +614,13 @@ function CompareChart(props: CompareChartProps) {
   // Theme D demographics are panel-provided (no survey item), so they
   // use a short composition descriptor. The title (registry slug) is
   // always the chart title; the question never becomes the title.
-  const subtitle = isStacked
-    ? 'Demographic composition of each platform’s user base. Segments are shares of the platform’s users; bars may total under 100% where a group is suppressed.'
-    : formatSurveyQuestion(
-        surveyQuestionFor(question.variable, questionTexts, meta),
-      );
+  const subtitle = isDrill
+    ? `Breakdown among each platform’s users who reported “${question.title}.”`
+    : isStacked
+      ? 'Demographic composition of each platform’s user base. Segments are shares of the platform’s users; bars may total under 100% where a group is suppressed.'
+      : formatSurveyQuestion(
+          surveyQuestionFor(question.variable, questionTexts, meta),
+        );
 
   // THE NUMBERS — ranked stat list (ranked themes) or a per-platform
   // composition table (Theme D). Built below; one is passed to the frame.
@@ -592,7 +692,10 @@ function CompareChart(props: CompareChartProps) {
     suppressed.length > 0 ? ` (this wave: ${suppressed.join(', ')})` : '';
   // Source-specific caveats appended to the standard source note.
   let extraNote = '';
-  if (isStacked) {
+  if (isDrill) {
+    extraNote =
+      ' Percentages are among users who reported the experience. Respondents could select multiple options, so percentages may sum to more than 100%.';
+  } else if (isStacked) {
     extraNote =
       ' Composition is among each platform’s users. Percentages may not sum to 100% due to rounding, missing values, or suppressed groups (n < 30).';
   } else if (
@@ -609,49 +712,89 @@ function CompareChart(props: CompareChartProps) {
         ' This item is reverse-coded; higher agreement indicates the respondent does NOT feel negative most of the time.';
     }
   }
-  // Ranked themes show n in the tooltip; the stacked chart shows it
-  // per-segment in the tooltip too, so the phrasing stays generic.
-  const nClause = isStacked
-    ? ' n shown in the hover tooltip is the count of platform users in each group.'
-    : ' n shown in tooltip is the count of platform users.';
+  // Ranked themes show n in the tooltip; stacked + heatmap show it
+  // per-segment/per-cell in the tooltip too, so phrasing adapts.
+  const tooltipBased = isStacked || isDrill;
+  const nClause = isDrill
+    ? ' n shown in the hover tooltip is the count of affected users on each platform.'
+    : isStacked
+      ? ' n shown in the hover tooltip is the count of platform users in each group.'
+      : ' n shown in tooltip is the count of platform users.';
   const sourceNote = `Source: UAS panel ${fullWaveLabel(
     effectiveWave,
     waveDates,
   )}. Weighted estimates. 95% CIs shown ${
-    isStacked ? 'in the hover tooltip' : 'as error bars at bar tips and in the hover tooltip'
+    tooltipBased
+      ? 'in the hover tooltip'
+      : 'as error bars at bar tips and in the hover tooltip'
   }.${nClause}${extraNote} Cells with n < 30 are suppressed by design${suppressedNote}. Precomputed JSON generated ${generatedAt}.`;
 
-  // CSV — stacked themes emit one row per platform × segment; ranked
-  // themes emit one row per platform.
-  const csvHeaders = isStacked
-    ? [
-        'platform_slug',
-        'platform_label',
-        'wave',
-        'wave_dates',
-        'grouping_var',
-        'group_value',
-        'weighted_value',
-        'weighted_ci_lower',
-        'weighted_ci_upper',
-        'n',
-        'suppressed',
-      ]
-    : [
-        'platform_slug',
-        'platform_label',
-        'wave',
-        'wave_dates',
-        'variable',
-        'response_band',
-        'weighted_value',
-        'weighted_ci_lower',
-        'weighted_ci_upper',
-        'n',
-        'suppressed',
-      ];
-  const csvRows: unknown[][] = isStacked
-    ? stackedSeries.flatMap((d) =>
+  // CSV — heatmap: one row per platform × option; stacked: per
+  // platform × segment; ranked: per platform.
+  const csvHeaders =
+    isDrill && drilldown
+      ? [
+          'platform_slug',
+          'platform_label',
+          'wave',
+          'wave_dates',
+          'construct',
+          'option_label',
+          'weighted_value',
+          'weighted_ci_lower',
+          'weighted_ci_upper',
+          'n',
+          'suppressed',
+        ]
+      : isStacked
+        ? [
+            'platform_slug',
+            'platform_label',
+            'wave',
+            'wave_dates',
+            'grouping_var',
+            'group_value',
+            'weighted_value',
+            'weighted_ci_lower',
+            'weighted_ci_upper',
+            'n',
+            'suppressed',
+          ]
+        : [
+            'platform_slug',
+            'platform_label',
+            'wave',
+            'wave_dates',
+            'variable',
+            'response_band',
+            'weighted_value',
+            'weighted_ci_lower',
+            'weighted_ci_upper',
+            'n',
+            'suppressed',
+          ];
+  const csvRows: unknown[][] =
+    isDrill && drilldown && heatmapData
+      ? heatmapData.rows.flatMap((row) =>
+          heatmapData.options.map((opt) => {
+            const cell = row.cells[opt];
+            return [
+              row.platform_slug,
+              row.label,
+              effectiveWave,
+              waveDates,
+              drilldown.construct,
+              opt,
+              cell?.value ?? null,
+              cell?.ciLow ?? null,
+              cell?.ciHigh ?? null,
+              cell?.n ?? null,
+              cell?.suppressed ?? true,
+            ];
+          }),
+        )
+      : isStacked
+        ? stackedSeries.flatMap((d) =>
         segments.map((seg) => {
           const sv = d.segments[seg.value];
           return [
@@ -850,12 +993,12 @@ function CompareChart(props: CompareChartProps) {
       />
       {waveSelector}
       {responseTypeSelector}
-      {/* Stacked composition is always 0–100% — no x-axis zoom. */}
-      {isStacked ? null : xAxisControls}
+      {/* No x-axis zoom for stacked composition or heatmap drill-downs. */}
+      {isStacked || isDrill ? null : xAxisControls}
     </div>
   );
 
-  const chartFooter = !isStacked && isZoomed ? (
+  const chartFooter = !isStacked && !isDrill && isZoomed ? (
     <div
       className="flex items-center justify-between gap-3 flex-wrap text-xs"
       style={{ fontFamily: 'var(--font-mono)' }}
@@ -873,15 +1016,68 @@ function CompareChart(props: CompareChartProps) {
     </div>
   ) : null;
 
+  // ── drill-down (heatmap) presentation ───────────────────────────────
+  const breadcrumb =
+    isDrill && drilldown ? (
+      <button
+        type="button"
+        onClick={onBack}
+        className="text-xs text-mulberry hover:text-plum underline-offset-2 hover:underline"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        ← Back to {question.title}
+      </button>
+    ) : undefined;
+
+  const heatmapChart = condLoading ? (
+    <div
+      className="py-16 text-center text-slate text-sm"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      Loading breakdown data…
+    </div>
+  ) : !constructHasWave ? (
+    <div
+      className="py-12 text-center text-slate text-sm space-y-1"
+      style={{ fontFamily: 'var(--font-mono)' }}
+    >
+      <p>This breakdown was not collected in the selected wave.</p>
+      <p className="text-xs">
+        Available in{' '}
+        {constructWaves.length > 0
+          ? constructWaves.map((w) => `Wave ${w}`).join(', ')
+          : 'no waves'}
+        . Switch waves to view it.
+      </p>
+    </div>
+  ) : heatmapData ? (
+    <CompareHeatmap data={heatmapData} />
+  ) : null;
+
+  // Short text alternative for the heatmap (THE NUMBERS slot).
+  const heatmapNumbers =
+    isDrill && drilldown ? (
+      <p className="text-sm text-ink/80 leading-relaxed">
+        Each cell is the weighted % of a platform’s affected users who
+        selected that option, for the selected wave. Hover a cell for its
+        95% CI and n. Suppressed cells (n &lt; 30) show “—”. Because
+        respondents could choose multiple options, a platform’s row can
+        sum to more than 100%.
+      </p>
+    ) : null;
+
   return (
     <StrataChartFrame
       eyebrow={`Compare · ${activeThemeLabel}`}
-      title={question.title}
+      title={isDrill && drilldown ? drilldown.heatmapTitle : question.title}
       subtitle={subtitle}
       titleInCard
+      breadcrumb={breadcrumb}
       sourceNote={sourceNote}
       chart={
-        isStacked ? (
+        isDrill ? (
+          heatmapChart
+        ) : isStacked ? (
           <CompareStackedBar series={stackedSeries} segments={segments} />
         ) : (
           <CompareRankedBar
@@ -896,24 +1092,35 @@ function CompareChart(props: CompareChartProps) {
       chartRef={chartRef}
       controls={controlsAside}
       chartFooter={chartFooter}
-      stats={isStacked ? undefined : stats}
-      customNumbers={isStacked ? compositionNumbers : undefined}
+      stats={isStacked || isDrill ? undefined : stats}
+      customNumbers={
+        isDrill ? heatmapNumbers : isStacked ? compositionNumbers : undefined
+      }
       isPlaceholderInterpretation
       interpretation={
-        isStacked
-          ? '[PLACEHOLDER -- Matt to review] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
-          : '[PLACEHOLDER -- Matt to review] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
+        isDrill
+          ? '[PLACEHOLDER -- Matt to review] Per-platform breakdown of the topics/impacts users reported, for the selected wave. Interpretation copy is intentionally omitted — the heatmap and THE NUMBERS note describe the weighted percentages and caveats.'
+          : isStacked
+            ? '[PLACEHOLDER -- Matt to review] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
+            : '[PLACEHOLDER -- Matt to review] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
       }
       methodologyFootnote=""
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
-        findingTitle: question.title,
-        variables: [question.variable],
-        waves: availableWaves,
+        findingTitle:
+          isDrill && drilldown ? drilldown.heatmapTitle : question.title,
+        variables: [
+          isDrill && drilldown ? drilldown.construct : question.variable,
+        ],
+        waves: isDrill ? [effectiveWave] : availableWaves,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}
-      filenameBase={`compare-${question.key}`}
+      filenameBase={
+        isDrill && drilldown
+          ? `compare-${question.key}-${drilldown.construct}`
+          : `compare-${question.key}`
+      }
     />
   );
 }

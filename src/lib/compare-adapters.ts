@@ -11,6 +11,7 @@
 // Theme C / Theme D adapters arrive in Part 2.
 
 import type {
+  ConditionalBreakdownRow,
   GroupComparisonRow,
   LikertBucket,
   PlatformDemographicRow,
@@ -246,6 +247,94 @@ export function availableWavesForDemographic(
   const set = new Set<number>();
   for (const r of rows) {
     if (r.grouping_var === groupingVar) set.add(r.wave);
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+// ── Theme A drill-down heatmap (conditional_breakdowns.json) ─────────
+// Platforms × response-option matrix for one construct + wave.
+// Percentages are among users who reported the experience and are
+// multi-select, so a row can exceed 100%. Suppressed cells keep a null
+// value (rendered "—").
+export interface HeatmapCell {
+  value: number | null;
+  ciLow: number | null;
+  ciHigh: number | null;
+  n: number | null;
+  suppressed: boolean;
+}
+
+export interface HeatmapRow {
+  platform_slug: string;
+  label: string;
+  cells: Record<string, HeatmapCell>; // keyed by option_label
+  rowAvg: number; // mean of non-suppressed cell values (sort key)
+}
+
+export interface HeatmapData {
+  options: string[]; // column labels, in option_index order
+  rows: HeatmapRow[];
+}
+
+export function conditionalBreakdownsToHeatmap(
+  rows: ConditionalBreakdownRow[],
+  construct: string,
+  wave: number,
+  platformsSet: ReadonlySet<string>,
+  labelBySlug: ReadonlyMap<string, string>,
+): HeatmapData {
+  const relevant = rows.filter(
+    (r) =>
+      r.construct === construct &&
+      r.wave === wave &&
+      platformsSet.has(r.platform_slug),
+  );
+  // Columns: distinct (option_index, option_label) in option_index order.
+  const optByIndex = new Map<number, string>();
+  for (const r of relevant) optByIndex.set(r.option_index, r.option_label);
+  const options = [...optByIndex.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([, label]) => label);
+
+  const byPlatform = new Map<string, HeatmapRow>();
+  for (const r of relevant) {
+    let row = byPlatform.get(r.platform_slug);
+    if (!row) {
+      row = {
+        platform_slug: r.platform_slug,
+        label: labelBySlug.get(r.platform_slug) ?? r.platform_label,
+        cells: {},
+        rowAvg: 0,
+      };
+      byPlatform.set(r.platform_slug, row);
+    }
+    row.cells[r.option_label] = {
+      value: r.suppressed ? null : r.weighted_value,
+      ciLow: r.suppressed ? null : r.weighted_ci_lower,
+      ciHigh: r.suppressed ? null : r.weighted_ci_upper,
+      n: r.n,
+      suppressed: r.suppressed,
+    };
+  }
+
+  const out = [...byPlatform.values()];
+  for (const row of out) {
+    const vals = options
+      .map((o) => row.cells[o]?.value)
+      .filter((v): v is number => typeof v === 'number');
+    row.rowAvg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : -1;
+  }
+  out.sort((a, b) => b.rowAvg - a.rowAvg || a.label.localeCompare(b.label));
+  return { options, rows: out };
+}
+
+export function availableWavesForConstruct(
+  rows: ConditionalBreakdownRow[],
+  construct: string,
+): number[] {
+  const set = new Set<number>();
+  for (const r of rows) {
+    if (r.construct === construct) set.add(r.wave);
   }
   return [...set].sort((a, b) => a - b);
 }

@@ -24,8 +24,21 @@ export function ChartActions({
   const handlePng = async () => {
     if (!chartRef.current) return;
     setBusy('png');
+    const root = chartRef.current;
+    // Scroll containers (e.g. the heatmap's overflow-x-auto wrapper)
+    // capture scrollbar chrome and clip content. Temporarily force their
+    // overflow to visible so the export shows the full table, then
+    // restore the original inline overflow afterward.
+    const restores: Array<[HTMLElement, string]> = [];
+    root.querySelectorAll<HTMLElement>('*').forEach((el) => {
+      const style = getComputedStyle(el);
+      if (style.overflowX !== 'visible' || style.overflowY !== 'visible') {
+        restores.push([el, el.style.overflow]);
+        el.style.overflow = 'visible';
+      }
+    });
     try {
-      const dataUrl = await toPng(chartRef.current, {
+      const dataUrl = await toPng(root, {
         backgroundColor: '#F6F3EE',
         pixelRatio: 2,
         cacheBust: true,
@@ -36,6 +49,7 @@ export function ChartActions({
     } catch (err) {
       console.error('PNG export failed:', err);
     } finally {
+      for (const [el, prev] of restores) el.style.overflow = prev;
       setBusy(null);
     }
   };

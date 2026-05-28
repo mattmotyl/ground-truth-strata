@@ -11,9 +11,19 @@
 // (lines 898-923). Radio labels come from the per-theme Step-2 option
 // lists in the same spec. Never surface variable names in the UI.
 
-import type { PlatformRateMetric } from './strata-types';
+import type { ConditionalConstruct, PlatformRateMetric } from './strata-types';
 
 export type ThemeId = 'A' | 'B' | 'C' | 'D';
+
+// Theme A drill-down: a follow-up breakdown reachable from a Theme A
+// question. Rendered as a concise button in the picker's third column;
+// the full descriptive prompt is the button's hover tooltip.
+export interface FollowUp {
+  construct: ConditionalConstruct;
+  buttonLabel: string; // concise (e.g. "Topics", "Impacts")
+  tooltip: string; // full descriptive prompt from the spec
+  heatmapTitle: string; // plain-English title shown above the heatmap
+}
 
 export type CompareSource =
   | 'platform_rates'
@@ -55,6 +65,8 @@ export interface CompareQuestion {
   // feel negative. The orchestrator relabels the response-type control
   // and axis and adds a footnote when this is set.
   reverseCoded?: boolean;
+  // Theme A only: follow-up heatmap drill-downs (conditional_breakdowns).
+  followUps?: FollowUp[];
   chartType: CompareChartType;
 }
 
@@ -167,6 +179,20 @@ const THEME_A: CompareTheme = {
       coloring: { mode: 'magnitude', scale: 'warm' },
       responseTypeApplies: false,
       chartType: 'rankedBar',
+      followUps: [
+        {
+          construct: 'nuxtopic',
+          buttonLabel: 'Topics',
+          tooltip: 'What topics did these experiences involve?',
+          heatmapTitle: 'Topics in Negative Personal Experiences',
+        },
+        {
+          construct: 'nuximpact',
+          buttonLabel: 'Impacts',
+          tooltip: 'How did these experiences impact users?',
+          heatmapTitle: 'Impacts of Negative Personal Experiences',
+        },
+      ],
     },
     {
       key: 'bad-for-world',
@@ -178,6 +204,20 @@ const THEME_A: CompareTheme = {
       coloring: { mode: 'magnitude', scale: 'warm' },
       responseTypeApplies: false,
       chartType: 'rankedBar',
+      followUps: [
+        {
+          construct: 'bftwtopic',
+          buttonLabel: 'Topics',
+          tooltip: 'What topics did this content involve?',
+          heatmapTitle: 'Topics of Bad-for-the-World Content',
+        },
+        {
+          construct: 'bftwimpact',
+          buttonLabel: 'Expected impacts',
+          tooltip: 'What impacts did users expect?',
+          heatmapTitle: 'Expected Impacts of Bad-for-the-World Content',
+        },
+      ],
     },
     {
       key: 'meaningful-connection',
@@ -189,6 +229,14 @@ const THEME_A: CompareTheme = {
       coloring: { mode: 'magnitude', scale: 'cool' },
       responseTypeApplies: false,
       chartType: 'rankedBar',
+      followUps: [
+        {
+          construct: 'mcxntopic',
+          buttonLabel: 'Topics',
+          tooltip: 'What topics were these connections about?',
+          heatmapTitle: 'Topics of Meaningful Connections',
+        },
+      ],
     },
     {
       key: 'learned-useful',
@@ -200,6 +248,14 @@ const THEME_A: CompareTheme = {
       coloring: { mode: 'magnitude', scale: 'cool' },
       responseTypeApplies: false,
       chartType: 'rankedBar',
+      followUps: [
+        {
+          construct: 'usefultopic',
+          buttonLabel: 'Topics',
+          tooltip: 'What topics did users learn about?',
+          heatmapTitle: 'Topics People Learned About',
+        },
+      ],
     },
   ],
 };
