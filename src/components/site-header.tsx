@@ -3,6 +3,7 @@ import Link from 'next/link';
 const NAV = [
   { href: '/trends', label: 'Trends' },
   { href: '/platforms', label: 'Platforms' },
+  { href: '/compare', label: 'Compare' },
   { href: '/groups', label: 'Groups' },
   { href: '/correlations', label: 'Correlations' },
   { href: '/about', label: 'About' },

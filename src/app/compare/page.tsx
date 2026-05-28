@@ -1,7 +1,7 @@
 import { Suspense } from 'react';
 import { PlatformComparisonShell } from '@/components/platform-comparison-shell';
 
-export default function PlatformsPage() {
+export default function ComparePage() {
   return (
     <Suspense
       fallback={
@@ -13,7 +13,7 @@ export default function PlatformsPage() {
         </div>
       }
     >
-      <PlatformComparisonShell basePath="/platforms" />
+      <PlatformComparisonShell basePath="/compare" />
     </Suspense>
   );
 }
