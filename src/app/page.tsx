@@ -120,7 +120,7 @@ export default function HomePage() {
             </Link>
             ,{' '}
             <Link
-              href="/platforms"
+              href="/compare"
               className="text-mulberry hover:text-plum"
             >
               platform comparisons

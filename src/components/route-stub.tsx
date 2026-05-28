@@ -5,6 +5,10 @@ interface RouteStubProps {
   title: string;
   description: string;
   comingNext: string[];
+  // Optional primary call-to-action (e.g. point users to where moved
+  // content now lives). Rendered only when both are provided.
+  ctaHref?: string;
+  ctaLabel?: string;
 }
 
 export function RouteStub({
@@ -12,6 +16,8 @@ export function RouteStub({
   title,
   description,
   comingNext,
+  ctaHref,
+  ctaLabel,
 }: RouteStubProps) {
   return (
     <section className="mx-auto max-w-3xl px-6 py-16 space-y-6">
@@ -49,6 +55,16 @@ export function RouteStub({
           ))}
         </ul>
       </div>
+      {ctaHref && ctaLabel ? (
+        <p>
+          <Link
+            href={ctaHref}
+            className="inline-block rounded-md bg-plum px-4 py-2 text-sm text-paper font-medium hover:bg-mulberry transition-colors"
+          >
+            {ctaLabel}
+          </Link>
+        </p>
+      ) : null}
       <p className="text-sm text-slate">
         <Link href="/" className="text-mulberry hover:text-plum">
           ← Back to Strata

@@ -22,7 +22,7 @@ const FINDINGS: Finding[] = [
     blurb:
       'Share of users reporting a recent negative personal experience on each platform.',
     chart: 'Ranked horizontal bar',
-    href: '/platforms?finding=negative-experiences',
+    href: '/compare?finding=negative-experiences',
   },
   {
     n: 3,
@@ -30,21 +30,21 @@ const FINDINGS: Finding[] = [
     blurb:
       'Share of users who say a platform is bad for the world, by platform.',
     chart: 'Ranked horizontal bar',
-    href: '/platforms?finding=bftw',
+    href: '/compare?finding=bftw',
   },
   {
     n: 4,
     title: 'Where do people learn things?',
     blurb: 'Share of users who say a platform is useful or informative.',
     chart: 'Ranked horizontal bar',
-    href: '/platforms?finding=useful',
+    href: '/compare?finding=useful',
   },
   {
     n: 5,
     title: 'Where do people connect?',
     blurb: 'Share reporting meaningful connections on each platform.',
     chart: 'Ranked horizontal bar',
-    href: '/platforms?finding=connections',
+    href: '/compare?finding=connections',
   },
   {
     n: 6,
@@ -60,7 +60,7 @@ const FINDINGS: Finding[] = [
     blurb:
       'Liberal / moderate / conservative composition of each platform’s user base.',
     chart: 'Stacked horizontal bar',
-    href: '/platforms?finding=political-composition',
+    href: '/compare?finding=political-composition',
   },
   {
     n: 8,
