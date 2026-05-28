@@ -230,15 +230,12 @@ export default function AboutPage() {
           Weighting
         </h2>
         <p className="text-ink/85 leading-relaxed">
-          Every precomputed row carries both <em>unweighted</em> and{' '}
-          <em>weighted</em> estimates (<code className="text-sm">value</code>{' '}
-          and <code className="text-sm">weighted_value</code>, with
-          matching standard errors, confidence intervals, and effective
-          sample sizes). UAS provides probability weights to adjust for
-          panel design and non-response; weighted estimates are
-          generalizable to U.S. adults at the time of each wave, while
-          unweighted estimates describe the panel itself. Strata defaults
-          to <strong>weighted</strong> and offers an explicit toggle.
+          Every precomputed row carries weighted estimates (
+          <code className="text-sm">weighted_value</code>, with matching
+          standard errors, confidence intervals, and effective sample
+          sizes). UAS provides probability weights to adjust for panel
+          design and non-response; weighted estimates are generalizable
+          to U.S. adults at the time of each wave.
         </p>
       </section>
 

@@ -38,7 +38,6 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
-import { type Weighting } from './weighted-toggle';
 
 // =====================================================================
 // Finding 08 — Does using social media more mean feeling worse?
@@ -54,11 +53,10 @@ import { type Weighting } from './weighted-toggle';
 // so the chart is single-wave by necessity. The methodology footnote
 // surfaces that constraint.
 //
-// Significance: each correlation row carries a p_value (Spearman test
-// of independence). Only correlations with p < 0.05 are colored as
-// meaningful; the rest land in a muted gray. The interpretation
-// names only the significant correlations to honor Matt's
-// "no overstating" rule. See feedback_significance_rule.md.
+// p_value was stripped from correlations.json in Step 2 (no p-values
+// anywhere in the UI per PHASE4_UI_SPEC). Interpretation leads with
+// effect-size bands instead of significance language, per
+// feedback_significance_rule.md and T2-10.
 // =====================================================================
 
 const OUTCOME_OPTIONS: Array<{
@@ -98,8 +96,6 @@ interface ChartDatum {
   platformLabel: string;
   r: number;
   n: number;
-  pValue: number;
-  significant: boolean;
 }
 
 interface BarTooltipProps {
@@ -123,17 +119,7 @@ function CorrelationTooltip({ active, payload }: BarTooltipProps) {
         Spearman ρ ={' '}
         <span className="font-medium">{formatNumber(datum.r, 3)}</span>
       </div>
-      <div className="text-slate">
-        n = {formatN(datum.n)}, p ={' '}
-        {datum.pValue < 0.001
-          ? '< 0.001'
-          : formatNumber(datum.pValue, 3)}
-      </div>
-      <div className="text-slate">
-        {datum.significant
-          ? 'Statistically meaningful at p < 0.05'
-          : 'Not statistically meaningful at p < 0.05'}
-      </div>
+      <div className="text-slate">n = {formatN(datum.n)}</div>
     </div>
   );
 }
@@ -168,7 +154,6 @@ export function FindingUsageWellbeing() {
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [outcomeVar, setOutcomeVar] = useState<string>('ex003c');
   // Wave: time_per_day_minutes exists in W4 and W5 in correlations.json
   // (UAS519/W6 has zero entries for this variable, so it's correctly
@@ -261,10 +246,8 @@ export function FindingUsageWellbeing() {
       if (!timeVar) continue;
       const otherVar = timeVar === r.var1 ? r.var2 : r.var1;
       if (otherVar !== outcomeVar) continue;
-      const rho =
-        (weighting === 'weighted' ? r.weighted_r : r.r) ?? null;
+      const rho = r.weighted_r ?? null;
       const n = r.n ?? 0;
-      const p = r.p_value ?? 1;
       if (rho === null || n < 30) continue;
       const slug = timeVar.replace(/^time_per_day_min_/, '');
       if (!chartPlatformsSet.has(slug)) continue;
@@ -273,8 +256,6 @@ export function FindingUsageWellbeing() {
         platformLabel: platformLabelBySlug.get(slug) ?? slug,
         r: rho,
         n,
-        pValue: p,
-        significant: p < 0.05,
       });
     }
     data.sort((a, b) => b.r - a.r);
@@ -283,7 +264,6 @@ export function FindingUsageWellbeing() {
     rows,
     selectedWave,
     outcomeVar,
-    weighting,
     platformLabelBySlug,
     chartPlatformsSet,
   ]);
@@ -309,12 +289,10 @@ export function FindingUsageWellbeing() {
   const selectedOutcome =
     OUTCOME_OPTIONS.find((o) => o.variable === outcomeVar) ??
     OUTCOME_OPTIONS[2];
-  const colorForBar = (d: ChartDatum): string => {
-    if (!d.significant) return STRATA_PALETTES.diverging.zero + '40';
-    return d.r > 0
+  const colorForBar = (d: ChartDatum): string =>
+    d.r > 0
       ? STRATA_PALETTES.diverging.above
       : STRATA_PALETTES.diverging.below;
-  };
 
   const clampToUnit = (v: number) => Math.max(-1, Math.min(1, v));
   const xDomain: [number, number] = (() => {
@@ -341,8 +319,6 @@ export function FindingUsageWellbeing() {
   const isZoomed = xMode !== 'full';
 
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const weightingLabel =
-    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === selectedWave)?.dates ?? '';
 
@@ -376,20 +352,19 @@ export function FindingUsageWellbeing() {
   };
   const platformLine = (d: ChartDatum): string => {
     const band = effectBand(d.r);
-    const sig = d.significant ? '' : ' — within sampling noise at this n';
     const ρ = formatNumber(d.r, 3);
     const n = formatN(d.n);
     switch (band) {
       case 'none':
-        return `${d.platformLabel} shows essentially no association (ρ=${ρ}, n=${n})${sig}.`;
+        return `${d.platformLabel} shows essentially no association (ρ=${ρ}, n=${n}).`;
       case 'very-small':
-        return `${d.platformLabel} shows a very small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — close to zero, ${directionWord(d)}, though the effect is tiny.`;
+        return `${d.platformLabel} shows a very small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n}) — close to zero, ${directionWord(d)}, though the effect is tiny.`;
       case 'small':
-        return `${d.platformLabel} shows a small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}, though the effect is small.`;
+        return `${d.platformLabel} shows a small ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n}) — ${directionWord(d)}, though the effect is small.`;
       case 'moderate':
-        return `${d.platformLabel} shows a moderate ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}.`;
+        return `${d.platformLabel} shows a moderate ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n}) — ${directionWord(d)}.`;
       case 'strong':
-        return `${d.platformLabel} shows a strong ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n})${sig} — ${directionWord(d)}.`;
+        return `${d.platformLabel} shows a strong ${d.r > 0 ? 'positive' : 'negative'} association (ρ=${ρ}, n=${n}) — ${directionWord(d)}.`;
     }
   };
   const notableLines = chartData
@@ -423,9 +398,7 @@ export function FindingUsageWellbeing() {
     'outcome_variable',
     'wave',
     'wave_dates',
-    'spearman_r_unweighted',
-    'spearman_r_weighted',
-    'p_value',
+    'spearman_r',
     'n',
     'weighted_n_eff',
     'suppressed',
@@ -442,9 +415,7 @@ export function FindingUsageWellbeing() {
         otherVar,
         r.wave,
         meta.waves.find((w) => w.wave === r.wave)?.dates ?? '',
-        r.r,
         r.weighted_r,
-        r.p_value,
         r.n,
         r.weighted_n_eff,
         r.suppressed,
@@ -714,20 +685,13 @@ export function FindingUsageWellbeing() {
               </th>
               <th className="text-right font-normal py-2 px-2">ρ</th>
               <th className="text-right font-normal py-2 px-2">n</th>
-              <th className="text-right font-normal py-2 px-2">p</th>
-              <th className="text-right font-normal py-2 px-2">
-                95% sig.
-              </th>
             </tr>
           </thead>
           <tbody>
             {chartData.map((d) => (
               <tr
                 key={d.platform_slug}
-                className={
-                  'border-b border-mist/60 ' +
-                  (d.significant ? '' : 'opacity-60')
-                }
+                className="border-b border-mist/60"
               >
                 <th
                   scope="row"
@@ -741,14 +705,6 @@ export function FindingUsageWellbeing() {
                 <td className="text-right py-1.5 px-2 text-slate tabular-nums">
                   {formatN(d.n)}
                 </td>
-                <td className="text-right py-1.5 px-2 text-slate tabular-nums">
-                  {d.pValue < 0.001
-                    ? '<0.001'
-                    : formatNumber(d.pValue, 3)}
-                </td>
-                <td className="text-right py-1.5 px-2 text-slate">
-                  {d.significant ? '✓' : '—'}
-                </td>
               </tr>
             ))}
           </tbody>
@@ -760,7 +716,6 @@ export function FindingUsageWellbeing() {
       >
         Spearman ρ between time spent on each platform (minutes per
         day) and the selected wellbeing outcome at W{selectedWave}.
-        Bars in the chart are faded when p ≥ 0.05.
       </p>
     </>
   );
@@ -793,9 +748,7 @@ export function FindingUsageWellbeing() {
         availableWaves.length > 1
           ? `Available in ${availableWaves.map((w) => `Wave ${w}`).join(' and ')} for this outcome — switch waves in the controls.`
           : `Available only in Wave ${selectedWave} for this outcome (other waves lack overlapping respondents).`
-      } ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored only when the underlying p-value is below 0.05.`}
-      weighting={weighting}
-      onWeightingChange={setWeighting}
+      } ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored by sign: teal for positive associations, amber for negative.`}
       chart={chart}
       chartRef={chartRef}
       controls={controlsAside}
@@ -803,7 +756,7 @@ export function FindingUsageWellbeing() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel Wave ${selectedWave} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). ${weightingLabel} ρ shown. Significance: p < 0.05 from the Spearman test of independence. Faded bars are not statistically meaningful at the 95% level. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
+      methodologyFootnote={`Source: UAS panel Wave ${selectedWave} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). Weighted ρ shown. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:
@@ -813,7 +766,6 @@ export function FindingUsageWellbeing() {
           selectedOutcome.variable,
         ],
         waves: [selectedWave],
-        weighting,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}

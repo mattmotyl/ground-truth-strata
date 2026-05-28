@@ -15,7 +15,6 @@ import {
 interface PlatformWaveTableProps {
   rows: PlatformRateRow[]; // filtered to a single metric, all platforms
   meta: MetaJson;
-  weighting: 'weighted' | 'unweighted';
   // Slugs the user has hidden from the chart. These rows still appear in
   // the table but are visually dimmed. Set to an empty Set if no
   // hiding behavior is wired yet.
@@ -31,26 +30,16 @@ interface CellState {
   value: number | null;
   ciLo: number | null;
   ciHi: number | null;
-  nUsers: number | null;
   nPanel: number | null;
 }
 
-function userCount(value: number | null, nPanel: number | null): number | null {
-  if (value === null || nPanel === null) return null;
-  return Math.round(value * nPanel);
-}
-
-function cellFromRow(
-  row: PlatformRateRow | undefined,
-  weighting: 'weighted' | 'unweighted',
-): CellState {
+function cellFromRow(row: PlatformRateRow | undefined): CellState {
   if (!row) {
     return {
       kind: 'missing',
       value: null,
       ciLo: null,
       ciHi: null,
-      nUsers: null,
       nPanel: null,
     };
   }
@@ -60,22 +49,14 @@ function cellFromRow(
       value: null,
       ciLo: null,
       ciHi: null,
-      nUsers: null,
       nPanel: row.n,
     };
   }
-  const value =
-    weighting === 'weighted' ? row.weighted_value : row.value;
-  const ciLo =
-    weighting === 'weighted' ? row.weighted_ci_lower : row.ci_lower;
-  const ciHi =
-    weighting === 'weighted' ? row.weighted_ci_upper : row.ci_upper;
   return {
     kind: 'value',
-    value,
-    ciLo,
-    ciHi,
-    nUsers: userCount(row.value, row.n),
+    value: row.weighted_value,
+    ciLo: row.weighted_ci_lower,
+    ciHi: row.weighted_ci_upper,
     nPanel: row.n,
   };
 }
@@ -98,7 +79,7 @@ function cellTitle(
   }
   const pct = formatPercent(cell.value);
   const ci = formatCI(cell.ciLo, cell.ciHi);
-  const nUsers = cell.nUsers !== null ? formatN(cell.nUsers) : '—';
+  const n = cell.nPanel !== null ? formatN(cell.nPanel) : '—';
   return (
     platformLabel +
     ' · ' +
@@ -108,15 +89,13 @@ function cellTitle(
     ' ' +
     ci +
     ' · n=' +
-    nUsers +
-    ' users'
+    n
   );
 }
 
 export function PlatformWaveTable({
   rows,
   meta,
-  weighting,
   hidden,
   swatchBySlug,
 }: PlatformWaveTableProps) {
@@ -134,14 +113,8 @@ export function PlatformWaveTable({
   const sortedPlatforms = [...platforms].sort((a, b) => {
     const ar = rowsBySlugWave.get(a.slug + '|' + sortRefWave);
     const br = rowsBySlugWave.get(b.slug + '|' + sortRefWave);
-    const aVal =
-      ar && !ar.suppressed
-        ? (weighting === 'weighted' ? ar.weighted_value : ar.value) ?? -1
-        : -1;
-    const bVal =
-      br && !br.suppressed
-        ? (weighting === 'weighted' ? br.weighted_value : br.value) ?? -1
-        : -1;
+    const aVal = ar && !ar.suppressed ? ar.weighted_value ?? -1 : -1;
+    const bVal = br && !br.suppressed ? br.weighted_value ?? -1 : -1;
     if (aVal !== bVal) return bVal - aVal;
     return a.label.localeCompare(b.label);
   });
@@ -218,7 +191,6 @@ export function PlatformWaveTable({
                 {waves.map((w) => {
                   const cell = cellFromRow(
                     rowsBySlugWave.get(p.slug + '|' + w),
-                    weighting,
                   );
                   const dates =
                     meta.waves.find((mw) => mw.wave === w)?.dates ?? '';

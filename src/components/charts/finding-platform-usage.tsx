@@ -47,7 +47,6 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
-import { type Weighting } from './weighted-toggle';
 
 interface ChartDatum {
   wave: number;
@@ -58,24 +57,9 @@ interface ChartDatum {
   [k: string]: number | string | null;
 }
 
-// Count of respondents who reported using a given platform in a given
-// wave. For usage_rate rows, n_panel is the wave sample size (the
-// denominator), and value is the share reporting yes; the count of
-// users is therefore round(value * n_panel). We always derive this
-// from the UNWEIGHTED row (raw counts in the sample) so the display
-// is stable across the weighted/unweighted toggle — weighting affects
-// the rate ESTIMATE, not the count of respondents who actually
-// reported using the platform.
-function userCount(row: PlatformRateRow): number | null {
-  if (row.suppressed) return null;
-  if (row.value === null || row.n === null) return null;
-  return Math.round(row.value * row.n);
-}
-
 function buildChartData(
   rows: PlatformRateRow[],
   meta: MetaJson,
-  weighting: Weighting,
   visibleSlugs: string[],
 ): ChartDatum[] {
   const waveDateMap = new Map(meta.waves.map((w) => [w.wave, w.dates]));
@@ -95,18 +79,13 @@ function buildChartData(
         datum[slug] = null;
         datum[`${slug}_ci_lo`] = null;
         datum[`${slug}_ci_hi`] = null;
-        datum[`${slug}_users`] = null;
+        datum[`${slug}_n`] = null;
         continue;
       }
-      datum[slug] =
-        weighting === 'weighted' ? row.weighted_value : row.value;
-      datum[`${slug}_ci_lo`] =
-        weighting === 'weighted' ? row.weighted_ci_lower : row.ci_lower;
-      datum[`${slug}_ci_hi`] =
-        weighting === 'weighted' ? row.weighted_ci_upper : row.ci_upper;
-      // Always show the actual user count (unweighted-derived), not
-      // weighted_n_eff — see userCount() comment.
-      datum[`${slug}_users`] = userCount(row);
+      datum[slug] = row.weighted_value;
+      datum[`${slug}_ci_lo`] = row.weighted_ci_lower;
+      datum[`${slug}_ci_hi`] = row.weighted_ci_upper;
+      datum[`${slug}_n`] = row.n;
     }
     return datum;
   });
@@ -152,7 +131,7 @@ function PlatformTooltip({
             typeof p.value === 'number' ? p.value : null;
           const ciLo = datum[`${slug}_ci_lo`];
           const ciHi = datum[`${slug}_ci_hi`];
-          const nUsers = datum[`${slug}_users`];
+          const n = datum[`${slug}_n`];
           if (value === null) return null;
           return (
             <li key={slug} className="flex items-baseline gap-2">
@@ -170,8 +149,8 @@ function PlatformTooltip({
               {typeof ciLo === 'number' && typeof ciHi === 'number' ? (
                 <span className="text-slate">{formatCI(ciLo, ciHi)}</span>
               ) : null}
-              {typeof nUsers === 'number' ? (
-                <span className="text-slate">n={formatN(nUsers)}</span>
+              {typeof n === 'number' ? (
+                <span className="text-slate">n={formatN(n)}</span>
               ) : null}
             </li>
           );
@@ -346,7 +325,6 @@ export function FindingPlatformUsage({
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [weighting, setWeighting] = useState<Weighting>('weighted');
   // The platforms that have a line in the chart. User-controlled via
   // the multiselect in the controls aside. Capped at
   // MAX_CHART_PLATFORMS (12) for readability.
@@ -380,8 +358,8 @@ export function FindingPlatformUsage({
 
   const chartData = useMemo(() => {
     if (!rows || !meta) return [];
-    return buildChartData(rows, meta, weighting, chartPlatforms);
-  }, [rows, meta, weighting, chartPlatforms]);
+    return buildChartData(rows, meta, chartPlatforms);
+  }, [rows, meta, chartPlatforms]);
 
   // Swatch lookup so the Numbers table can show the same colored marker
   // next to platforms that have a corresponding line in the chart.
@@ -444,8 +422,7 @@ export function FindingPlatformUsage({
     for (const r of rows) {
       if (!chartPlatforms.includes(r.platform_slug)) continue;
       if (r.suppressed) continue;
-      const v =
-        weighting === 'weighted' ? r.weighted_value : r.value;
+      const v = r.weighted_value;
       if (v === null) continue;
       if (v < min) min = v;
       if (v > max) max = v;
@@ -455,7 +432,7 @@ export function FindingPlatformUsage({
       Math.max(0, Math.floor((min - 0.05) * 100) / 100),
       Math.min(1, Math.ceil((max + 0.05) * 100) / 100),
     ];
-  }, [yMode, customMin, customMax, rows, chartPlatforms, weighting]);
+  }, [yMode, customMin, customMax, rows, chartPlatforms]);
 
   const isZoomed = yMode !== 'full';
 
@@ -544,23 +521,16 @@ export function FindingPlatformUsage({
   // zoom note only.
 
   // CSV: long format mirroring the underlying platform_rates.json (one
-  // row per platform-wave). Includes both weighted and unweighted
-  // estimates regardless of toggle so the CSV is the whole truth, not
-  // just the current view. Adds a derived n_users column (count of
-  // respondents who reported using the platform).
+  // row per platform-wave).
   const csvHeaders = [
     'platform_slug',
     'platform_label',
     'wave',
     'wave_dates',
-    'value',
-    'ci_lower',
-    'ci_upper',
-    'n_panel',
-    'n_users',
     'weighted_value',
     'weighted_ci_lower',
     'weighted_ci_upper',
+    'n',
     'weighted_n_eff',
     'suppressed',
   ];
@@ -571,21 +541,15 @@ export function FindingPlatformUsage({
       r.platform_label,
       r.wave,
       meta.waves.find((w) => w.wave === r.wave)?.dates ?? '',
-      r.value,
-      r.ci_lower,
-      r.ci_upper,
-      r.n,
-      userCount(r),
       r.weighted_value,
       r.weighted_ci_lower,
       r.weighted_ci_upper,
+      r.n,
       r.weighted_n_eff,
       r.suppressed,
     ]);
 
   const waveCount = meta.waves.length;
-  const weightingLabel =
-    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const subtitleText =
     'Share of U.S. adults reporting each platform among the services they use, across ' +
     wavesSpan +
@@ -628,8 +592,7 @@ export function FindingPlatformUsage({
     'Among the eight traditional social-media platforms in the default view, Facebook and YouTube have the broadest reach across U.S. adults in the most recent wave (W6), with Instagram a clear third. Four platforms show statistically meaningful changes from W1 to W6: YouTube use declined by about 4.9 percentage points, X (Twitter) by 4.9 points, and LinkedIn by 4.5 points, while Reddit grew by 4.1 points (all exceed their 95% margins of error). Facebook, Instagram, TikTok, and Snapchat remained stable across the six waves; any apparent shifts are within the margin of error. Communication utilities such as text messaging and email reach a larger share of U.S. adults than any of these platforms — toggle them on in the Platforms picker to see their trends.';
   const methodologyFootnoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
-    weightingLabel +
-    ' estimates. 95% CIs available on hover (chart line + Numbers table cells). Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
+    'Weighted estimates. 95% CIs available on hover (chart line + Numbers table cells). Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
     generatedAt +
     '.';
 
@@ -746,8 +709,6 @@ export function FindingPlatformUsage({
       title="Who uses what?"
       subtitle={subtitleText}
       surveyQuestion={surveyQuestion || undefined}
-      weighting={weighting}
-      onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
       controls={controlsContent}
@@ -757,7 +718,6 @@ export function FindingPlatformUsage({
           <PlatformWaveTable
             rows={rows}
             meta={meta}
-            weighting={weighting}
             hidden={new Set<string>()}
             swatchBySlug={swatchBySlug}
           />
@@ -779,11 +739,10 @@ export function FindingPlatformUsage({
         findingTitle: 'Who uses what? Platform usage rates',
         variables: ['us001 (platforms_used)'],
         waves: allWaves,
-        weighting,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}
-      filenameBase={`strata_platform_usage_${weighting}`}
+      filenameBase="strata_platform_usage"
     />
   );
 }

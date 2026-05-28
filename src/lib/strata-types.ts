@@ -1,8 +1,11 @@
-// TypeScript shapes of the 8 precomputed JSON files under public/data/.
+// TypeScript shapes of the 9 precomputed JSON files under public/data/.
 // Mirrors the schemas documented in PHASE4_HANDOFF.md — keep in sync if
 // r/precompute/build_*.R adds/removes/renames any field. Suppression
-// convention: when `suppressed: true`, all stat fields (value / mean /
-// prop / r / se / ci_lower / ci_upper / n / weighted_*) are `null`.
+// convention: when `suppressed: true`, all stat fields (weighted_value /
+// weighted_mean / weighted_prop / weighted_r / weighted_se /
+// weighted_ci_lower / weighted_ci_upper / weighted_n_eff) are `null`.
+// `n` (unweighted observed count) remains populated as the suppression
+// guard.
 
 // =====================================================================
 // meta.json
@@ -113,9 +116,6 @@ interface TrendRowBase {
   variable_name: string;
   wave: number;
   n: number | null;
-  se: number | null;
-  ci_lower: number | null;
-  ci_upper: number | null;
   weighted_se: number | null;
   weighted_ci_lower: number | null;
   weighted_ci_upper: number | null;
@@ -125,22 +125,18 @@ interface TrendRowBase {
 
 export interface TrendMeanRow extends TrendRowBase {
   metric_type: 'mean';
-  mean: number | null;
   weighted_mean: number | null;
 }
 
 export interface TrendRateRow extends TrendRowBase {
   metric_type: 'rate';
-  prop: number | null;
   weighted_prop: number | null;
 }
 
 // Bucket variant — emitted alongside the continuous row for variables
 // in BUCKETED_VARS (the ls002a-l set in trends). Does NOT extend
 // TrendRowBase because the field shape differs: `weighted_value`
-// replaces `weighted_prop` / `weighted_mean`, and the stale
-// unweighted point-estimate fields (se / ci_lower / ci_upper / prop /
-// mean) are not emitted for bucket rows.
+// replaces `weighted_prop` / `weighted_mean`.
 export interface TrendBucketRow {
   variable_name: string;
   wave: number;
@@ -180,10 +176,6 @@ export interface DistributionRow {
   bin_index: number;
   bin_label: string;
   metric_type: DistributionMetricType;
-  value: number | null;
-  se: number | null;
-  ci_lower: number | null;
-  ci_upper: number | null;
   n: number | null;
   weighted_value: number | null;
   weighted_se: number | null;
@@ -223,10 +215,6 @@ export interface PlatformRateRow {
   metric: PlatformRateMetric;
   metric_type: PlatformRateMetricType;
   source_variable: string;
-  value: number | null;
-  se: number | null;
-  ci_lower: number | null;
-  ci_upper: number | null;
   n: number | null;
   weighted_value: number | null;
   weighted_se: number | null;
@@ -277,10 +265,6 @@ export interface ConditionalBreakdownRow {
   wave: number;
   option_index: number;
   option_label: string;
-  value: number | null;
-  se: number | null;
-  ci_lower: number | null;
-  ci_upper: number | null;
   n: number | null;
   weighted_value: number | null;
   weighted_se: number | null;
@@ -303,10 +287,6 @@ export interface GroupComparisonRow {
   group: string;
   wave: number;
   metric_type: GroupComparisonMetricType;
-  value: number | null;
-  se: number | null;
-  ci_lower: number | null;
-  ci_upper: number | null;
   n: number | null;
   weighted_value: number | null;
   weighted_se: number | null;
@@ -423,8 +403,6 @@ export interface CorrelationRow {
   var2: string;
   wave: number;
   method: 'spearman';
-  r: number | null;
-  p_value: number | null;
   n: number | null;
   weighted_r: number | null;
   weighted_n_eff: number | null;

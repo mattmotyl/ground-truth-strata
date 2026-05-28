@@ -44,7 +44,6 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
-import { type Weighting } from './weighted-toggle';
 
 // =====================================================================
 // Finding 07 — Which platforms are most politically skewed?
@@ -52,7 +51,7 @@ import { type Weighting } from './weighted-toggle';
 // PHASE4_UI_SPEC.md described a stacked horizontal bar showing
 // liberal/moderate/conservative composition of each platform's user
 // base. The precomputed group_comparisons.json does not currently
-// expose the (platform user x political tertile) cross — only mean
+// expose the (platform user x political ideology group) cross — only mean
 // ideology scores (rate_self) by platform_user_<slug>. We reframe the
 // finding to use that available signal: a DIVERGING horizontal bar
 // of each platform's mean self-rated ideology relative to the
@@ -237,7 +236,6 @@ export function FindingPoliticalSkew() {
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [selectedWave, setSelectedWave] = useState<number>(6);
   // Platform multiselect — filters the diverging bars. Numbers table
   // stays whole-truth (all platforms x all waves).
@@ -327,14 +325,8 @@ export function FindingPoliticalSkew() {
   const chartData = useMemo<ChartDatum[]>(() => {
     if (!groupRows || !nationalRow) return [];
     if (nationalRow.metric_type !== 'mean') return [];
-    const natMean =
-      (weighting === 'weighted'
-        ? nationalRow.weighted_mean
-        : nationalRow.mean) ?? null;
-    const natSE =
-      (weighting === 'weighted'
-        ? nationalRow.weighted_se
-        : nationalRow.se) ?? null;
+    const natMean = nationalRow.weighted_mean ?? null;
+    const natSE = nationalRow.weighted_se ?? null;
     if (natMean === null || natSE === null) return [];
     const waveRows = groupRows.filter((r) => {
       if (r.wave !== effectiveWave) return false;
@@ -350,14 +342,10 @@ export function FindingPoliticalSkew() {
     });
     const data: ChartDatum[] = [];
     for (const r of waveRows) {
-      const mean =
-        (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
-      const se =
-        (weighting === 'weighted' ? r.weighted_se : r.se) ?? null;
-      const lo =
-        (weighting === 'weighted' ? r.weighted_ci_lower : r.ci_lower) ?? null;
-      const hi =
-        (weighting === 'weighted' ? r.weighted_ci_upper : r.ci_upper) ?? null;
+      const mean = r.weighted_value ?? null;
+      const se = r.weighted_se ?? null;
+      const lo = r.weighted_ci_lower ?? null;
+      const hi = r.weighted_ci_upper ?? null;
       if (mean === null || se === null || lo === null || hi === null) {
         continue;
       }
@@ -385,7 +373,6 @@ export function FindingPoliticalSkew() {
   }, [
     groupRows,
     nationalRow,
-    weighting,
     effectiveWave,
     platformLabelBySlug,
     chartPlatformsSet,
@@ -418,10 +405,8 @@ export function FindingPoliticalSkew() {
     for (const wave of availableWaves) {
       const nat = nationalRowByWave.get(wave);
       if (!nat || nat.metric_type !== 'mean') continue;
-      const natMean =
-        (weighting === 'weighted' ? nat.weighted_mean : nat.mean) ?? null;
-      const natSE =
-        (weighting === 'weighted' ? nat.weighted_se : nat.se) ?? null;
+      const natMean = nat.weighted_mean ?? null;
+      const natSE = nat.weighted_se ?? null;
       if (natMean === null || natSE === null) continue;
       for (const slug of slugs) {
         const r = groupRows.find(
@@ -440,10 +425,8 @@ export function FindingPoliticalSkew() {
           datum[`w${wave}_significant`] = false;
           continue;
         }
-        const mean =
-          (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
-        const se =
-          (weighting === 'weighted' ? r.weighted_se : r.se) ?? null;
+        const mean = r.weighted_value ?? null;
+        const se = r.weighted_se ?? null;
         if (mean === null || se === null) {
           datum[`w${wave}_skew`] = null;
           datum[`w${wave}_skewErr`] = null;
@@ -481,7 +464,6 @@ export function FindingPoliticalSkew() {
     chartPlatforms,
     availableWaves,
     nationalRowByWave,
-    weighting,
     platformLabelBySlug,
   ]);
 
@@ -510,8 +492,6 @@ export function FindingPoliticalSkew() {
   };
 
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const weightingLabel =
-    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
 
@@ -591,10 +571,8 @@ export function FindingPoliticalSkew() {
           !r.suppressed,
       );
       if (!earlierRow) continue;
-      const ev =
-        (weighting === 'weighted' ? earlierRow.weighted_value : earlierRow.value) ?? null;
-      const ese =
-        (weighting === 'weighted' ? earlierRow.weighted_se : earlierRow.se) ?? null;
+      const ev = earlierRow.weighted_value ?? null;
+      const ese = earlierRow.weighted_se ?? null;
       // T2-8: use the platform's weighted_se directly from
       // group_comparisons.json rather than back-computing SE from
       // CI width. Avoids floating-point drift and matches the SE
@@ -628,13 +606,10 @@ export function FindingPoliticalSkew() {
     'platform_slug',
     'wave',
     'wave_dates',
-    'mean_ideology',
-    'ci_lower',
-    'ci_upper',
-    'n',
     'weighted_mean_ideology',
     'weighted_ci_lower',
     'weighted_ci_upper',
+    'n',
     'weighted_n_eff',
     'suppressed',
   ];
@@ -642,13 +617,10 @@ export function FindingPoliticalSkew() {
     r.grouping_var.replace(/^platform_user_/, ''),
     r.wave,
     meta.waves.find((w) => w.wave === r.wave)?.dates ?? '',
-    r.value,
-    r.ci_lower,
-    r.ci_upper,
-    r.n,
     r.weighted_value,
     r.weighted_ci_lower,
     r.weighted_ci_upper,
+    r.n,
     r.weighted_n_eff,
     r.suppressed,
   ]);
@@ -1054,8 +1026,7 @@ export function FindingPoliticalSkew() {
           gr.group === 'User',
       );
       if (!r || r.suppressed) return { v: null, n: null, smallN: false };
-      const v =
-        (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
+      const v = r.weighted_value ?? null;
       const n = r.n ?? null;
       return { v, n, smallN: n !== null && n < SMALL_N };
     });
@@ -1185,10 +1156,8 @@ export function FindingPoliticalSkew() {
           : `Mean self-reported political ideology (0 = very liberal, 100 = very conservative) of each platform's ${fullWaveLabel(effectiveWave, selectedWaveDates)} U.S. adult user base, plotted as a divergence from the national mean of ${formatNumber(
               chartData[0]?.nationalMean ?? 50,
               1,
-            )}. The original spec called for a liberal/moderate/conservative composition stack, but the (platform user × ideology tertile) cross is not yet precomputed; mean ideology by user base is the closest available signal. Bars are colored blue when the user base is measurably liberal of the national mean, red when measurably conservative, and purple when within the 95% margin of error.`
+            )}. The original spec called for a liberal/moderate/conservative composition stack, but the (platform user × ideology group) cross is not yet precomputed; mean ideology by user base is the closest available signal. Bars are colored blue when the user base is measurably liberal of the national mean, red when measurably conservative, and purple when within the 95% margin of error.`
       }
-      weighting={weighting}
-      onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
       controls={controlsAside}
@@ -1196,7 +1165,7 @@ export function FindingPoliticalSkew() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)} (UAS514–UAS519). ${weightingLabel} estimates. Significance vs. the national mean uses pooled SE (sqrt(SE_p² + SE_nat²)); a platform is colored as "skewed" only if |platform mean − national mean| > 1.96 × pooled SE. Error bars on the chart are the platform-user 95% CI. National mean for the selected wave (${formatNumber(
+      methodologyFootnote={`Source: UAS panel Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)} (UAS514–UAS519). Weighted estimates. Significance vs. the national mean uses pooled SE (sqrt(SE_p² + SE_nat²)); a platform is colored as "skewed" only if |platform mean − national mean| > 1.96 × pooled SE. Error bars on the chart are the platform-user 95% CI. National mean for the selected wave (${formatNumber(
         chartData[0]?.nationalMean ?? 50,
         1,
       )}) is computed from trends.json (variable=rate_self).${excludedFromChartNote} Precomputed JSON generated ${generatedAt}.`}
@@ -1206,7 +1175,6 @@ export function FindingPoliticalSkew() {
           'Which platforms are most politically skewed? Mean ideology of each platform user base',
         variables: ['rate_self', 'platform_user_<slug>'],
         waves: availableWaves,
-        weighting,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}

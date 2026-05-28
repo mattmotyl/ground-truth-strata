@@ -6,15 +6,12 @@ import {
   NumbersMeaningBlock,
   type StatRow,
 } from './numbers-meaning-block';
-import { WeightedToggle, type Weighting } from './weighted-toggle';
 import { type CitationMetadata } from './citation-widget';
 
 interface StrataChartFrameProps {
   eyebrow: string;
   title: string;
   subtitle?: ReactNode;
-  weighting: Weighting;
-  onWeightingChange: (next: Weighting) => void;
   chart: ReactNode;
   chartRef: RefObject<HTMLDivElement | null>;
   stats?: StatRow[];
@@ -42,8 +39,6 @@ export function StrataChartFrame({
   eyebrow,
   title,
   subtitle,
-  weighting,
-  onWeightingChange,
   chart,
   chartRef,
   stats,
@@ -80,26 +75,14 @@ export function StrataChartFrame({
         ) : null}
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[280px_1fr] items-start">
-        <aside className="space-y-4">
-          {controls}
-          <div className="space-y-2">
-            <p
-              className="text-xs text-slate uppercase tracking-wide"
-              style={{ fontFamily: 'var(--font-mono)' }}
-            >
-              Weighting
-            </p>
-            <WeightedToggle
-              value={weighting}
-              onChange={onWeightingChange}
-            />
-            <p className="text-xs text-slate leading-relaxed">
-              Weighted estimates use the UAS panel weights and generalize
-              to U.S. adults. Unweighted describes the panel itself.
-            </p>
-          </div>
-        </aside>
+      <div
+        className={`grid gap-6 items-start ${
+          controls ? 'lg:grid-cols-[280px_1fr]' : ''
+        }`}
+      >
+        {controls ? (
+          <aside className="space-y-4">{controls}</aside>
+        ) : null}
 
         <div className="space-y-4">
           <div

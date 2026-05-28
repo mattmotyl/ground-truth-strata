@@ -15,7 +15,6 @@ export interface CitationMetadata {
   findingTitle: string;
   variables: string[];
   waves: number[];
-  weighting: 'weighted' | 'unweighted';
   source: string;
   generatedAt?: string;
   url?: string;
@@ -31,7 +30,7 @@ function buildCitation(meta: CitationMetadata): string {
   const lines = [
     `Motyl, M. (${year}). "${meta.findingTitle}" — UAS panel, ${wavesLabel}.`,
     `Ground Truth Strata (v0.1.0). ${url}`,
-    `Variables: ${meta.variables.join(', ')}. Estimates: ${meta.weighting}.`,
+    `Variables: ${meta.variables.join(', ')}. Estimates: weighted.`,
     `Source: ${meta.source}.`,
   ];
   if (meta.generatedAt) {

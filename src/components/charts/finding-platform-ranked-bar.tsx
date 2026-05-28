@@ -44,7 +44,6 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
-import { type Weighting } from './weighted-toggle';
 
 // =====================================================================
 // Reusable single-wave ranked horizontal bar chart for the platform-
@@ -57,7 +56,7 @@ import { type Weighting } from './weighted-toggle';
 //   - color by magnitude (warm scale for harms, cool for positives)
 //   - error bars at bar tips for 95% CIs
 //   - tooltip with full CI + user count
-//   - weighted toggle, wave selector
+//   - wave selector
 //   - Numbers table (PlatformWaveTable, same as Finding 01)
 //   - significance-aware computed change verdicts the caller can use
 //     to author placeholder interpretation text per the rule in
@@ -79,6 +78,19 @@ const METRIC_SOURCE_VARIABLE: Record<PlatformRateMetric, string> = {
   mcxn_rate: 'us010',
   useful_rate: 'us012',
   time_per_day_minutes: 'us019_time_min',
+  // Platform habit/attitude scale (us018a-g) added in Step C —
+  // continuous mean rows. Bucket rows for these metrics live in the
+  // same file with bucket / bucket_label set. The ranked-bar chart
+  // here will need its own treatment to surface them (TODO in P3-B
+  // platform report card); for now the source_variable mapping just
+  // mirrors the metric name's variable suffix.
+  us018a_mean: 'us018a',
+  us018b_mean: 'us018b',
+  us018c_mean: 'us018c',
+  us018d_mean: 'us018d',
+  us018e_mean: 'us018e',
+  us018f_mean: 'us018f',
+  us018g_mean: 'us018g',
 };
 
 export interface RankedFindingProps {
@@ -99,7 +111,6 @@ export interface RankedFindingProps {
 
 export interface InterpretationContext {
   meta: MetaJson;
-  weighting: Weighting;
   selectedWave: number;
   // Rows for the selected wave, sorted by weighted_value descending
   // (suppressed rows sink to the bottom).
@@ -332,7 +343,6 @@ export function FindingPlatformRankedBar({
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [weighting, setWeighting] = useState<Weighting>('weighted');
   const [selectedWave, setSelectedWave] = useState<number>(6);
   // Platform multiselect — same DEFAULT_CHART_PLATFORMS as Finding 01.
   // Filters which bars appear in the chart (Numbers table stays whole-
@@ -414,29 +424,20 @@ export function FindingPlatformRankedBar({
         r.wave === effectiveWave && chartPlatformsSet.has(r.platform_slug),
     );
     return [...waveRows].sort((a, b) => {
-      const av =
-        a.suppressed
-          ? -1
-          : (weighting === 'weighted' ? a.weighted_value : a.value) ?? -1;
-      const bv =
-        b.suppressed
-          ? -1
-          : (weighting === 'weighted' ? b.weighted_value : b.value) ?? -1;
+      const av = a.suppressed ? -1 : a.weighted_value ?? -1;
+      const bv = b.suppressed ? -1 : b.weighted_value ?? -1;
       if (av !== bv) return bv - av;
       return a.platform_label.localeCompare(b.platform_label);
     });
-  }, [allRows, effectiveWave, weighting, chartPlatformsSet]);
+  }, [allRows, effectiveWave, chartPlatformsSet]);
 
   const chartData = useMemo<ChartDatum[]>(() => {
     return sortedRows
       .filter((r) => !r.suppressed)
       .map((r) => {
-        const value =
-          (weighting === 'weighted' ? r.weighted_value : r.value) ?? 0;
-        const lo =
-          (weighting === 'weighted' ? r.weighted_ci_lower : r.ci_lower) ?? value;
-        const hi =
-          (weighting === 'weighted' ? r.weighted_ci_upper : r.ci_upper) ?? value;
+        const value = r.weighted_value ?? 0;
+        const lo = r.weighted_ci_lower ?? value;
+        const hi = r.weighted_ci_upper ?? value;
         return {
           platform_slug: r.platform_slug,
           platformLabel:
@@ -452,7 +453,7 @@ export function FindingPlatformRankedBar({
           suppressed: false,
         };
       });
-  }, [sortedRows, weighting, platformLabelBySlug]);
+  }, [sortedRows, platformLabelBySlug]);
 
   // All-waves grouped-bar data shape. One row per selected platform,
   // with fields w{wave}_value / w{wave}_ciErr / w{wave}_n / w{wave}_ciHigh.
@@ -479,11 +480,9 @@ export function FindingPlatformRankedBar({
         datum[`w${r.wave}_n`] = null;
         continue;
       }
-      const v = (weighting === 'weighted' ? r.weighted_value : r.value) ?? null;
-      const lo =
-        (weighting === 'weighted' ? r.weighted_ci_lower : r.ci_lower) ?? v;
-      const hi =
-        (weighting === 'weighted' ? r.weighted_ci_upper : r.ci_upper) ?? v;
+      const v = r.weighted_value ?? null;
+      const lo = r.weighted_ci_lower ?? v;
+      const hi = r.weighted_ci_upper ?? v;
       datum[`w${r.wave}_value`] = v;
       datum[`w${r.wave}_ciHigh`] = hi;
       datum[`w${r.wave}_n`] = r.n;
@@ -515,7 +514,6 @@ export function FindingPlatformRankedBar({
     allRows,
     chartPlatformsSet,
     platformLabelBySlug,
-    weighting,
     availableWaves,
   ]);
 
@@ -577,7 +575,6 @@ export function FindingPlatformRankedBar({
 
   const interpretationText = buildInterpretation({
     meta,
-    weighting,
     selectedWave: effectiveWave,
     selectedWaveSorted: sortedRows,
     allWaveRows: allRows,
@@ -586,8 +583,6 @@ export function FindingPlatformRankedBar({
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
-  const weightingLabel =
-    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const wavesSpan = `Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)}`;
   const fullSubtitle =
     viewMode === 'all'
@@ -600,13 +595,10 @@ export function FindingPlatformRankedBar({
     'wave',
     'wave_dates',
     'metric',
-    'value',
-    'ci_lower',
-    'ci_upper',
-    'n',
     'weighted_value',
     'weighted_ci_lower',
     'weighted_ci_upper',
+    'n',
     'weighted_n_eff',
     'suppressed',
   ];
@@ -616,13 +608,10 @@ export function FindingPlatformRankedBar({
     r.wave,
     meta.waves.find((w) => w.wave === r.wave)?.dates ?? '',
     r.metric,
-    r.value,
-    r.ci_lower,
-    r.ci_upper,
-    r.n,
     r.weighted_value,
     r.weighted_ci_lower,
     r.weighted_ci_upper,
+    r.n,
     r.weighted_n_eff,
     r.suppressed,
   ]);
@@ -817,7 +806,7 @@ export function FindingPlatformRankedBar({
       : null;
 
   const methodologyFootnoteText =
-    `Source: UAS panel ${wavesSpan} (UAS514–UAS519), 2023–2025. ${weightingLabel} estimates. 95% CIs shown as error bars at bar tips and in hover tooltip. n shown in tooltip is the count of respondents asked about each platform. Cells with n < 30 are suppressed by design${
+    `Source: UAS panel ${wavesSpan} (UAS514–UAS519), 2023–2025. Weighted estimates. 95% CIs shown as error bars at bar tips and in hover tooltip. n shown in tooltip is the count of respondents asked about each platform. Cells with n < 30 are suppressed by design${
       suppressedNote ? ` (this wave: ${suppressedNote})` : ''
     }. Precomputed JSON generated ${generatedAt}.`;
 
@@ -1010,8 +999,6 @@ export function FindingPlatformRankedBar({
       title={title}
       subtitle={fullSubtitle}
       surveyQuestion={surveyQuestion || undefined}
-      weighting={weighting}
-      onWeightingChange={setWeighting}
       chart={chart}
       chartRef={chartRef}
       controls={controlsAside}
@@ -1021,7 +1008,6 @@ export function FindingPlatformRankedBar({
           <PlatformWaveTable
             rows={allRows}
             meta={meta}
-            weighting={weighting}
             hidden={new Set<string>()}
             swatchBySlug={swatchBySlug}
           />
@@ -1044,7 +1030,6 @@ export function FindingPlatformRankedBar({
         findingTitle: citationTitle,
         variables,
         waves: availableWaves,
-        weighting,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}
@@ -1075,7 +1060,7 @@ export function computePlatformChanges(
   ctx: InterpretationContext,
   earliestWave?: number,
 ): PlatformChangeRow[] {
-  const { allWaveRows, selectedWaveSorted, weighting, meta } = ctx;
+  const { allWaveRows, selectedWaveSorted, meta } = ctx;
   const waves = [...new Set(allWaveRows.map((r) => r.wave))].sort((a, b) => a - b);
   const earliest = earliestWave ?? waves[0];
   const platformLabelBySlug = new Map(
@@ -1084,28 +1069,20 @@ export function computePlatformChanges(
   const result: PlatformChangeRow[] = [];
   for (const sel of selectedWaveSorted) {
     if (sel.suppressed) continue;
-    const sv =
-      (weighting === 'weighted' ? sel.weighted_value : sel.value) ?? 0;
-    const sse =
-      (weighting === 'weighted' ? sel.weighted_se : sel.se) ?? 0;
-    const lo =
-      (weighting === 'weighted' ? sel.weighted_ci_lower : sel.ci_lower) ?? sv;
-    const hi =
-      (weighting === 'weighted' ? sel.weighted_ci_upper : sel.ci_upper) ?? sv;
+    const sv = sel.weighted_value ?? 0;
+    const sse = sel.weighted_se ?? 0;
+    const lo = sel.weighted_ci_lower ?? sv;
+    const hi = sel.weighted_ci_upper ?? sv;
     const earliestRow = allWaveRows.find(
       (r) => r.wave === earliest && r.platform_slug === sel.platform_slug,
     );
     const ev =
       earliestRow && !earliestRow.suppressed
-        ? (weighting === 'weighted'
-            ? earliestRow.weighted_value
-            : earliestRow.value) ?? null
+        ? earliestRow.weighted_value ?? null
         : null;
     const ese =
       earliestRow && !earliestRow.suppressed
-        ? (weighting === 'weighted'
-            ? earliestRow.weighted_se
-            : earliestRow.se) ?? null
+        ? earliestRow.weighted_se ?? null
         : null;
     const change = describeChange(ev, ese, sv, sse);
     result.push({

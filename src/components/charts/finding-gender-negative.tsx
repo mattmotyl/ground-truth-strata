@@ -34,7 +34,6 @@ import {
   surveyQuestionFor,
 } from '@/lib/strata-survey';
 import { StrataChartFrame } from './strata-chart-frame';
-import { type Weighting } from './weighted-toggle';
 
 // =====================================================================
 // Finding 06 — Do men and women experience platforms differently?
@@ -132,7 +131,6 @@ export function FindingGenderNegativeExperience() {
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [weighting, setWeighting] = useState<Weighting>('weighted');
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -167,22 +165,11 @@ export function FindingGenderNegativeExperience() {
           (r) => r.group === group && r.wave === wave,
         );
         const value =
-          row && !row.suppressed
-            ? (weighting === 'weighted' ? row.weighted_value : row.value) ??
-              null
-            : null;
+          row && !row.suppressed ? row.weighted_value ?? null : null;
         const lo =
-          row && !row.suppressed
-            ? (weighting === 'weighted'
-                ? row.weighted_ci_lower
-                : row.ci_lower) ?? null
-            : null;
+          row && !row.suppressed ? row.weighted_ci_lower ?? null : null;
         const hi =
-          row && !row.suppressed
-            ? (weighting === 'weighted'
-                ? row.weighted_ci_upper
-                : row.ci_upper) ?? null
-            : null;
+          row && !row.suppressed ? row.weighted_ci_upper ?? null : null;
         datum[`w${wave}`] = value;
         datum[`w${wave}_lo`] = lo;
         datum[`w${wave}_hi`] = hi;
@@ -199,7 +186,7 @@ export function FindingGenderNegativeExperience() {
       }
       return datum;
     });
-  }, [rows, waves, weighting]);
+  }, [rows, waves]);
 
   if (error) {
     return (
@@ -228,8 +215,6 @@ export function FindingGenderNegativeExperience() {
   };
 
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const weightingLabel =
-    weighting === 'weighted' ? 'Weighted' : 'Unweighted';
   const wavesSpan =
     waves.length > 0
       ? `Wave ${Math.min(...waves)}–Wave ${Math.max(...waves)}`
@@ -248,8 +233,8 @@ export function FindingGenderNegativeExperience() {
     const row = rows!.find((r) => r.group === group && r.wave === wave);
     if (!row || row.suppressed) return { v: null, se: null, n: null };
     return {
-      v: (weighting === 'weighted' ? row.weighted_value : row.value) ?? null,
-      se: (weighting === 'weighted' ? row.weighted_se : row.se) ?? null,
+      v: row.weighted_value ?? null,
+      se: row.weighted_se ?? null,
       n: row.n,
     };
   }
@@ -302,13 +287,10 @@ export function FindingGenderNegativeExperience() {
     'outcome',
     'wave',
     'wave_dates',
-    'value',
-    'ci_lower',
-    'ci_upper',
-    'n',
     'weighted_value',
     'weighted_ci_lower',
     'weighted_ci_upper',
+    'n',
     'weighted_n_eff',
     'suppressed',
   ];
@@ -318,13 +300,10 @@ export function FindingGenderNegativeExperience() {
     r.outcome,
     r.wave,
     meta.waves.find((w) => w.wave === r.wave)?.dates ?? '',
-    r.value,
-    r.ci_lower,
-    r.ci_upper,
-    r.n,
     r.weighted_value,
     r.weighted_ci_lower,
     r.weighted_ci_upper,
+    r.n,
     r.weighted_n_eff,
     r.suppressed,
   ]);
@@ -497,8 +476,6 @@ export function FindingGenderNegativeExperience() {
       title="Do men and women experience platforms differently?"
       subtitle={`Share of U.S. adults reporting a recent in-person ${OUTCOME_LABEL}, by gender, across ${wavesSpan}. Negative-experience items broken out by gender are not platform-indexed in the precomputed JSON, so this view uses the in-person counterpart (us024) as the closest available proxy.`}
       surveyQuestion={surveyQuestion || undefined}
-      weighting={weighting}
-      onWeightingChange={setWeighting}
       chart={
         <>
           {chart}
@@ -509,14 +486,13 @@ export function FindingGenderNegativeExperience() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). ${weightingLabel} estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted. Precomputed JSON generated ${generatedAt}.`}
+      methodologyFootnote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). Weighted estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted. Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:
           'Do men and women experience platforms differently? In-person negative-experience rates by gender',
         variables: ['us024 (inperson_neg_experience)'],
         waves,
-        weighting,
         source: 'Understanding America Study, USC CESR',
         generatedAt: meta.generated_at,
       }}
