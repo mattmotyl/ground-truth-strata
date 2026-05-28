@@ -2,20 +2,25 @@
 
 import { useEffect, useRef, useState } from 'react';
 import {
+  getPlatformOutcomeComparison,
+  loadGroupComparisons,
   loadMeta,
   loadPlatformRates,
   loadQuestionTexts,
   type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
+  GroupComparisonRow,
   LikertBucket,
   MetaJson,
   PlatformRateRow,
 } from '@/lib/strata-types';
 import {
   availableWavesForMetric,
+  availableWavesForOutcome,
   comparisonColorScaleMax,
   magnitudeColor,
+  platformOutcomeToSeries,
   platformRatesToSeries,
   type ComparisonSeries,
 } from '@/lib/compare-adapters';
@@ -48,15 +53,20 @@ import {
 import { type StatRow } from '@/components/charts/numbers-meaning-block';
 import { TwoStepPicker } from './two-step-picker';
 
-// Solid bar colors for the response-type-driven Theme B charts.
-const AGREE_COLOR = '#4B2E63'; // plum
-const DISAGREE_COLOR = '#FFC107'; // amber
+// Solid bar colors.
+const AGREE_COLOR = '#4B2E63'; // plum — % agree
+const DISAGREE_COLOR = '#FFC107'; // amber — % disagree
+// Loneliness binary rate. Intentional warm override (see the override
+// note on the ex003_lonely question in compare-themes.ts): loneliness is
+// a harm, so it uses amber rather than the cool teal a binary-rate
+// convention might suggest.
+const LONELY_COLOR = '#FFC107'; // amber
 
 type ResponseType = 'agree' | 'disagree';
 
 // Resolve a question's abstract coloring intent to a concrete fill,
-// given the live response type. Magnitude themes map to the warm/cool
-// palettes; response-type themes are solid plum (agree) / amber (disagree).
+// given the live response type. Magnitude → warm/cool palettes;
+// responseType → solid plum (agree) / amber (disagree); binary → amber.
 function resolveColoring(
   question: CompareQuestion,
   responseType: ResponseType,
@@ -70,19 +80,28 @@ function resolveColoring(
           : STRATA_PALETTES.positive,
     };
   }
+  if (question.coloring.mode === 'binary') {
+    return { mode: 'solid', color: LONELY_COLOR };
+  }
   return {
     mode: 'solid',
     color: responseType === 'agree' ? AGREE_COLOR : DISAGREE_COLOR,
   };
 }
 
-// X-axis caption per the spec's axis-label table (lines 806-813). Theme
-// C loneliness and Theme D arrive in Part 2.
+// X-axis caption per the spec's axis-label table (lines 806-813).
 function axisLabelFor(
   question: CompareQuestion,
   responseType: ResponseType,
 ): string {
+  if (question.variable === 'ex003_lonely') return '% who are lonely';
   if (question.responseTypeApplies) {
+    if (question.reverseCoded) {
+      // ls002i: post-reversal "agree" = does NOT feel negative.
+      return responseType === 'agree'
+        ? '% who do NOT feel negative'
+        : '% who feel negative';
+    }
     return responseType === 'agree' ? '% who agree' : '% who disagree';
   }
   return '% of platform users reporting this';
@@ -162,6 +181,11 @@ export function CompareExplorer() {
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
+  // group_comparisons.json is LARGE (6.8 MB) — loaded lazily only when a
+  // Theme C question is selected, never on initial mount.
+  const [groupRows, setGroupRows] = useState<GroupComparisonRow[] | null>(
+    null,
+  );
   const [error, setError] = useState<Error | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
@@ -175,17 +199,25 @@ export function CompareExplorer() {
       .catch(setError);
   }, []);
 
+  // Lazy-load the large wellbeing file on first entry to Theme C.
+  useEffect(() => {
+    if (theme === 'C' && groupRows === null) {
+      loadGroupComparisons().then(setGroupRows).catch(setError);
+    }
+  }, [theme, groupRows]);
+
   const activeTheme = getTheme(theme);
   const activeQuestion =
     activeTheme.questions.find((q) => q.key === questionKey) ??
     activeTheme.questions[0];
 
-  // Theme A → continuous rows (bucket null); Theme B → the selected
-  // response-type bucket.
+  const isGroupSource = activeQuestion.source === 'group_comparisons';
+
+  // bucket: response-type-bearing questions (Theme B, Theme C ls002*)
+  // read the selected band; binary/experience questions read null.
   const bucket: LikertBucket | null = activeQuestion.responseTypeApplies
     ? responseType
     : null;
-  const metric = activeQuestion.metric!;
 
   // Derived values are plain consts — the React Compiler memoizes them.
   // (Manual useMemo on deps derived from activeQuestion trips the
@@ -194,9 +226,14 @@ export function CompareExplorer() {
     ? new Map(meta.platforms.map((p) => [p.slug, p.label]))
     : new Map<string, string>();
 
-  const availableWaves = allRows
-    ? availableWavesForMetric(allRows, metric, bucket)
-    : [];
+  // Available waves and the series both branch on the question's source.
+  const availableWaves: number[] = isGroupSource
+    ? groupRows
+      ? availableWavesForOutcome(groupRows, activeQuestion.variable, bucket)
+      : []
+    : allRows
+      ? availableWavesForMetric(allRows, activeQuestion.metric!, bucket)
+      : [];
 
   // Clamp the displayed wave to one the current question was asked in,
   // without mutating `wave` state — so flipping back to a theme with the
@@ -210,16 +247,29 @@ export function CompareExplorer() {
 
   const platformsSet = new Set(platforms);
 
-  const series: ComparisonSeries = allRows
-    ? platformRatesToSeries(
-        allRows,
-        metric,
-        effectiveWave,
-        bucket,
-        platformsSet,
-        labelBySlug,
-      )
-    : [];
+  const series: ComparisonSeries = isGroupSource
+    ? groupRows
+      ? platformOutcomeToSeries(
+          getPlatformOutcomeComparison(
+            groupRows,
+            activeQuestion.variable,
+            effectiveWave,
+            bucket,
+          ),
+          platformsSet,
+          labelBySlug,
+        )
+      : []
+    : allRows
+      ? platformRatesToSeries(
+          allRows,
+          activeQuestion.metric!,
+          effectiveWave,
+          bucket,
+          platformsSet,
+          labelBySlug,
+        )
+      : [];
 
   const coloring = resolveColoring(activeQuestion, responseType);
   const axisLabel = axisLabelFor(activeQuestion, responseType);
@@ -254,7 +304,12 @@ export function CompareExplorer() {
     );
   }
 
-  const ready = allRows && meta;
+  const baseReady = allRows && meta;
+  // Theme C also needs the lazily-loaded wellbeing file.
+  const waitingForGroup = isGroupSource && !groupRows;
+  const loadingMessage = !baseReady
+    ? 'Loading platform-comparison data…'
+    : 'Loading wellbeing data…';
 
   // Picker renders immediately; the chart frame waits for data.
   return (
@@ -266,12 +321,12 @@ export function CompareExplorer() {
         onThemeChange={handleThemeChange}
         onQuestionChange={setQuestionKey}
       />
-      {!ready ? (
+      {!baseReady || waitingForGroup ? (
         <div
           className="mx-auto max-w-3xl px-6 py-16 text-center text-slate"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          Loading platform-comparison data…
+          {loadingMessage}
         </div>
       ) : (
         <CompareChart
@@ -377,9 +432,14 @@ function CompareChart(props: CompareChartProps) {
     surveyQuestionFor(question.variable, questionTexts, meta),
   );
 
-  const subtitle = question.responseTypeApplies
-    ? 'Platforms ranked by the share of users in the selected response band. Platform habit & attitude scale; Waves 4–6 only; items are non-validated.'
-    : 'Platforms ranked by the share of users who report this experience.';
+  const subtitle =
+    question.source === 'group_comparisons'
+      ? question.responseTypeApplies
+        ? 'Platforms ranked by the share of their users in the selected response band, among each platform’s users.'
+        : 'Platforms ranked by the share of their users who are lonely (UCLA 3-item loneliness scale). Available in Waves 2, 5, and 6 only.'
+      : question.responseTypeApplies
+        ? 'Platforms ranked by the share of users in the selected response band. Platform habit & attitude scale; Waves 4–6 only; items are non-validated.'
+        : 'Platforms ranked by the share of users who report this experience.';
 
   // THE NUMBERS — ranked stat list mirroring the chart order.
   const stats: StatRow[] = series.map((d) => {
@@ -403,13 +463,23 @@ function CompareChart(props: CompareChartProps) {
   const suppressed = series.filter((d) => d.suppressed).map((d) => d.label);
   const suppressedNote =
     suppressed.length > 0 ? ` (this wave: ${suppressed.join(', ')})` : '';
-  const habitNote = question.responseTypeApplies
-    ? ' Platform habit/attitude scale, Waves 4–6 only; items are non-validated.'
-    : '';
+  // Source-specific caveats appended to the standard source note.
+  let extraNote = '';
+  if (question.source === 'platform_rates' && question.responseTypeApplies) {
+    extraNote =
+      ' Platform habit/attitude scale, Waves 4–6 only; items are non-validated.';
+  } else if (question.source === 'group_comparisons') {
+    extraNote =
+      ' Estimates are among each platform’s users (respondents who reported using the platform).';
+    if (question.reverseCoded) {
+      extraNote +=
+        ' This item is reverse-coded; higher agreement indicates the respondent does NOT feel negative most of the time.';
+    }
+  }
   const methodologyFootnote = `Source: UAS panel ${fullWaveLabel(
     effectiveWave,
     waveDates,
-  )}. Weighted estimates. 95% CIs shown as error bars at bar tips and in the hover tooltip. n shown in tooltip is the count of platform users.${habitNote} Cells with n < 30 are suppressed by design${suppressedNote}. Precomputed JSON generated ${generatedAt}.`;
+  )}. Weighted estimates. 95% CIs shown as error bars at bar tips and in the hover tooltip. n shown in tooltip is the count of platform users.${extraNote} Cells with n < 30 are suppressed by design${suppressedNote}. Precomputed JSON generated ${generatedAt}.`;
 
   // CSV — the displayed wave's series.
   const csvHeaders = [
@@ -472,6 +542,17 @@ function CompareChart(props: CompareChartProps) {
     </div>
   );
 
+  // ls002i is reverse-coded: post-reversal "agree" means the respondent
+  // does NOT feel negative, so relabel the control accordingly.
+  const responseTypeLabel = (rt: ResponseType): string => {
+    if (question.reverseCoded) {
+      return rt === 'agree'
+        ? '% who do NOT feel negative'
+        : '% who feel negative';
+    }
+    return rt === 'agree' ? '% who agree' : '% who disagree';
+  };
+
   const responseTypeSelector = question.responseTypeApplies ? (
     <div className="space-y-2">
       <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
@@ -493,7 +574,7 @@ function CompareChart(props: CompareChartProps) {
               className={responseType === rt ? 'text-ink' : 'text-slate'}
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              {rt === 'agree' ? '% who agree' : '% who disagree'}
+              {responseTypeLabel(rt)}
             </span>
           </label>
         ))}

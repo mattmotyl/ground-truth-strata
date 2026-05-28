@@ -33,6 +33,15 @@ export const COMPOSITE_VARIABLES: Record<string, CompositeVariableInfo> = {
     componentVariables: ['us019_hours', 'us019_minutes'],
     note: 'Composite of two survey items asked for each platform — hours-per-day and minutes-per-day — converted to total minutes per day.',
   },
+  // Binary loneliness indicator derived from the UCLA 3-item scale.
+  // Surfaced on /compare Theme C. Header text authored by Matt.
+  ex003_lonely: {
+    description:
+      'Loneliness is measured using the UCLA 3-item loneliness scale. Respondents reported how often they feel they lack companionship, feel left out, and feel isolated from others (Hardly ever / Some of the time / Often). Respondents scoring 6 or higher out of 9 are classified as lonely.',
+    cleanVariableName: 'ex003_lonely',
+    isPlatformIndexed: false,
+    componentVariables: ['ex003a', 'ex003b', 'ex003c'],
+  },
 };
 
 export function lookupComposite(

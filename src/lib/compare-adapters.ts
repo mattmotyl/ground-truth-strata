@@ -11,10 +11,12 @@
 // Theme C / Theme D adapters arrive in Part 2.
 
 import type {
+  GroupComparisonRow,
   LikertBucket,
   PlatformRateMetric,
   PlatformRateRow,
 } from './strata-types';
+import type { PlatformOutcomeDatum } from './strata-data';
 
 // One bar's worth of normalized data. `value` / `ciLow` / `ciHigh` are
 // null when the cell is suppressed (n < 30) — the chart renders these
@@ -125,6 +127,49 @@ export function availableWavesForMetric(
   for (const r of rows) {
     if (r.metric !== metric) continue;
     if (matchesBucket(r, bucket)) set.add(r.wave);
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+// ── Theme C adapter (group_comparisons.json) ─────────────────────────
+// getPlatformOutcomeComparison() (strata-data.ts) does the file-specific
+// filtering and platform_slug derivation; this turns its output into the
+// shared ComparisonSeries the chart consumes.
+export function platformOutcomeToSeries(
+  data: PlatformOutcomeDatum[],
+  platformsSet: ReadonlySet<string>,
+  labelBySlug: ReadonlyMap<string, string>,
+): ComparisonSeries {
+  const series: ComparisonSeries = data
+    .filter((d) => platformsSet.has(d.platform_slug))
+    .map((d) => ({
+      platform_slug: d.platform_slug,
+      label: labelBySlug.get(d.platform_slug) ?? d.platform_slug,
+      value: d.suppressed ? null : d.weighted_value,
+      ciLow: d.suppressed ? null : d.weighted_ci_lower,
+      ciHigh: d.suppressed ? null : d.weighted_ci_upper,
+      n: d.n,
+      suppressed: d.suppressed,
+    }));
+  return sortComparisonSeries(series);
+}
+
+// Waves a Theme C (outcome, bucket) selection has User-side rows for.
+// ex003_lonely exists in W2/W5/W6 only; ls002* span W1-W6 — deriving
+// from the data gates the wave selector automatically.
+export function availableWavesForOutcome(
+  rows: GroupComparisonRow[],
+  outcome: string,
+  bucket: LikertBucket | null,
+): number[] {
+  const set = new Set<number>();
+  for (const r of rows) {
+    if (r.outcome !== outcome) continue;
+    if (r.group !== 'User') continue;
+    if (!r.grouping_var.startsWith('platform_user_')) continue;
+    if (bucket === null ? (r.bucket ?? null) === null : r.bucket === bucket) {
+      set.add(r.wave);
+    }
   }
   return [...set].sort((a, b) => a - b);
 }

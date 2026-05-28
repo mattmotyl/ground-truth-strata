@@ -27,9 +27,11 @@ export type CompareChartType = 'rankedBar' | 'stackedBar';
 //   - magnitude/warm  → harm palette  (Theme A negative outcomes)
 //   - magnitude/cool  → positive palette (Theme A positive outcomes)
 //   - responseType    → solid plum (% agree) / amber (% disagree)
+//   - binary          → solid warm amber (Theme C loneliness rate)
 export type QuestionColoring =
   | { mode: 'magnitude'; scale: 'warm' | 'cool' }
-  | { mode: 'responseType' };
+  | { mode: 'responseType' }
+  | { mode: 'binary' };
 
 export interface CompareQuestion {
   // Stable id used as the Step-2 radio value (and, later, URL state).
@@ -46,8 +48,13 @@ export interface CompareQuestion {
   metric?: PlatformRateMetric;
   coloring: QuestionColoring;
   // Whether the RESPONSE TYPE control (% agree / % disagree) applies.
-  // True for Theme B (and Theme C bucketed items in Part 2).
+  // True for Theme B and Theme C bucketed (ls002*) items.
   responseTypeApplies: boolean;
+  // ls002i only. The item is reverse-coded (reversed at data-load time),
+  // so the post-reversal "agree" bucket means the respondent does NOT
+  // feel negative. The orchestrator relabels the response-type control
+  // and axis and adds a footnote when this is set.
+  reverseCoded?: boolean;
   chartType: CompareChartType;
 }
 
@@ -203,15 +210,90 @@ const THEME_B: CompareTheme = {
 };
 
 // ── Theme C — Wellbeing of Users (group_comparisons.json) ────────────
-// Part 2: reads platform_user_* / group === "User" rows via
-// getPlatformOutcomeComparison(); needs bucket handling + ls002i
-// reverse-coding relabeling. Stubbed here so the picker shows all four
-// themes; questions filled next session.
+// Reads respondent-level wellbeing outcomes among each platform's USERS,
+// via getPlatformOutcomeComparison() (platform_user_* / group "User").
+// `variable` doubles as the group_comparisons `outcome` key.
 const THEME_C: CompareTheme = {
   id: 'C',
   label: 'Wellbeing of Users',
-  available: false,
-  questions: [],
+  available: true,
+  questions: [
+    {
+      key: 'lonely',
+      label: 'Lonely (% of users)',
+      title: 'Loneliness Among Platform Users',
+      variable: 'ex003_lonely',
+      source: 'group_comparisons',
+      // INTENTIONAL PALETTE OVERRIDE: loneliness is a harm, so it uses
+      // warm amber (#FFC107) — NOT the cool teal that a "binary rate"
+      // might otherwise suggest. Teal is reserved for positive outcomes
+      // in the Strata palette; coloring a harm teal would mislead.
+      coloring: { mode: 'binary' },
+      responseTypeApplies: false,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'life-overall',
+      label: 'Satisfied with life overall',
+      title: 'Overall Life Satisfaction',
+      variable: 'ls002l',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'physical-health',
+      label: 'Satisfied with physical health',
+      title: 'Satisfaction With Physical Health',
+      variable: 'ls002a',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'mental-health',
+      label: 'Satisfied with mental health',
+      title: 'Satisfaction With Mental Health',
+      variable: 'ls002d',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'social-life',
+      label: 'Satisfied with social life',
+      title: 'Satisfaction With Social Life',
+      variable: 'ls002c',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'happy',
+      label: 'Feels happy most of the time',
+      title: 'Feeling Happy Most of the Time',
+      variable: 'ls002h',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      chartType: 'rankedBar',
+    },
+    {
+      key: 'feels-negative',
+      label: 'Feels negative most of the time',
+      title: 'Feeling Negative Most of the Time (Reverse-Coded)',
+      variable: 'ls002i',
+      source: 'group_comparisons',
+      coloring: { mode: 'responseType' },
+      responseTypeApplies: true,
+      reverseCoded: true,
+      chartType: 'rankedBar',
+    },
+  ],
 };
 
 // ── Theme D — Who Uses Each Platform (platform_demographics.json) ────
