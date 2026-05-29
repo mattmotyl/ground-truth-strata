@@ -163,6 +163,34 @@ export const DEMOGRAPHIC_CONFIGS: Record<string, DemographicConfig> = {
   },
 };
 
+// ── T3-B6 demographic group-split (Theme A only) ─────────────────────
+// The breakdown selector on Theme A experience questions offers these
+// demographic grouping_vars from platform_group_comparisons.json. Each
+// reuses DEMOGRAPHIC_CONFIGS, so the group levels, stack order, and
+// colors match Theme D's composition bars exactly. `label` is the
+// selector option text.
+//
+// Intentionally excluded (do not add without Matt's sign-off):
+//   - pol_incl_leaners: present in platform_group_comparisons.json but
+//     dropped from the breakdown — party-with-leaners overlaps
+//     political_ideology_group and clutters the selector.
+//   - income / hhincome: not computed in platform_group_comparisons.json
+//     at all (no rows exist), so it cannot be offered here.
+export interface BreakdownDemographic {
+  // Key into DEMOGRAPHIC_CONFIGS and the JSON `grouping_var` field.
+  groupingVar: string;
+  // Selector option text.
+  label: string;
+}
+
+export const BREAKDOWN_DEMOGRAPHICS: BreakdownDemographic[] = [
+  { groupingVar: 'gender', label: 'Gender' },
+  { groupingVar: 'age', label: 'Age group' },
+  { groupingVar: 'education', label: 'Education' },
+  { groupingVar: 'race', label: 'Race/ethnicity' },
+  { groupingVar: 'political_ideology_group', label: 'Political ideology' },
+];
+
 // ── Theme A — Experiences on Platforms (platform_rates.json) ─────────
 const THEME_A: CompareTheme = {
   id: 'A',

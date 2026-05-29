@@ -7,6 +7,7 @@ import {
   loadGroupComparisons,
   loadMeta,
   loadPlatformDemographics,
+  loadPlatformGroupComparisons,
   loadPlatformRates,
   loadQuestionTexts,
   type QuestionTextsJson,
@@ -17,6 +18,7 @@ import type {
   LikertBucket,
   MetaJson,
   PlatformDemographicRow,
+  PlatformGroupComparisonRow,
   PlatformRateRow,
 } from '@/lib/strata-types';
 import {
@@ -24,17 +26,23 @@ import {
   availableWavesForDemographic,
   availableWavesForMetric,
   availableWavesForOutcome,
+  availableWavesForPlatformGroup,
   comparisonColorScaleMax,
   conditionalBreakdownsToHeatmap,
   magnitudeColor,
   platformDemographicsToStacked,
+  platformGroupComparisonsToGrouped,
   platformOutcomeToSeries,
   platformRatesToSeries,
   type ComparisonSeries,
+  type GroupDef,
+  type GroupedOverall,
+  type GroupedSeries,
   type HeatmapData,
   type StackedSeries,
 } from '@/lib/compare-adapters';
 import {
+  BREAKDOWN_DEMOGRAPHICS,
   COMPARE_THEMES,
   DEMOGRAPHIC_CONFIGS,
   getTheme,
@@ -61,6 +69,7 @@ import {
   CompareStackedBar,
   type StackSegmentDef,
 } from '@/components/charts/compare-stacked-bar';
+import { CompareGroupedBar } from '@/components/charts/compare-grouped-bar';
 import { CompareHeatmap } from '@/components/charts/compare-heatmap';
 import { StrataChartFrame } from '@/components/charts/strata-chart-frame';
 import {
@@ -219,6 +228,10 @@ export function CompareExplorer() {
   const [xMode, setXMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState<number>(0);
   const [customMax, setCustomMax] = useState<number>(100);
+  // Theme A demographic group-split (T3-B6). null = "No breakdown" (the
+  // default ranked bar). Persists across Theme A question switches; reset
+  // to null only on theme change (see handleThemeChange).
+  const [breakdown, setBreakdown] = useState<string | null>(null);
 
   const [allRows, setAllRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
@@ -238,6 +251,11 @@ export function CompareExplorer() {
   const [condRows, setCondRows] = useState<ConditionalBreakdownRow[] | null>(
     null,
   );
+  // platform_group_comparisons.json (2.86 MB) — lazy-loaded on first
+  // Theme A breakdown selection.
+  const [platformGroupRows, setPlatformGroupRows] = useState<
+    PlatformGroupComparisonRow[] | null
+  >(null);
   const [drilldown, setDrilldown] = useState<FollowUp | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
@@ -273,6 +291,14 @@ export function CompareExplorer() {
     }
   }, [drilldown, condRows]);
 
+  // Lazy-load the per-platform demographic outcomes on the first Theme A
+  // breakdown selection.
+  useEffect(() => {
+    if (theme === 'A' && breakdown !== null && platformGroupRows === null) {
+      loadPlatformGroupComparisons().then(setPlatformGroupRows).catch(setError);
+    }
+  }, [theme, breakdown, platformGroupRows]);
+
   const activeTheme = getTheme(theme);
   const activeQuestion =
     activeTheme.questions.find((q) => q.key === questionKey) ??
@@ -281,6 +307,11 @@ export function CompareExplorer() {
   const isGroupSource = activeQuestion.source === 'group_comparisons';
   const isDemoSource = activeQuestion.source === 'platform_demographics';
   const isStacked = activeQuestion.chartType === 'stackedBar';
+  // Theme A group-split is active only with a demographic selected and no
+  // drill-down open (the heatmap drill-down takes visual precedence; the
+  // breakdown re-applies when the user returns from it).
+  const isBreakdown =
+    theme === 'A' && breakdown !== null && drilldown === null;
 
   // bucket: response-type-bearing questions (Theme B, Theme C ls002*)
   // read the selected band; binary/experience questions read null.
@@ -295,18 +326,29 @@ export function CompareExplorer() {
     ? new Map(meta.platforms.map((p) => [p.slug, p.label]))
     : new Map<string, string>();
 
-  // Available waves branch on the question's source.
-  const availableWaves: number[] = isDemoSource
-    ? demoRows
-      ? availableWavesForDemographic(demoRows, activeQuestion.variable)
-      : []
-    : isGroupSource
-      ? groupRows
-        ? availableWavesForOutcome(groupRows, activeQuestion.variable, bucket)
-        : []
+  // Available waves branch on the question's source (and on the active
+  // breakdown for Theme A group-splits).
+  const availableWaves: number[] = isBreakdown
+    ? platformGroupRows
+      ? availableWavesForPlatformGroup(
+          platformGroupRows,
+          activeQuestion.variable,
+          breakdown!,
+        )
       : allRows
         ? availableWavesForMetric(allRows, activeQuestion.metric!, bucket)
-        : [];
+        : []
+    : isDemoSource
+      ? demoRows
+        ? availableWavesForDemographic(demoRows, activeQuestion.variable)
+        : []
+      : isGroupSource
+        ? groupRows
+          ? availableWavesForOutcome(groupRows, activeQuestion.variable, bucket)
+          : []
+        : allRows
+          ? availableWavesForMetric(allRows, activeQuestion.metric!, bucket)
+          : [];
 
   // Clamp the displayed wave to one the current question was asked in,
   // without mutating `wave` state — so flipping back to a theme with the
@@ -347,6 +389,37 @@ export function CompareExplorer() {
           )
         : [];
 
+  // Theme A group-split (T3-B6). The Overall baseline is reused from
+  // `series` (platform_rates); per-group values come from
+  // platform_group_comparisons via the adapter. resolveSegments returns
+  // {value,label,color} in config order — also the table column order.
+  const groupDefs: GroupDef[] = isBreakdown ? resolveSegments(breakdown!) : [];
+  const overallBySlug = new Map<string, GroupedOverall>();
+  if (isBreakdown) {
+    for (const d of series) {
+      overallBySlug.set(d.platform_slug, {
+        value: d.value,
+        ciLow: d.ciLow,
+        ciHigh: d.ciHigh,
+        n: d.n,
+        suppressed: d.suppressed,
+      });
+    }
+  }
+  const groupedSeries: GroupedSeries =
+    isBreakdown && platformGroupRows
+      ? platformGroupComparisonsToGrouped(
+          platformGroupRows,
+          activeQuestion.variable,
+          effectiveWave,
+          breakdown!,
+          groupDefs,
+          overallBySlug,
+          platformsSet,
+          labelBySlug,
+        )
+      : [];
+
   // Stacked-composition series + resolved segments for Theme D.
   const segments: StackSegmentDef[] = isStacked
     ? resolveSegments(activeQuestion.variable)
@@ -367,11 +440,43 @@ export function CompareExplorer() {
   const axisLabel = axisLabelFor(activeQuestion, responseType);
 
   // Swatch per displayed platform — matches CompareRankedBar fills.
-  // (Empty for stacked themes; the multiselect shows no swatches there.)
+  // (Empty for stacked themes and breakdown mode, where bars are colored
+  // by group, not platform; the multiselect shows no swatches there.)
   const colorScaleMax = comparisonColorScaleMax(series);
-  const swatchBySlug = buildSwatches(series, coloring, colorScaleMax);
+  const swatchBySlug =
+    isBreakdown
+      ? new Map<string, string>()
+      : buildSwatches(series, coloring, colorScaleMax);
 
-  const xDomain = computeXDomain(xMode, customMin, customMax, series);
+  // In breakdown mode the fit-to-data domain must span both the Overall
+  // and every per-group CI envelope, so group bars aren't clipped.
+  const domainSeries: ComparisonSeries = isBreakdown
+    ? groupedSeries.flatMap((d) => [
+        ...(d.overall
+          ? [
+              {
+                platform_slug: d.platform_slug,
+                label: d.label,
+                value: d.overall.value,
+                ciLow: d.overall.ciLow,
+                ciHigh: d.overall.ciHigh,
+                n: d.overall.n,
+                suppressed: d.overall.suppressed,
+              },
+            ]
+          : []),
+        ...d.groups.map((g) => ({
+          platform_slug: d.platform_slug,
+          label: g.label,
+          value: g.value,
+          ciLow: g.ciLow,
+          ciHigh: g.ciHigh,
+          n: g.n,
+          suppressed: g.suppressed,
+        })),
+      ])
+    : series;
+  const xDomain = computeXDomain(xMode, customMin, customMax, domainSeries);
   const isZoomed = xMode !== 'full';
 
   // ── Theme A drill-down (heatmap) derived state ──────────────────────
@@ -430,6 +535,7 @@ export function CompareExplorer() {
   const handleThemeChange = (id: ThemeId) => {
     setTheme(id);
     setDrilldown(null); // drill-down is per-question
+    setBreakdown(null); // group-split is Theme-A-only; reset on theme change
     // Reset to the new theme's first question; platforms / wave /
     // responseType persist.
     const first = getTheme(id).questions[0];
@@ -438,7 +544,9 @@ export function CompareExplorer() {
   const handleQuestionChange = (key: string) => {
     setQuestionKey(key);
     setDrilldown(null); // exiting a question exits its drill-down
+    // breakdown PERSISTS across Theme A question switches (per spec).
   };
+  const handleBreakdownChange = (gv: string | null) => setBreakdown(gv);
   const togglePlatform = (slug: string) => {
     setPlatforms((curr) =>
       curr.includes(slug) ? curr.filter((s) => s !== slug) : [...curr, slug],
@@ -455,14 +563,19 @@ export function CompareExplorer() {
   }
 
   const baseReady = allRows && meta;
-  // Themes C and D each need a lazily-loaded file before rendering.
+  // Themes C and D each need a lazily-loaded file before rendering; a
+  // Theme A breakdown needs platform_group_comparisons.json.
   const waitingForData =
-    (isGroupSource && !groupRows) || (isDemoSource && !demoRows);
+    (isGroupSource && !groupRows) ||
+    (isDemoSource && !demoRows) ||
+    (isBreakdown && !platformGroupRows);
   const loadingMessage = !baseReady
     ? 'Loading platform-comparison data…'
-    : isDemoSource
-      ? 'Loading demographics data…'
-      : 'Loading wellbeing data…';
+    : isBreakdown
+      ? 'Loading breakdown data…'
+      : isDemoSource
+        ? 'Loading demographics data…'
+        : 'Loading wellbeing data…';
 
   // Picker renders immediately; the chart frame waits for data.
   return (
@@ -491,6 +604,13 @@ export function CompareExplorer() {
           series={series}
           stackedSeries={stackedSeries}
           segments={segments}
+          isBreakdown={isBreakdown}
+          groupedSeries={groupedSeries}
+          groupDefs={groupDefs}
+          breakdown={breakdown}
+          onBreakdownChange={handleBreakdownChange}
+          breakdownDisabled={!(theme === 'A' && drilldown === null)}
+          breakdownThemeNote={theme !== 'A'}
           coloring={coloring}
           axisLabel={axisLabel}
           xDomain={xDomain}
@@ -535,6 +655,13 @@ interface CompareChartProps {
   series: ComparisonSeries;
   stackedSeries: StackedSeries;
   segments: StackSegmentDef[];
+  isBreakdown: boolean;
+  groupedSeries: GroupedSeries;
+  groupDefs: GroupDef[];
+  breakdown: string | null;
+  onBreakdownChange: (gv: string | null) => void;
+  breakdownDisabled: boolean;
+  breakdownThemeNote: boolean;
   coloring: RankedBarColoring;
   axisLabel: string;
   xDomain: [number, number];
@@ -574,6 +701,13 @@ function CompareChart(props: CompareChartProps) {
     series,
     stackedSeries,
     segments,
+    isBreakdown,
+    groupedSeries,
+    groupDefs,
+    breakdown,
+    onBreakdownChange,
+    breakdownDisabled,
+    breakdownThemeNote,
     coloring,
     axisLabel,
     xDomain,
@@ -687,6 +821,71 @@ function CompareChart(props: CompareChartProps) {
     </div>
   ) : null;
 
+  // Breakdown table (Theme A group-split) — Platform | Overall | groups.
+  // Overall column is styled ink/bold to match the chart's baseline bar.
+  const breakdownNumbers = isBreakdown ? (
+    <div className="overflow-x-auto">
+      <table
+        className="w-full text-xs"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        <thead>
+          <tr className="text-slate text-left">
+            <th className="pr-3 pb-1 font-normal">Platform</th>
+            <th className="px-2 pb-1 font-normal text-right">
+              <span className="inline-flex items-center gap-1">
+                <span
+                  aria-hidden
+                  className="inline-block h-2 w-2 rounded-sm"
+                  style={{ backgroundColor: '#C8C3BC' }}
+                />
+                Overall
+              </span>
+            </th>
+            {groupDefs.map((g) => (
+              <th key={g.value} className="px-2 pb-1 font-normal text-right">
+                <span className="inline-flex items-center gap-1">
+                  <span
+                    aria-hidden
+                    className="inline-block h-2 w-2 rounded-sm"
+                    style={{ backgroundColor: g.color }}
+                  />
+                  {g.label}
+                </span>
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {groupedSeries.map((d) => (
+            <tr key={d.platform_slug} className="border-t border-mist/60">
+              <td className="pr-3 py-1 text-ink">{d.label}</td>
+              <td
+                className="px-2 py-1 text-right text-ink/85"
+                title={d.overall?.suppressed ? 'n < 30 (suppressed)' : undefined}
+              >
+                {d.overall && !d.overall.suppressed && d.overall.value !== null
+                  ? formatPercent(d.overall.value)
+                  : '—'}
+              </td>
+              {d.groups.map((g) => (
+                <td
+                  key={g.group}
+                  className="px-2 py-1 text-right text-ink/85"
+                  title={g.suppressed ? 'n < 30 (suppressed)' : undefined}
+                >
+                  {!g.suppressed && g.value !== null
+                    ? formatPercent(g.value)
+                    : '—'}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  ) : null;
+
   const suppressed = series.filter((d) => d.suppressed).map((d) => d.label);
   const suppressedNote =
     suppressed.length > 0 ? ` (this wave: ${suppressed.join(', ')})` : '';
@@ -698,6 +897,9 @@ function CompareChart(props: CompareChartProps) {
   } else if (isStacked) {
     extraNote =
       ' Composition is among each platform’s users. Percentages may not sum to 100% due to rounding, missing values, or suppressed groups (n < 30).';
+  } else if (isBreakdown) {
+    extraNote =
+      ' Bars are broken out by the selected demographic group; “Overall” (dark baseline bar) is the rate among all of the platform’s users. Every estimate is among each platform’s users (conditional on platform use).';
   } else if (
     question.source === 'platform_rates' &&
     question.responseTypeApplies
@@ -719,7 +921,9 @@ function CompareChart(props: CompareChartProps) {
     ? ' n shown in the hover tooltip is the count of affected users on each platform.'
     : isStacked
       ? ' n shown in the hover tooltip is the count of platform users in each group.'
-      : ' n shown in tooltip is the count of platform users.';
+      : isBreakdown
+        ? ' n shown in the hover tooltip is the count of platform users in each demographic group.'
+        : ' n shown in tooltip is the count of platform users.';
   const sourceNote = `Source: UAS panel ${fullWaveLabel(
     effectiveWave,
     waveDates,
@@ -760,19 +964,34 @@ function CompareChart(props: CompareChartProps) {
             'n',
             'suppressed',
           ]
-        : [
-            'platform_slug',
-            'platform_label',
-            'wave',
-            'wave_dates',
-            'variable',
-            'response_band',
-            'weighted_value',
-            'weighted_ci_lower',
-            'weighted_ci_upper',
-            'n',
-            'suppressed',
-          ];
+        : isBreakdown
+          ? [
+              'platform_slug',
+              'platform_label',
+              'wave',
+              'wave_dates',
+              'outcome',
+              'grouping_var',
+              'group',
+              'weighted_value',
+              'weighted_ci_lower',
+              'weighted_ci_upper',
+              'n',
+              'suppressed',
+            ]
+          : [
+              'platform_slug',
+              'platform_label',
+              'wave',
+              'wave_dates',
+              'variable',
+              'response_band',
+              'weighted_value',
+              'weighted_ci_lower',
+              'weighted_ci_upper',
+              'n',
+              'suppressed',
+            ];
   const csvRows: unknown[][] =
     isDrill && drilldown && heatmapData
       ? heatmapData.rows.flatMap((row) =>
@@ -812,19 +1031,50 @@ function CompareChart(props: CompareChartProps) {
           ];
         }),
       )
-    : series.map((d) => [
-        d.platform_slug,
-        d.label,
-        effectiveWave,
-        waveDates,
-        question.variable,
-        question.responseTypeApplies ? responseType : '',
-        d.value,
-        d.ciLow,
-        d.ciHigh,
-        d.n,
-        d.suppressed,
-  ]);
+    : isBreakdown
+      ? groupedSeries.flatMap((d) => [
+          [
+            d.platform_slug,
+            d.label,
+            effectiveWave,
+            waveDates,
+            question.variable,
+            'overall',
+            'Overall',
+            d.overall?.value ?? null,
+            d.overall?.ciLow ?? null,
+            d.overall?.ciHigh ?? null,
+            d.overall?.n ?? null,
+            d.overall?.suppressed ?? true,
+          ],
+          ...d.groups.map((g) => [
+            d.platform_slug,
+            d.label,
+            effectiveWave,
+            waveDates,
+            question.variable,
+            breakdown ?? '',
+            g.group,
+            g.value,
+            g.ciLow,
+            g.ciHigh,
+            g.n,
+            g.suppressed,
+          ]),
+        ])
+      : series.map((d) => [
+          d.platform_slug,
+          d.label,
+          effectiveWave,
+          waveDates,
+          question.variable,
+          question.responseTypeApplies ? responseType : '',
+          d.value,
+          d.ciLow,
+          d.ciHigh,
+          d.n,
+          d.suppressed,
+        ]);
 
   // ── controls aside ───────────────────────────────────────────────
   // Render ALL waves; waves the current question wasn't asked in render
@@ -982,6 +1232,72 @@ function CompareChart(props: CompareChartProps) {
     </div>
   );
 
+  // Demographic group-split selector — always occupies the same slot
+  // (below PLATFORMS, above WAVE). It's interactive on the Experiences
+  // theme (no drill-down) and greyed/disabled elsewhere, with a note
+  // explaining why, rather than vanishing. Default is "No breakdown".
+  const cursorClass = breakdownDisabled ? 'cursor-not-allowed' : 'cursor-pointer';
+  const breakdownSelector = (
+    <div className="space-y-2">
+      <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
+        Breakdown
+      </p>
+      <fieldset
+        disabled={breakdownDisabled}
+        className={
+          'flex flex-col gap-1 text-sm ' + (breakdownDisabled ? 'opacity-50' : '')
+        }
+      >
+        <legend className="sr-only">Split by demographic group</legend>
+        <label className={'flex items-center gap-2 ' + cursorClass}>
+          <input
+            type="radio"
+            name="compare-breakdown"
+            value=""
+            checked={breakdown === null}
+            onChange={() => onBreakdownChange(null)}
+            className="accent-plum"
+          />
+          <span
+            className={breakdown === null ? 'text-ink' : 'text-slate'}
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            No breakdown
+          </span>
+        </label>
+        {BREAKDOWN_DEMOGRAPHICS.map((b) => (
+          <label
+            key={b.groupingVar}
+            className={'flex items-center gap-2 ' + cursorClass}
+          >
+            <input
+              type="radio"
+              name="compare-breakdown"
+              value={b.groupingVar}
+              checked={breakdown === b.groupingVar}
+              onChange={() => onBreakdownChange(b.groupingVar)}
+              className="accent-plum"
+            />
+            <span
+              className={breakdown === b.groupingVar ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {b.label}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {breakdownThemeNote ? (
+        <p
+          className="text-xs text-slate leading-snug"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Demographic breakdown available for Experiences theme only.
+        </p>
+      ) : null}
+    </div>
+  );
+
   const controlsAside = (
     <div className="space-y-5">
       <PlatformMultiselect
@@ -991,6 +1307,7 @@ function CompareChart(props: CompareChartProps) {
         onReset={onResetPlatforms}
         swatchBySlug={swatchBySlug}
       />
+      {breakdownSelector}
       {waveSelector}
       {responseTypeSelector}
       {/* No x-axis zoom for stacked composition or heatmap drill-downs. */}
@@ -1079,6 +1396,13 @@ function CompareChart(props: CompareChartProps) {
           heatmapChart
         ) : isStacked ? (
           <CompareStackedBar series={stackedSeries} segments={segments} />
+        ) : isBreakdown ? (
+          <CompareGroupedBar
+            series={groupedSeries}
+            xDomain={xDomain}
+            isZoomed={isZoomed}
+            axisLabel={axisLabel}
+          />
         ) : (
           <CompareRankedBar
             series={series}
@@ -1092,9 +1416,15 @@ function CompareChart(props: CompareChartProps) {
       chartRef={chartRef}
       controls={controlsAside}
       chartFooter={chartFooter}
-      stats={isStacked || isDrill ? undefined : stats}
+      stats={isStacked || isDrill || isBreakdown ? undefined : stats}
       customNumbers={
-        isDrill ? heatmapNumbers : isStacked ? compositionNumbers : undefined
+        isDrill
+          ? heatmapNumbers
+          : isStacked
+            ? compositionNumbers
+            : isBreakdown
+              ? breakdownNumbers
+              : undefined
       }
       isPlaceholderInterpretation
       interpretation={
@@ -1102,7 +1432,9 @@ function CompareChart(props: CompareChartProps) {
           ? '[PLACEHOLDER -- Matt to review] Per-platform breakdown of the topics/impacts users reported, for the selected wave. Interpretation copy is intentionally omitted — the heatmap and THE NUMBERS note describe the weighted percentages and caveats.'
           : isStacked
             ? '[PLACEHOLDER -- Matt to review] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
-            : '[PLACEHOLDER -- Matt to review] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
+            : isBreakdown
+              ? '[PLACEHOLDER -- Matt to review] Per-platform rates broken out by the selected demographic group, with each platform’s Overall rate as the dark baseline bar. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the per-group weighted estimates with 95% CIs.'
+              : '[PLACEHOLDER -- Matt to review] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
       }
       methodologyFootnote=""
       csv={{ headers: csvHeaders, rows: csvRows }}
@@ -1119,7 +1451,9 @@ function CompareChart(props: CompareChartProps) {
       filenameBase={
         isDrill && drilldown
           ? `compare-${question.key}-${drilldown.construct}`
-          : `compare-${question.key}`
+          : isBreakdown && breakdown
+            ? `compare-${question.key}-by-${breakdown}`
+            : `compare-${question.key}`
       }
     />
   );

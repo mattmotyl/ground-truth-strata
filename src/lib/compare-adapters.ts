@@ -15,6 +15,7 @@ import type {
   GroupComparisonRow,
   LikertBucket,
   PlatformDemographicRow,
+  PlatformGroupComparisonRow,
   PlatformRateMetric,
   PlatformRateRow,
 } from './strata-types';
@@ -335,6 +336,154 @@ export function availableWavesForConstruct(
   const set = new Set<number>();
   for (const r of rows) {
     if (r.construct === construct) set.add(r.wave);
+  }
+  return [...set].sort((a, b) => a - b);
+}
+
+// ── Theme A demographic group-split (platform_group_comparisons.json) ─
+// T3-B6. When a demographic breakdown is selected on a Theme A
+// experience question, each platform gets one value PER demographic
+// group level of the chosen grouping_var (plus an Overall baseline that
+// the orchestrator passes in, derived from platform_rates.json — there
+// is no Overall row in platform_group_comparisons.json). Unlike the flat
+// single-value ComparisonSeries the ranked bar consumes, this is
+// multi-value per platform, so it carries its own shape rendered by
+// CompareGroupedBar as a clustered bar (Overall first, then groups).
+//
+// How this differs from platformRatesToSeries():
+//   - source: platform_group_comparisons.json (PlatformGroupComparisonRow)
+//     vs platform_rates.json (PlatformRateRow)
+//   - selector: keyed on `outcome` (us003/us007/us010/us012) + selected
+//     `grouping_var`, vs `metric` (nux_rate/…) + `bucket`
+//   - no bucket dimension — these outcomes are binary, never bucketed
+//   - cardinality: N values per platform (one per group) vs one
+// All rows here are CONDITIONAL ON PLATFORM USE (denominators are
+// platform users in the demographic group) — see the schema docstring on
+// PlatformGroupComparisonRow.
+export interface GroupedOverall {
+  value: number | null;
+  ciLow: number | null;
+  ciHigh: number | null;
+  n: number | null;
+  suppressed: boolean;
+}
+
+export interface GroupedGroupValue {
+  group: string; // raw group value in the JSON (matches the config `value`)
+  label: string; // display label
+  color: string;
+  value: number | null;
+  ciLow: number | null;
+  ciHigh: number | null;
+  n: number | null;
+  suppressed: boolean;
+}
+
+export interface GroupedDatum {
+  platform_slug: string;
+  label: string;
+  overall: GroupedOverall | null; // null when no Overall rate for this platform
+  groups: GroupedGroupValue[]; // in config (stack) order
+}
+
+export type GroupedSeries = GroupedDatum[];
+
+// The orchestrator resolves a grouping_var's levels to {value,label,color}
+// (via resolveSegments over DEMOGRAPHIC_CONFIGS) and passes them in, so
+// this adapter stays free of palette/registry knowledge.
+export interface GroupDef {
+  value: string;
+  label: string;
+  color: string;
+}
+
+export function platformGroupComparisonsToGrouped(
+  rows: PlatformGroupComparisonRow[],
+  outcome: string,
+  wave: number,
+  groupingVar: string,
+  groupDefs: readonly GroupDef[],
+  overallBySlug: ReadonlyMap<string, GroupedOverall>,
+  platformsSet: ReadonlySet<string>,
+  labelBySlug: ReadonlyMap<string, string>,
+): GroupedSeries {
+  // platform_slug → (group value → row) for the requested cut.
+  const byPlatform = new Map<
+    string,
+    Map<string, PlatformGroupComparisonRow>
+  >();
+  for (const r of rows) {
+    if (r.outcome !== outcome) continue;
+    if (r.wave !== wave) continue;
+    if (r.grouping_var !== groupingVar) continue;
+    if (!platformsSet.has(r.platform_slug)) continue;
+    let m = byPlatform.get(r.platform_slug);
+    if (!m) {
+      m = new Map();
+      byPlatform.set(r.platform_slug, m);
+    }
+    m.set(r.group, r);
+  }
+
+  const out: GroupedSeries = [];
+  for (const [slug, m] of byPlatform) {
+    const groups: GroupedGroupValue[] = groupDefs.map((gd) => {
+      const r = m.get(gd.value);
+      if (!r || r.suppressed) {
+        return {
+          group: gd.value,
+          label: gd.label,
+          color: gd.color,
+          value: null,
+          ciLow: null,
+          ciHigh: null,
+          n: r?.n ?? null,
+          suppressed: true,
+        };
+      }
+      return {
+        group: gd.value,
+        label: gd.label,
+        color: gd.color,
+        value: r.weighted_value,
+        ciLow: r.weighted_ci_lower,
+        ciHigh: r.weighted_ci_upper,
+        n: r.n,
+        suppressed: false,
+      };
+    });
+    out.push({
+      platform_slug: slug,
+      label: labelBySlug.get(slug) ?? slug,
+      overall: overallBySlug.get(slug) ?? null,
+      groups,
+    });
+  }
+
+  // Sort platforms by the Overall rate, descending (spec). Platforms
+  // without a usable Overall sink to the bottom; ties broken by label.
+  out.sort((a, b) => {
+    const av =
+      a.overall && !a.overall.suppressed ? a.overall.value ?? -Infinity : -Infinity;
+    const bv =
+      b.overall && !b.overall.suppressed ? b.overall.value ?? -Infinity : -Infinity;
+    if (av !== bv) return bv - av;
+    return a.label.localeCompare(b.label);
+  });
+  return out;
+}
+
+// Waves a (outcome, grouping_var) breakdown has rows for. Experience
+// outcomes span W1-W6; deriving from the data keeps wave ghosting honest
+// if a grouping_var/outcome happens to be sparse in some wave.
+export function availableWavesForPlatformGroup(
+  rows: PlatformGroupComparisonRow[],
+  outcome: string,
+  groupingVar: string,
+): number[] {
+  const set = new Set<number>();
+  for (const r of rows) {
+    if (r.outcome === outcome && r.grouping_var === groupingVar) set.add(r.wave);
   }
   return [...set].sort((a, b) => a - b);
 }
