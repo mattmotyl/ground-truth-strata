@@ -41,3 +41,10 @@ release.
   sparse (W4–W5 only) and excluded from JSON output via
   EXCLUDED_VARIABLES, so this would need the data path reconsidered
   before it can be built.
+- **/compare group-split — dense-case fallback.** If the race/ethnicity
+  breakdown (6 bars per platform cluster: Overall + 5 groups) reads too
+  dense in full review, the fallback is numbers-only for 4+ group
+  demographics — keep the multi-column Numbers table but drop the
+  grouped bars (Overall stays as the table column). The Overall bar was
+  intentionally de-emphasized (light grey #C8C3BC) to mitigate density;
+  revisit only if review still finds it cluttered.
