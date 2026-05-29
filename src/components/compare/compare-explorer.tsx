@@ -1429,12 +1429,12 @@ function CompareChart(props: CompareChartProps) {
       isPlaceholderInterpretation
       interpretation={
         isDrill
-          ? '[PLACEHOLDER -- Matt to review] Per-platform breakdown of the topics/impacts users reported, for the selected wave. Interpretation copy is intentionally omitted — the heatmap and THE NUMBERS note describe the weighted percentages and caveats.'
+          ? '[WORK IN PROGRESS] Per-platform breakdown of the topics/impacts users reported, for the selected wave. Interpretation copy is intentionally omitted — the heatmap and THE NUMBERS note describe the weighted percentages and caveats.'
           : isStacked
-            ? '[PLACEHOLDER -- Matt to review] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
+            ? '[WORK IN PROGRESS] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
             : isBreakdown
-              ? '[PLACEHOLDER -- Matt to review] Per-platform rates broken out by the selected demographic group, with each platform’s Overall rate as the dark baseline bar. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the per-group weighted estimates with 95% CIs.'
-              : '[PLACEHOLDER -- Matt to review] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
+              ? '[WORK IN PROGRESS] Per-platform rates broken out by the selected demographic group, with each platform’s Overall rate as the dark baseline bar. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the per-group weighted estimates with 95% CIs.'
+              : '[WORK IN PROGRESS] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
       }
       methodologyFootnote=""
       csv={{ headers: csvHeaders, rows: csvRows }}

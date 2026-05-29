@@ -430,7 +430,7 @@ export function PlatformMetricTrend({
       title={title}
       subtitle={subtitle || undefined}
       sourceNote={sourceNote}
-      interpretation={`[PLACEHOLDER -- Matt to review] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`}
+      interpretation={`[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`}
       filenameBase={filenameBase}
       citationVariables={[surveyVar]}
     />
@@ -543,7 +543,7 @@ export function RespondentTrend({
     `available on hover. Cells with n < 30 are suppressed by design. ` +
     `Precomputed JSON generated ${generatedAt}.`;
   const fullSourceNote = evt.appendContext(sourceNote);
-  const interpretation = `[PLACEHOLDER -- Matt to review] ${title} over time. ${
+  const interpretation = `[WORK IN PROGRESS] ${title} over time. ${
     isSingleWave
       ? 'Only one survey wave carries this item, so no trend is shown.'
       : 'The line shows the weighted population estimate wave by wave; hover any point for its 95% CI and n.'
@@ -1079,7 +1079,7 @@ export function PairedAttitudeTrend({
       chartFooter={chartFooter}
       customNumbers={numbers}
       isPlaceholderInterpretation
-      interpretation={`[PLACEHOLDER -- Matt to review] ${title} over time. The two lines compare ${pairLabels[0]} and ${pairLabels[1]} at the population level, wave by wave; hover any point for its 95% CI and n.`}
+      interpretation={`[WORK IN PROGRESS] ${title} over time. The two lines compare ${pairLabels[0]} and ${pairLabels[1]} at the population level, wave by wave; hover any point for its 95% CI and n.`}
       methodologyFootnote=""
       sourceNote={fullSourceNote}
       csv={{ headers: csvHeaders, rows: csvRows }}

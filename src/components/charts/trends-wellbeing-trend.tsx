@@ -106,7 +106,7 @@ export function WellbeingPlatformTrend({
     `${reverseClause} 95% CIs available on hover. Cells with n < 30 are ` +
     `suppressed by design. Precomputed JSON generated ${generatedAt}.`;
 
-  const interpretation = `[PLACEHOLDER -- Matt to review] ${title} over time, split by platform. Each line is ${valueLabel} among that platform's users, wave by wave; the table and tooltip carry the 95% CIs and user counts. Estimates are conditional on platform use.${reverseClause}`;
+  const interpretation = `[WORK IN PROGRESS] ${title} over time, split by platform. Each line is ${valueLabel} among that platform's users, wave by wave; the table and tooltip carry the 95% CIs and user counts. Estimates are conditional on platform use.${reverseClause}`;
 
   return (
     <PlatformFanChart

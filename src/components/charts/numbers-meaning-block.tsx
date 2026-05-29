@@ -91,7 +91,7 @@ export function NumbersMeaningBlock({
               style={{ fontFamily: 'var(--font-mono)' }}
               title="Matt has not yet reviewed this interpretation."
             >
-              Placeholder
+              Work in progress
             </span>
           ) : null}
         </div>
