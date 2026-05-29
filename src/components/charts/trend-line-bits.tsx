@@ -5,14 +5,25 @@
 // legacy F01 component stays untouched (same house pattern as
 // CompareRankedBar vs FindingPlatformRankedBar).
 
+import { useState } from 'react';
 import {
+  ReferenceLine,
   usePlotArea,
   useXAxisScale,
   useYAxisScale,
 } from 'recharts';
 import { CHART_FONTS } from '@/lib/strata-charts';
 import { formatCI, formatN } from '@/lib/strata-formatters';
-import type { PlatformFanDatum, TrendPoint } from '@/lib/trends-adapters';
+import {
+  eventContextSentence,
+  groupEventsToRefLines,
+  selectableEvents,
+  type EventRefLine,
+  type PlatformFanDatum,
+  type TrendEvent,
+  type TrendPoint,
+} from '@/lib/trends-adapters';
+import type { ContextualEventsJson, MetaJson } from '@/lib/strata-types';
 
 // ── X-axis two-line wave tick ─────────────────────────────────────────
 
@@ -321,6 +332,107 @@ export function SingleSeriesTooltip({
       </div>
     </div>
   );
+}
+
+// ── Context-events state hook + renderers ─────────────────────────────
+// Centralizes the per-event visibility state, snapped reference lines,
+// and source-note context sentence so every trend renderer (the generic
+// ones plus the legacy F01 usage chart) wires events identically.
+
+export interface TrendEventsState {
+  available: TrendEvent[];
+  visible: TrendEvent[];
+  refLines: EventRefLine[];
+  hidden: ReadonlySet<string>;
+  toggle: (id: string) => void;
+  appendContext: (base: string) => string;
+}
+
+export function useTrendEvents(
+  events: ContextualEventsJson | null,
+  meta: MetaJson | null,
+  presentWaves: number[],
+): TrendEventsState {
+  const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const available =
+    events && meta ? selectableEvents(events, meta, presentWaves) : [];
+  const visible = available.filter((e) => !hidden.has(e.id));
+  const refLines = groupEventsToRefLines(visible);
+  const toggle = (id: string) =>
+    setHidden((curr) => {
+      const next = new Set(curr);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  const appendContext = (base: string) =>
+    refLines.length > 0 ? `${base} ${eventContextSentence(refLines)}` : base;
+  return { available, visible, refLines, hidden, toggle, appendContext };
+}
+
+// Bare vertical dashed reference lines (one per wave with visible events).
+// Labels are drawn separately by EventLabels so they can be staggered and
+// right-aligned. Returned as an array of <ReferenceLine> so Recharts
+// detects them as chart children.
+export function renderEventLines(refLines: EventRefLine[]) {
+  return refLines.map((rl) => (
+    <ReferenceLine
+      key={rl.waveLabel}
+      x={rl.waveLabel}
+      stroke="#605A6B"
+      strokeDasharray="4 2"
+    />
+  ));
+}
+
+// Per-event labels drawn to the RIGHT of each wave's reference line.
+// Within a wave the events cascade downward in centerDist order so they
+// never stack. Anchoring is uniform-right for every wave so adjacent
+// waves' labels grow the SAME direction and never collide head-on (each
+// fits in the gap to the next wave; the last wave grows into the chart's
+// right margin). baseOffset clears the top Y-axis anchor where shown.
+export function EventLabels({
+  events,
+  baseOffset,
+}: {
+  events: TrendEvent[];
+  baseOffset: number;
+}) {
+  const xScale = useXAxisScale();
+  const plot = usePlotArea();
+  if (!xScale || !plot || events.length === 0) return null;
+
+  const byWave = new Map<string, TrendEvent[]>();
+  for (const ev of events) {
+    const list = byWave.get(ev.waveLabel);
+    if (list) list.push(ev);
+    else byWave.set(ev.waveLabel, [ev]);
+  }
+
+  const STEP = 16;
+  const out: React.ReactNode[] = [];
+  for (const [waveLabel, group] of byWave) {
+    const x = xScale(waveLabel);
+    if (typeof x !== 'number') continue;
+    const sorted = [...group].sort((a, b) => a.centerDist - b.centerDist);
+    sorted.forEach((ev, i) => {
+      out.push(
+        <text
+          key={ev.id}
+          x={x + 6}
+          y={plot.y + baseOffset + i * STEP}
+          fontSize={10}
+          fontFamily="var(--font-mono)"
+          fill="#605A6B"
+          textAnchor="start"
+          style={{ pointerEvents: 'none' }}
+        >
+          {ev.shortLabel}
+        </text>,
+      );
+    });
+  }
+  return <g aria-hidden>{out}</g>;
 }
 
 // ── Context-events control (per-event checkbox list) ──────────────────

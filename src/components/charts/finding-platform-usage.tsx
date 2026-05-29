@@ -20,6 +20,7 @@ import {
   type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
+  ContextualEventsJson,
   MetaJson,
   PlatformRateRow,
 } from '@/lib/strata-types';
@@ -47,6 +48,12 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
+import {
+  EventLabels,
+  EventsControl,
+  renderEventLines,
+  useTrendEvents,
+} from './trend-line-bits';
 
 interface ChartDatum {
   wave: number;
@@ -315,10 +322,15 @@ interface FindingPlatformUsageProps {
   // Optional override for default visible set (e.g., set by a URL query
   // param in a later milestone).
   initialPlatforms?: string[];
+  // Contextual events (T3-B7) — passed by TrendsExplorer so the usage
+  // chart can show the same per-event reference lines as the other
+  // categories. Optional so the component still works standalone.
+  events?: ContextualEventsJson | null;
 }
 
 export function FindingPlatformUsage({
   initialPlatforms,
+  events = null,
 }: FindingPlatformUsageProps = {}) {
   const [rows, setRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
@@ -436,6 +448,11 @@ export function FindingPlatformUsage({
 
   const isZoomed = yMode !== 'full';
 
+  // Contextual events (T3-B7). Called unconditionally (before the early
+  // returns); tolerates null meta + empty waves while data loads.
+  const eventWaves = rows ? [...new Set(rows.map((r) => r.wave))] : [];
+  const evt = useTrendEvents(events, meta, eventWaves);
+
   if (error) {
     return (
       <div className="mx-auto max-w-3xl px-6 py-16 text-center text-ink/80">
@@ -489,6 +506,7 @@ export function FindingPlatformUsage({
             <PlatformTooltip {...props} platformLabels={platformLabels} />
           )}
         />
+        {renderEventLines(evt.refLines)}
         {chartPlatforms.map((slug) => (
           <Line
             key={slug}
@@ -509,6 +527,7 @@ export function FindingPlatformUsage({
           swatchBySlug={swatchBySlug}
           platformLabels={platformLabels}
         />
+        <EventLabels events={evt.visible} baseOffset={10} />
         <BrokenAxisIndicator visible={isZoomed} />
       </LineChart>
     </ResponsiveContainer>
@@ -688,6 +707,13 @@ export function FindingPlatformUsage({
         swatchBySlug={swatchBySlug}
       />
       {yAxisControls}
+      {evt.available.length > 0 ? (
+        <EventsControl
+          events={evt.available}
+          hidden={evt.hidden}
+          onToggle={evt.toggle}
+        />
+      ) : null}
     </div>
   );
 
@@ -726,7 +752,7 @@ export function FindingPlatformUsage({
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote=""
-      sourceNote={sourceNoteText}
+      sourceNote={evt.appendContext(sourceNoteText)}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: 'Who uses what? Platform usage rates',

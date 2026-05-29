@@ -5,7 +5,6 @@ import {
   CartesianGrid,
   Line,
   LineChart,
-  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -44,13 +43,8 @@ import {
   buildPairedSeries,
   buildPlatformFanData,
   buildRespondentSeries,
-  eventContextSentence,
-  groupEventsToRefLines,
   respondentTitle,
-  selectableMacroEvents,
   trendConfig,
-  type EventRefLine,
-  type MacroEvent,
 } from '@/lib/trends-adapters';
 import type { AxisAnchor } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
@@ -63,12 +57,15 @@ import { PlatformWaveTable } from './platform-wave-table';
 import {
   AxisAnchorLabels,
   BrokenYAxisIndicator,
+  EventLabels,
   EventsControl,
   LineEndLabels,
   PlatformFanTooltip,
   SingleSeriesTooltip,
   YZoomControls,
   makeTwoLineXTick,
+  renderEventLines,
+  useTrendEvents,
 } from './trend-line-bits';
 
 const TwoLineXTick = makeTwoLineXTick(splitWaveLabelLines);
@@ -78,37 +75,6 @@ function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
-// Vertical dashed reference lines for contextual events, snapped to the
-// wave category. Returned as an array of <ReferenceLine> so Recharts
-// detects them as chart children. labelOffset pushes the label down from
-// the top edge — larger on charts that show Y-axis anchor labels, so the
-// Wave 1 event label clears the top anchor (e.g. "very favorable").
-function renderEventLines(refLines: EventRefLine[], labelOffset: number) {
-  return refLines.map((rl) => (
-    <ReferenceLine
-      key={rl.waveLabel}
-      x={rl.waveLabel}
-      stroke="#605A6B"
-      strokeDasharray="4 2"
-      label={{
-        value: rl.label,
-        position: 'insideTop',
-        offset: labelOffset,
-        fontSize: 10,
-        fontFamily: 'var(--font-mono)',
-        fill: '#605A6B',
-      }}
-    />
-  ));
-}
-
-// Immutable toggle of an id in a Set (for the per-event checkbox list).
-function toggleInSet(set: ReadonlySet<string>, id: string): Set<string> {
-  const next = new Set(set);
-  if (next.has(id)) next.delete(id);
-  else next.add(id);
-  return next;
-}
 
 // =====================================================================
 // PlatformFanChart — generic multi-line-by-platform chart (percent Y).
@@ -148,25 +114,14 @@ export function PlatformFanChart({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(0);
   const [customMax, setCustomMax] = useState(100);
-  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const labelBySlug = new Map(meta.platforms.map((p) => [p.slug, p.label]));
   const chartData = buildPlatformFanData(rows, meta, chartPlatforms);
 
   const presentWaves = [...new Set(rows.map((r) => r.wave))];
-  const availableEvents: MacroEvent[] = events
-    ? selectableMacroEvents(events, meta, presentWaves)
-    : [];
-  const refLines = groupEventsToRefLines(
-    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
-  );
-  const fullSourceNote =
-    refLines.length > 0
-      ? `${sourceNote} ${eventContextSentence(refLines)}`
-      : sourceNote;
+  const evt = useTrendEvents(events, meta, presentWaves);
+  const fullSourceNote = evt.appendContext(sourceNote);
 
   const swatchBySlug = new Map<string, string>();
   const dashBySlug = new Map<string, string | undefined>();
@@ -265,7 +220,7 @@ export function PlatformFanChart({
               />
             )}
           />
-          {renderEventLines(refLines, 8)}
+          {renderEventLines(evt.refLines)}
           {chartPlatforms.map((slug) => (
             <Line
               key={slug}
@@ -286,6 +241,7 @@ export function PlatformFanChart({
             swatchBySlug={swatchBySlug}
             labelBySlug={labelBySlug}
           />
+          <EventLabels events={evt.visible} baseOffset={10} />
           <BrokenYAxisIndicator visible={isZoomed} />
         </LineChart>
       </ResponsiveContainer>
@@ -319,11 +275,11 @@ export function PlatformFanChart({
         isPercent
         fullLabel="Full range (0–100%)"
       />
-      {availableEvents.length > 0 ? (
+      {evt.available.length > 0 ? (
         <EventsControl
-          events={availableEvents}
-          hidden={hiddenEvents}
-          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+          events={evt.available}
+          hidden={evt.hidden}
+          onToggle={evt.toggle}
         />
       ) : null}
     </div>
@@ -520,10 +476,16 @@ export function RespondentTrend({
   const [customMax, setCustomMax] = useState(
     config.isPercent ? 100 : numericFull[1],
   );
-  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  const series = buildRespondentSeries(
+    trends,
+    variableName,
+    config.mode,
+    'agree',
+    meta,
+  );
+  const evt = useTrendEvents(events, meta, series.map((p) => p.wave));
 
   if (!metaVar) {
     return (
@@ -533,13 +495,6 @@ export function RespondentTrend({
     );
   }
 
-  const series = buildRespondentSeries(
-    trends,
-    variableName,
-    config.mode,
-    'agree',
-    meta,
-  );
   const isSingleWave = series.length <= 1;
   const fmtValue: (v: number | null | undefined) => string = config.isPercent
     ? (v) => formatPercent(v)
@@ -587,20 +542,7 @@ export function RespondentTrend({
     `Source: ${waveClause}Population-level weighted estimates. 95% CIs ` +
     `available on hover. Cells with n < 30 are suppressed by design. ` +
     `Precomputed JSON generated ${generatedAt}.`;
-  const availableEvents: MacroEvent[] = events
-    ? selectableMacroEvents(
-        events,
-        meta,
-        series.map((p) => p.wave),
-      )
-    : [];
-  const refLines = groupEventsToRefLines(
-    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
-  );
-  const fullSourceNote =
-    refLines.length > 0
-      ? `${sourceNote} ${eventContextSentence(refLines)}`
-      : sourceNote;
+  const fullSourceNote = evt.appendContext(sourceNote);
   const interpretation = `[PLACEHOLDER -- Matt to review] ${title} over time. ${
     isSingleWave
       ? 'Only one survey wave carries this item, so no trend is shown.'
@@ -633,7 +575,7 @@ export function RespondentTrend({
       <ResponsiveContainer width="100%" height={CHART_HEIGHTS.line}>
         <LineChart
           data={series}
-          margin={{ top: 16, right: 24, bottom: 24, left: 8 }}
+          margin={{ top: 16, right: 130, bottom: 24, left: 8 }}
         >
           <CartesianGrid stroke="#E7E1EC" strokeDasharray="3 3" />
           <XAxis
@@ -670,7 +612,7 @@ export function RespondentTrend({
               />
             )}
           />
-          {renderEventLines(refLines, axisAnchors ? 24 : 8)}
+          {renderEventLines(evt.refLines)}
           <Line
             type="monotone"
             dataKey="value"
@@ -684,6 +626,10 @@ export function RespondentTrend({
           {axisAnchors ? (
             <AxisAnchorLabels anchors={axisAnchors} visible={!isZoomed} />
           ) : null}
+          <EventLabels
+            events={evt.visible}
+            baseOffset={axisAnchors ? 24 : 10}
+          />
           <BrokenYAxisIndicator visible={isZoomed} />
         </LineChart>
       </ResponsiveContainer>
@@ -711,11 +657,11 @@ export function RespondentTrend({
         rawMax={numericFull[1]}
         rawStep={0.1}
       />
-      {availableEvents.length > 0 ? (
+      {evt.available.length > 0 ? (
         <EventsControl
-          events={availableEvents}
-          hidden={hiddenEvents}
-          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+          events={evt.available}
+          hidden={evt.hidden}
+          onToggle={evt.toggle}
         />
       ) : null}
     </div>
@@ -863,12 +809,14 @@ export function PairedAttitudeTrend({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(numericFull[0]);
   const [customMax, setCustomMax] = useState(numericFull[1]);
-  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const series = buildPairedSeries(trends, pair[0], pair[1], meta);
+  const evt = useTrendEvents(
+    events,
+    meta,
+    series.map((p) => p.wave),
+  );
   const labelByKey = new Map<string, string>([
     [pair[0], pairLabels[0]],
     [pair[1], pairLabels[1]],
@@ -912,16 +860,7 @@ export function PairedAttitudeTrend({
     }–${waveList.length ? Math.max(...waveList) : '—'}. ` +
     'Population-level weighted means. 95% CIs available on hover. ' +
     `Precomputed JSON generated ${generatedAt}.`;
-  const availableEvents: MacroEvent[] = events
-    ? selectableMacroEvents(events, meta, waveList)
-    : [];
-  const refLines = groupEventsToRefLines(
-    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
-  );
-  const fullSourceNote =
-    refLines.length > 0
-      ? `${sourceNote} ${eventContextSentence(refLines)}`
-      : sourceNote;
+  const fullSourceNote = evt.appendContext(sourceNote);
 
   const csvHeaders = [
     'wave',
@@ -981,7 +920,7 @@ export function PairedAttitudeTrend({
               />
             )}
           />
-          {renderEventLines(refLines, axisAnchors ? 24 : 8)}
+          {renderEventLines(evt.refLines)}
           {pair.map((k) => (
             <Line
               key={k}
@@ -1004,6 +943,10 @@ export function PairedAttitudeTrend({
           {axisAnchors ? (
             <AxisAnchorLabels anchors={axisAnchors} visible={!isZoomed} />
           ) : null}
+          <EventLabels
+            events={evt.visible}
+            baseOffset={axisAnchors ? 24 : 10}
+          />
           <BrokenYAxisIndicator visible={isZoomed} />
         </LineChart>
       </ResponsiveContainer>
@@ -1043,11 +986,11 @@ export function PairedAttitudeTrend({
         rawMax={numericFull[1]}
         rawStep={0.5}
       />
-      {availableEvents.length > 0 ? (
+      {evt.available.length > 0 ? (
         <EventsControl
-          events={availableEvents}
-          hidden={hiddenEvents}
-          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+          events={evt.available}
+          hidden={evt.hidden}
+          onToggle={evt.toggle}
         />
       ) : null}
     </div>

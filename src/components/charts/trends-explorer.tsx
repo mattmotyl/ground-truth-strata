@@ -106,7 +106,7 @@ export function TrendsExplorer() {
   let body: React.ReactNode = null;
   switch (question.kind) {
     case 'f01':
-      body = <FindingPlatformUsage />;
+      body = <FindingPlatformUsage events={events} />;
       break;
     case 'platformMetric':
       body = (

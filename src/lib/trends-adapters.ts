@@ -307,13 +307,16 @@ export function axisTicks([lo, hi]: [number, number]): number[] {
 // snap-to-wave with fractional positioning at the event's true date. See
 // the ROADMAP "reference lines — time-axis upgrade" note.
 
-// One macro event that snapped onto a present wave — the unit the
-// per-event Context Events checkbox list toggles.
-export interface MacroEvent {
+// One event that snapped onto a present wave — the unit the per-event
+// Context Events checkbox list toggles. `centerDist` is |event date −
+// wave-window midpoint| in ms, used to order labels within a wave so the
+// closest-to-center event sits on top and the rest cascade downward.
+export interface TrendEvent {
   id: string;
   shortLabel: string;
   wave: number;
   waveLabel: string;
+  centerDist: number;
 }
 
 export interface EventRefLine {
@@ -344,39 +347,43 @@ function snapEventToWave(
   return best;
 }
 
-// Individual macro events available on a chart (one per checkbox in the
-// Context Events control), snapped to a present wave. Preserves source
-// order within a wave; sorted by wave.
-export function selectableMacroEvents(
+// All events available on a chart (one per checkbox in the Context
+// Events control), snapped to a present wave. Every event_annotation is
+// offered on every category — platform-specific and macro alike — so the
+// user can toggle any event onto any trend chart. Sorted by wave.
+export function selectableEvents(
   events: ContextualEventsJson,
   meta: MetaJson,
   presentWaves: number[],
-): MacroEvent[] {
+): TrendEvent[] {
   const ranges = events._meta.survey_date_ranges;
   const present = new Set(presentWaves);
   const waveDates = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-  const out: MacroEvent[] = [];
+  const out: TrendEvent[] = [];
   for (const ev of events.event_annotations) {
-    // Macro events only (platform-specific events need the usage chart's
-    // platform context — out of scope here).
-    if (ev.platforms && ev.platforms.length > 0) continue;
     const ms = Date.parse(ev.date);
     if (Number.isNaN(ms)) continue;
     const wave = snapEventToWave(ms, ranges);
     if (wave === null || !present.has(wave)) continue;
+    const range = ranges[`wave_${wave}`];
+    const center =
+      range != null
+        ? (Date.parse(range.start) + Date.parse(range.end)) / 2
+        : ms;
     out.push({
       id: ev.id,
       shortLabel: ev.short_label,
       wave,
       waveLabel: waveDateRangeLabel(waveDates.get(wave) ?? ''),
+      centerDist: Math.abs(ms - center),
     });
   }
   return out.sort((a, b) => a.wave - b.wave);
 }
 
 // Group the currently-visible events into one reference line per wave.
-export function groupEventsToRefLines(visible: MacroEvent[]): EventRefLine[] {
-  const byWave = new Map<number, MacroEvent[]>();
+export function groupEventsToRefLines(visible: TrendEvent[]): EventRefLine[] {
+  const byWave = new Map<number, TrendEvent[]>();
   for (const ev of visible) {
     const list = byWave.get(ev.wave);
     if (list) list.push(ev);
