@@ -48,3 +48,10 @@ release.
   grouped bars (Overall stays as the table column). The Overall bar was
   intentionally de-emphasized (light grey #C8C3BC) to mitigate density;
   revisit only if review still finds it cluttered.
+- **Lift platform selection to TrendsExplorer for cross-category
+  persistence (currently resets per renderer).** On /trends, the
+  platform multiselect lives inside each platform-using renderer
+  (Platform Use & Experiences, Well-Being), so switching category resets
+  the selection to the default 8. Mirroring /compare's persistence would
+  require hoisting the selected-platform state into TrendsExplorer and
+  threading it (plus F01's initialPlatforms) through the renderers.

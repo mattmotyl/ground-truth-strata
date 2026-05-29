@@ -1,0 +1,369 @@
+'use client';
+
+// Shared presentational bits for the /trends explorer's line charts.
+// These intentionally duplicate Finding 01's inline equivalents so the
+// legacy F01 component stays untouched (same house pattern as
+// CompareRankedBar vs FindingPlatformRankedBar).
+
+import {
+  usePlotArea,
+  useXAxisScale,
+  useYAxisScale,
+} from 'recharts';
+import { CHART_FONTS } from '@/lib/strata-charts';
+import { formatCI, formatN } from '@/lib/strata-formatters';
+import type { PlatformFanDatum, TrendPoint } from '@/lib/trends-adapters';
+
+// ── X-axis two-line wave tick ─────────────────────────────────────────
+
+interface AxisTickProps {
+  x?: number;
+  y?: number;
+  payload?: { value?: string | number };
+}
+
+export function makeTwoLineXTick(
+  splitLines: (label: string) => [string, string],
+) {
+  return function TwoLineXTick(props: AxisTickProps) {
+    const value = props.payload?.value;
+    if (typeof value !== 'string') return null;
+    const [line1, line2] = splitLines(value);
+    return (
+      <g transform={`translate(${props.x ?? 0},${props.y ?? 0})`}>
+        <text
+          x={0}
+          y={0}
+          dy={14}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)"
+          fontSize={12}
+          fill="#605A6B"
+        >
+          {line1}
+        </text>
+        <text
+          x={0}
+          y={0}
+          dy={28}
+          textAnchor="middle"
+          fontFamily="var(--font-mono)"
+          fontSize={12}
+          fill="#605A6B"
+        >
+          {line2}
+        </text>
+      </g>
+    );
+  };
+}
+
+// ── Broken-axis (Y) indicator ─────────────────────────────────────────
+// Zig-zag anchored to the Y-axis baseline when the axis is zoomed.
+
+export function BrokenYAxisIndicator({ visible }: { visible: boolean }) {
+  const plotArea = usePlotArea();
+  if (!visible || !plotArea) return null;
+  const xBaseline = plotArea.x;
+  const yBaseline = plotArea.y + plotArea.height;
+  return (
+    <g
+      aria-label="Y axis is zoomed (broken axis indicator)"
+      transform={`translate(${xBaseline - 5}, ${yBaseline - 22})`}
+    >
+      <path
+        d="M 0 0 L 10 4 L 0 10 L 10 14 L 0 20"
+        stroke="#605A6B"
+        strokeWidth="1.5"
+        fill="none"
+      />
+    </g>
+  );
+}
+
+// ── Per-line end labels (platform fan-out) ────────────────────────────
+
+interface LineEndLabelsProps {
+  slugs: string[];
+  chartData: PlatformFanDatum[];
+  swatchBySlug: ReadonlyMap<string, string>;
+  labelBySlug: ReadonlyMap<string, string>;
+}
+
+export function LineEndLabels({
+  slugs,
+  chartData,
+  swatchBySlug,
+  labelBySlug,
+}: LineEndLabelsProps) {
+  const xScale = useXAxisScale();
+  const yScale = useYAxisScale();
+  if (!xScale || !yScale || chartData.length === 0) return null;
+
+  const COLLISION_PX = 14;
+  type LabelEntry = {
+    slug: string;
+    label: string;
+    color: string;
+    x: number;
+    y: number;
+  };
+  const labels: LabelEntry[] = [];
+  for (const slug of slugs) {
+    let lastDatum: PlatformFanDatum | null = null;
+    for (let i = chartData.length - 1; i >= 0; i--) {
+      if (typeof chartData[i][slug] === 'number') {
+        lastDatum = chartData[i];
+        break;
+      }
+    }
+    if (!lastDatum) continue;
+    const value = lastDatum[slug];
+    if (typeof value !== 'number') continue;
+    const xPx = xScale(lastDatum.waveLabel);
+    const yPx = yScale(value);
+    if (typeof xPx !== 'number' || typeof yPx !== 'number') continue;
+    labels.push({
+      slug,
+      label: labelBySlug.get(slug) ?? slug,
+      color: swatchBySlug.get(slug) ?? '#605A6B',
+      x: xPx,
+      y: yPx,
+    });
+  }
+
+  labels.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < labels.length; i++) {
+    if (labels[i].y - labels[i - 1].y < COLLISION_PX) {
+      labels[i].y = labels[i - 1].y + COLLISION_PX;
+    }
+  }
+
+  return (
+    <g aria-label="Line endpoint labels">
+      {labels.map((l, i) => (
+        <text
+          key={`tick-label-${i}`}
+          x={l.x + 6}
+          y={l.y + 4}
+          fontSize={11}
+          fontFamily="var(--font-mono)"
+          fill={l.color}
+          style={{ pointerEvents: 'none' }}
+        >
+          {l.label}
+        </text>
+      ))}
+    </g>
+  );
+}
+
+// ── Tooltips ──────────────────────────────────────────────────────────
+
+interface FanTooltipProps {
+  active?: boolean;
+  payload?: readonly {
+    dataKey?: string | number | ((d: unknown) => unknown);
+    value?: unknown;
+    color?: string;
+    payload?: unknown;
+  }[];
+  label?: unknown;
+  labelBySlug: ReadonlyMap<string, string>;
+  formatValue: (v: number | null | undefined) => string;
+}
+
+export function PlatformFanTooltip({
+  active,
+  payload,
+  label,
+  labelBySlug,
+  formatValue,
+}: FanTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0]?.payload as PlatformFanDatum | undefined;
+  if (!datum) return null;
+  return (
+    <div
+      className="bg-white border border-mist rounded-md shadow-sm p-3 text-xs space-y-1.5 max-w-xs"
+      style={{ fontFamily: CHART_FONTS.mono }}
+    >
+      <div className="text-ink font-medium">
+        {String(label ?? '')} · {datum.waveDates}
+      </div>
+      <ul className="space-y-1">
+        {payload.map((p) => {
+          if (typeof p.dataKey !== 'string') return null;
+          const slug = p.dataKey;
+          const value = typeof p.value === 'number' ? p.value : null;
+          if (value === null) return null;
+          const ciLo = datum[`${slug}_ci_lo`];
+          const ciHi = datum[`${slug}_ci_hi`];
+          const n = datum[`${slug}_n`];
+          return (
+            <li key={slug} className="flex items-baseline gap-2">
+              <span
+                aria-hidden
+                className="inline-block h-2 w-2 rounded-sm shrink-0"
+                style={{ backgroundColor: p.color }}
+              />
+              <span className="text-ink/85 flex-1">
+                {labelBySlug.get(slug) ?? slug}
+              </span>
+              <span className="text-ink font-medium">{formatValue(value)}</span>
+              {typeof ciLo === 'number' && typeof ciHi === 'number' ? (
+                <span className="text-slate">{formatCI(ciLo, ciHi)}</span>
+              ) : null}
+              {typeof n === 'number' ? (
+                <span className="text-slate">n={formatN(n)}</span>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+interface SingleTooltipProps {
+  active?: boolean;
+  payload?: readonly { value?: unknown; payload?: unknown }[];
+  seriesLabel: string;
+  color: string;
+  formatValue: (v: number | null | undefined) => string;
+}
+
+export function SingleSeriesTooltip({
+  active,
+  payload,
+  seriesLabel,
+  color,
+  formatValue,
+}: SingleTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+  const datum = payload[0]?.payload as TrendPoint | undefined;
+  if (!datum || datum.value === null) return null;
+  return (
+    <div
+      className="bg-white border border-mist rounded-md shadow-sm p-3 text-xs space-y-1.5 max-w-xs"
+      style={{ fontFamily: CHART_FONTS.mono }}
+    >
+      <div className="text-ink font-medium">
+        Wave {datum.wave} · {datum.waveDates}
+      </div>
+      <div className="flex items-baseline gap-2">
+        <span
+          aria-hidden
+          className="inline-block h-2 w-2 rounded-sm shrink-0"
+          style={{ backgroundColor: color }}
+        />
+        <span className="text-ink/85 flex-1">{seriesLabel}</span>
+        <span className="text-ink font-medium">{formatValue(datum.value)}</span>
+        {typeof datum.ciLo === 'number' && typeof datum.ciHi === 'number' ? (
+          <span className="text-slate">
+            {formatCI(datum.ciLo, datum.ciHi, formatValue)}
+          </span>
+        ) : null}
+        {typeof datum.n === 'number' ? (
+          <span className="text-slate">n={formatN(datum.n)}</span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+// ── Y-axis zoom controls ──────────────────────────────────────────────
+// Mirrors Finding 01's Full / Fit / Custom control. In percent mode the
+// custom inputs are percentage points (0–100); in raw mode they are in
+// the variable's native units (e.g. 1–7 for a Likert mean).
+
+interface YZoomControlsProps {
+  mode: 'full' | 'fit' | 'custom';
+  onMode: (m: 'full' | 'fit' | 'custom') => void;
+  customMin: number;
+  customMax: number;
+  onCustomMin: (n: number) => void;
+  onCustomMax: (n: number) => void;
+  isPercent: boolean;
+  fullLabel: string;
+  rawMin?: number;
+  rawMax?: number;
+  rawStep?: number;
+}
+
+export function YZoomControls({
+  mode,
+  onMode,
+  customMin,
+  customMax,
+  onCustomMin,
+  onCustomMax,
+  isPercent,
+  fullLabel,
+  rawMin = 0,
+  rawMax = 100,
+  rawStep = 0.1,
+}: YZoomControlsProps) {
+  return (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        Y axis
+      </p>
+      <fieldset className="flex flex-col gap-1 text-sm">
+        <legend className="sr-only">Y axis zoom mode</legend>
+        {(['full', 'fit', 'custom'] as const).map((m) => (
+          <label key={m} className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="trends-y-mode"
+              value={m}
+              checked={mode === m}
+              onChange={() => onMode(m)}
+              className="accent-plum"
+            />
+            <span
+              className={mode === m ? 'text-ink' : 'text-slate'}
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              {m === 'full' ? fullLabel : m === 'fit' ? 'Fit to data' : 'Custom'}
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      {mode === 'custom' ? (
+        <div
+          className="grid grid-cols-2 gap-2 pt-1"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            {isPercent ? 'Min %' : 'Min'}
+            <input
+              type="number"
+              min={isPercent ? 0 : rawMin}
+              max={isPercent ? 99 : rawMax}
+              step={isPercent ? 1 : rawStep}
+              value={customMin}
+              onChange={(e) => onCustomMin(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-slate">
+            {isPercent ? 'Max %' : 'Max'}
+            <input
+              type="number"
+              min={isPercent ? 1 : rawMin}
+              max={isPercent ? 100 : rawMax}
+              step={isPercent ? 1 : rawStep}
+              value={customMax}
+              onChange={(e) => onCustomMax(Number(e.target.value))}
+              className="rounded border border-mist px-2 py-1 text-ink bg-paper"
+            />
+          </label>
+        </div>
+      ) : null}
+    </div>
+  );
+}

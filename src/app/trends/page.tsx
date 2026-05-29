@@ -1,9 +1,9 @@
-import { FindingPlatformUsage } from '@/components/charts/finding-platform-usage';
+import { TrendsExplorer } from '@/components/charts/trends-explorer';
 
 export default function TrendsPage() {
-  // For v0.1.0 the /trends route defaults to Finding 1 — "Who uses what?".
-  // The full variable picker that lets the user chart any analyzable
-  // variable across waves is part of a later milestone; until then this
-  // route returns the first starter finding.
-  return <FindingPlatformUsage />;
+  // T3-B7: /trends now opens on Finding 1 ("Who uses what?") and offers a
+  // variable picker that swaps in any analyzable variable over time —
+  // platform-experience fan-outs (platform_rates.json) or respondent-
+  // level series (trends.json). The orchestrator owns the selection.
+  return <TrendsExplorer />;
 }

@@ -43,6 +43,10 @@ interface StrataChartFrameProps {
   // (only meaningful with titleInCard). Distinct from methodologyFootnote
   // which renders outside the card next to the action buttons.
   sourceNote?: ReactNode;
+  // Optional scale-anchor annotation (e.g. "Scale: 0 = very cold · 10 =
+  // very warm") rendered inside the card, below the chart and above the
+  // source note. Used by /trends for non-percentage mean variables.
+  scaleNote?: ReactNode;
   // Optional element rendered directly above the title block (e.g. the
   // "← Back to …" breadcrumb shown during a Theme A drill-down).
   breadcrumb?: ReactNode;
@@ -67,6 +71,7 @@ export function StrataChartFrame({
   chartFooter,
   titleInCard = false,
   sourceNote,
+  scaleNote,
   breadcrumb,
 }: StrataChartFrameProps) {
   const titleBlock = (
@@ -124,6 +129,14 @@ export function StrataChartFrame({
               </h2>
             ) : null}
             {chart}
+            {scaleNote ? (
+              <p
+                className="text-xs text-slate text-left pt-2"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                {scaleNote}
+              </p>
+            ) : null}
             {sourceNote ? (
               <p
                 className="text-xs text-slate leading-relaxed pt-3 border-t border-mist"
