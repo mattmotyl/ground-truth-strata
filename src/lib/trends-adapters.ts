@@ -2,10 +2,12 @@
 // stays trivially testable; the renderer files hold only presentation.
 
 import type {
+  ContextualEventsJson,
   GroupComparisonRow,
   MetaJson,
   PlatformRateMetric,
   PlatformRateRow,
+  SurveyDateRange,
   TrendBucketRow,
   TrendMeanRow,
   TrendRateRow,
@@ -292,6 +294,87 @@ export function axisTicks([lo, hi]: [number, number]): number[] {
     ticks.push(Math.round(v * 1e6) / 1e6);
   }
   return ticks.length ? ticks : [lo, hi];
+}
+
+// ── Contextual-event reference lines (snap-to-wave) ───────────────────
+// The chart X axis is categorical by wave, so an event's calendar date is
+// snapped to the wave whose collection window contains it (or the nearest
+// wave when it falls between windows). Only macro events (no platform
+// scoping) are shown on the generic renderers; platform-specific event
+// overlay on the usage chart is a separate future enhancement (ROADMAP).
+//
+// TODO(time-axis): when /trends moves to a numeric/time X scale, replace
+// snap-to-wave with fractional positioning at the event's true date. See
+// the ROADMAP "reference lines — time-axis upgrade" note.
+
+export interface EventRefLine {
+  wave: number;
+  waveLabel: string;
+  label: string;
+  titles: string[];
+}
+
+function snapEventToWave(
+  dateMs: number,
+  ranges: Record<string, SurveyDateRange>,
+): number | null {
+  let best: number | null = null;
+  let bestDist = Infinity;
+  for (const key of Object.keys(ranges)) {
+    const wave = Number(key.replace('wave_', ''));
+    if (!Number.isFinite(wave)) continue;
+    const start = Date.parse(ranges[key].start);
+    const end = Date.parse(ranges[key].end);
+    if (dateMs >= start && dateMs <= end) return wave;
+    const dist = dateMs < start ? start - dateMs : dateMs - end;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = wave;
+    }
+  }
+  return best;
+}
+
+export function buildEventReferenceLines(
+  events: ContextualEventsJson,
+  meta: MetaJson,
+  presentWaves: number[],
+): EventRefLine[] {
+  const ranges = events._meta.survey_date_ranges;
+  const present = new Set(presentWaves);
+  const waveDates = new Map(meta.waves.map((w) => [w.wave, w.dates]));
+  const byWave = new Map<number, string[]>();
+  for (const ev of events.event_annotations) {
+    // Macro events only (platform-specific events need the usage chart's
+    // platform context — out of scope here).
+    if (ev.platforms && ev.platforms.length > 0) continue;
+    const ms = Date.parse(ev.date);
+    if (Number.isNaN(ms)) continue;
+    const wave = snapEventToWave(ms, ranges);
+    if (wave === null || !present.has(wave)) continue;
+    const list = byWave.get(wave);
+    if (list) list.push(ev.short_label);
+    else byWave.set(wave, [ev.short_label]);
+  }
+  return [...byWave.keys()]
+    .sort((a, b) => a - b)
+    .map((wave) => {
+      const titles = byWave.get(wave)!;
+      return {
+        wave,
+        waveLabel: waveDateRangeLabel(waveDates.get(wave) ?? ''),
+        label: titles.length === 1 ? titles[0] : `${titles.length} events`,
+        titles,
+      };
+    });
+}
+
+// Full-detail sentence appended to the source note so multi-event waves
+// (labelled "N events" on the chart) are still spelled out.
+export function eventContextSentence(lines: EventRefLine[]): string {
+  if (lines.length === 0) return '';
+  const parts = lines.map((l) => `Wave ${l.wave}: ${l.titles.join(', ')}`);
+  return `Context events — ${parts.join('; ')}.`;
 }
 
 export function buildPairedSeries(

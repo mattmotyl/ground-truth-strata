@@ -2,12 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import {
+  loadContextualEvents,
   loadMeta,
   loadQuestionTexts,
   loadTrends,
   type QuestionTextsJson,
 } from '@/lib/strata-data';
-import type { MetaJson, TrendRow } from '@/lib/strata-types';
+import type {
+  ContextualEventsJson,
+  MetaJson,
+  TrendRow,
+} from '@/lib/strata-types';
 import {
   TRENDS_CATEGORIES,
   getTrendsCategory,
@@ -31,16 +36,23 @@ export function TrendsExplorer() {
   const [trends, setTrends] = useState<TrendRow[] | null>(null);
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
+  const [events, setEvents] = useState<ContextualEventsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [categoryId, setCategoryId] = useState<string>('platform');
   const [questionKey, setQuestionKey] = useState<string>('usage');
 
   useEffect(() => {
-    Promise.all([loadMeta(), loadTrends(), loadQuestionTexts()])
-      .then(([m, t, qt]) => {
+    Promise.all([
+      loadMeta(),
+      loadTrends(),
+      loadQuestionTexts(),
+      loadContextualEvents(),
+    ])
+      .then(([m, t, qt, ev]) => {
         setMeta(m);
         setTrends(t);
         setQuestionTexts(qt);
+        setEvents(ev);
       })
       .catch(setError);
   }, []);
@@ -102,6 +114,7 @@ export function TrendsExplorer() {
           key={question.key}
           meta={meta}
           questionTexts={questionTexts}
+          events={events}
           metric={question.metric!}
           surveyVar={question.surveyVar!}
           title={question.title!}
@@ -115,6 +128,7 @@ export function TrendsExplorer() {
           key={question.key}
           meta={meta}
           questionTexts={questionTexts}
+          events={events}
           outcome={question.outcome!}
           bucket={question.bucket ?? null}
           title={question.title!}
@@ -130,6 +144,7 @@ export function TrendsExplorer() {
           meta={meta}
           trends={trends}
           questionTexts={questionTexts}
+          events={events}
           variableName={question.variable!}
           filenameBase={question.filenameBase}
           axisAnchors={question.axisAnchors}
@@ -143,6 +158,7 @@ export function TrendsExplorer() {
           meta={meta}
           trends={trends}
           questionTexts={questionTexts}
+          events={events}
           pair={question.pair!}
           pairLabels={question.pairLabels!}
           title={question.title!}

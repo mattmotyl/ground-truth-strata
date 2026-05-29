@@ -55,3 +55,21 @@ release.
   the selection to the default 8. Mirroring /compare's persistence would
   require hoisting the selected-platform state into TrendsExplorer and
   threading it (plus F01's initialPlatforms) through the renderers.
+- **Reference lines — time-axis upgrade.** /trends contextual-event
+  reference lines currently *snap* each event to the wave whose
+  collection window contains its date (or the nearest wave when it falls
+  between windows), because the X axis is a categorical wave-band scale.
+  A future enhancement is to switch the trend X axis to a numeric/time
+  scale and place each event line at its true calendar date (fractional
+  position between waves). See `buildEventReferenceLines` /
+  `snapEventToWave` in `trends-adapters.ts` (marked with a
+  `TODO(time-axis)`). Also deferred: platform-specific event overlay on
+  the F01 usage chart (filtered by the selected platform); only macro
+  events — `platforms: null` — are shown on the generic renderers today.
+- **"Too many levels" picker warning — dropped from T3-B7 scope.** The
+  original /trends variable-picker spec called for an intelligent warning
+  when a chosen variable had too many response levels to chart cleanly.
+  It was dropped: the curated category registry only exposes variables
+  that chart well, and small-n cells are already handled by suppression,
+  so the warning had no variable to fire on. Revisit only if an
+  open-ended (non-curated) variable picker is reintroduced.

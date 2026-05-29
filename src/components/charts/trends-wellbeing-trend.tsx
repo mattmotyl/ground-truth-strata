@@ -6,6 +6,7 @@ import {
   type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
+  ContextualEventsJson,
   GroupComparisonRow,
   LikertBucket,
   MetaJson,
@@ -30,6 +31,7 @@ import { PlatformFanChart } from './trends-variable-trend';
 interface WellbeingPlatformTrendProps {
   meta: MetaJson;
   questionTexts: QuestionTextsJson | null;
+  events: ContextualEventsJson | null;
   outcome: string;
   bucket: LikertBucket | null;
   title: string;
@@ -40,6 +42,7 @@ interface WellbeingPlatformTrendProps {
 export function WellbeingPlatformTrend({
   meta,
   questionTexts,
+  events,
   outcome,
   bucket,
   title,
@@ -109,6 +112,7 @@ export function WellbeingPlatformTrend({
     <PlatformFanChart
       meta={meta}
       rows={rows}
+      events={events}
       eyebrow="Trends over time · Well-Being"
       title={title}
       subtitle={subtitleText || undefined}

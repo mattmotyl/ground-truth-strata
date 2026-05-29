@@ -5,6 +5,7 @@ import {
   CartesianGrid,
   Line,
   LineChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,6 +16,7 @@ import {
   type QuestionTextsJson,
 } from '@/lib/strata-data';
 import type {
+  ContextualEventsJson,
   MetaJson,
   PlatformRateRow,
   TrendRow,
@@ -39,11 +41,14 @@ import {
 } from '@/lib/strata-survey';
 import {
   axisTicks,
+  buildEventReferenceLines,
   buildPairedSeries,
   buildPlatformFanData,
   buildRespondentSeries,
+  eventContextSentence,
   respondentTitle,
   trendConfig,
+  type EventRefLine,
 } from '@/lib/trends-adapters';
 import type { AxisAnchor } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
@@ -56,6 +61,7 @@ import { PlatformWaveTable } from './platform-wave-table';
 import {
   AxisAnchorLabels,
   BrokenYAxisIndicator,
+  EventsToggle,
   LineEndLabels,
   PlatformFanTooltip,
   SingleSeriesTooltip,
@@ -70,6 +76,27 @@ function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
 }
 
+// Vertical dashed reference lines for contextual events, snapped to the
+// wave category. Returned as an array of <ReferenceLine> so Recharts
+// detects them as chart children.
+function renderEventLines(refLines: EventRefLine[]) {
+  return refLines.map((rl) => (
+    <ReferenceLine
+      key={rl.waveLabel}
+      x={rl.waveLabel}
+      stroke="#605A6B"
+      strokeDasharray="4 2"
+      label={{
+        value: rl.label,
+        position: 'insideTop',
+        fontSize: 10,
+        fontFamily: 'var(--font-mono)',
+        fill: '#605A6B',
+      }}
+    />
+  ));
+}
+
 // =====================================================================
 // PlatformFanChart — generic multi-line-by-platform chart (percent Y).
 // Shared by Platform-Experiences (platform_rates) and Well-Being
@@ -80,6 +107,7 @@ function clamp01(v: number): number {
 interface PlatformFanChartProps {
   meta: MetaJson;
   rows: PlatformRateRow[]; // one metric/outcome, all platforms, all waves
+  events: ContextualEventsJson | null;
   eyebrow: string;
   title: string;
   subtitle?: string;
@@ -92,6 +120,7 @@ interface PlatformFanChartProps {
 export function PlatformFanChart({
   meta,
   rows,
+  events,
   eyebrow,
   title,
   subtitle,
@@ -106,10 +135,20 @@ export function PlatformFanChart({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(0);
   const [customMax, setCustomMax] = useState(100);
+  const [showEvents, setShowEvents] = useState(true);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const labelBySlug = new Map(meta.platforms.map((p) => [p.slug, p.label]));
   const chartData = buildPlatformFanData(rows, meta, chartPlatforms);
+
+  const presentWaves = [...new Set(rows.map((r) => r.wave))];
+  const refLines = events
+    ? buildEventReferenceLines(events, meta, presentWaves)
+    : [];
+  const fullSourceNote =
+    showEvents && refLines.length > 0
+      ? `${sourceNote} ${eventContextSentence(refLines)}`
+      : sourceNote;
 
   const swatchBySlug = new Map<string, string>();
   const dashBySlug = new Map<string, string | undefined>();
@@ -208,6 +247,7 @@ export function PlatformFanChart({
               />
             )}
           />
+          {showEvents ? renderEventLines(refLines) : null}
           {chartPlatforms.map((slug) => (
             <Line
               key={slug}
@@ -261,6 +301,9 @@ export function PlatformFanChart({
         isPercent
         fullLabel="Full range (0–100%)"
       />
+      {refLines.length > 0 ? (
+        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      ) : null}
     </div>
   );
 
@@ -312,7 +355,7 @@ export function PlatformFanChart({
       isPlaceholderInterpretation
       interpretation={interpretation}
       methodologyFootnote=""
-      sourceNote={sourceNote}
+      sourceNote={fullSourceNote}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: title,
@@ -334,6 +377,7 @@ export function PlatformFanChart({
 interface PlatformMetricTrendProps {
   meta: MetaJson;
   questionTexts: QuestionTextsJson | null;
+  events: ContextualEventsJson | null;
   metric: string;
   surveyVar: string;
   title: string;
@@ -343,6 +387,7 @@ interface PlatformMetricTrendProps {
 export function PlatformMetricTrend({
   meta,
   questionTexts,
+  events,
   metric,
   surveyVar,
   title,
@@ -402,6 +447,7 @@ export function PlatformMetricTrend({
     <PlatformFanChart
       meta={meta}
       rows={rows}
+      events={events}
       eyebrow="Trends over time · Platform experiences"
       title={title}
       subtitle={subtitle || undefined}
@@ -423,6 +469,7 @@ interface RespondentTrendProps {
   meta: MetaJson;
   trends: TrendRow[];
   questionTexts: QuestionTextsJson | null;
+  events: ContextualEventsJson | null;
   variableName: string;
   filenameBase: string;
   axisAnchors?: AxisAnchor[];
@@ -432,6 +479,7 @@ export function RespondentTrend({
   meta,
   trends,
   questionTexts,
+  events,
   variableName,
   filenameBase,
   axisAnchors,
@@ -450,6 +498,7 @@ export function RespondentTrend({
   const [customMax, setCustomMax] = useState(
     config.isPercent ? 100 : numericFull[1],
   );
+  const [showEvents, setShowEvents] = useState(true);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   if (!metaVar) {
@@ -514,6 +563,17 @@ export function RespondentTrend({
     `Source: ${waveClause}Population-level weighted estimates. 95% CIs ` +
     `available on hover. Cells with n < 30 are suppressed by design. ` +
     `Precomputed JSON generated ${generatedAt}.`;
+  const refLines = events
+    ? buildEventReferenceLines(
+        events,
+        meta,
+        series.map((p) => p.wave),
+      )
+    : [];
+  const fullSourceNote =
+    showEvents && refLines.length > 0
+      ? `${sourceNote} ${eventContextSentence(refLines)}`
+      : sourceNote;
   const interpretation = `[PLACEHOLDER -- Matt to review] ${title} over time. ${
     isSingleWave
       ? 'Only one survey wave carries this item, so no trend is shown.'
@@ -583,6 +643,7 @@ export function RespondentTrend({
               />
             )}
           />
+          {showEvents ? renderEventLines(refLines) : null}
           <Line
             type="monotone"
             dataKey="value"
@@ -623,6 +684,9 @@ export function RespondentTrend({
         rawMax={numericFull[1]}
         rawStep={0.1}
       />
+      {refLines.length > 0 ? (
+        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      ) : null}
     </div>
   );
 
@@ -707,7 +771,7 @@ export function RespondentTrend({
       isPlaceholderInterpretation
       interpretation={interpretation}
       methodologyFootnote=""
-      sourceNote={sourceNote}
+      sourceNote={fullSourceNote}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: title,
@@ -742,6 +806,7 @@ interface PairedAttitudeTrendProps {
   subtitle?: string;
   filenameBase: string;
   axisAnchors?: AxisAnchor[];
+  events: ContextualEventsJson | null;
 }
 
 export function PairedAttitudeTrend({
@@ -754,6 +819,7 @@ export function PairedAttitudeTrend({
   subtitle,
   filenameBase,
   axisAnchors,
+  events,
 }: PairedAttitudeTrendProps) {
   const config = trendConfig(
     meta.variables.find((v) => v.variable_name === pair[0])?.response_type ??
@@ -766,6 +832,7 @@ export function PairedAttitudeTrend({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(numericFull[0]);
   const [customMax, setCustomMax] = useState(numericFull[1]);
+  const [showEvents, setShowEvents] = useState(true);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const series = buildPairedSeries(trends, pair[0], pair[1], meta);
@@ -812,6 +879,13 @@ export function PairedAttitudeTrend({
     }–${waveList.length ? Math.max(...waveList) : '—'}. ` +
     'Population-level weighted means. 95% CIs available on hover. ' +
     `Precomputed JSON generated ${generatedAt}.`;
+  const refLines = events
+    ? buildEventReferenceLines(events, meta, waveList)
+    : [];
+  const fullSourceNote =
+    showEvents && refLines.length > 0
+      ? `${sourceNote} ${eventContextSentence(refLines)}`
+      : sourceNote;
 
   const csvHeaders = [
     'wave',
@@ -871,6 +945,7 @@ export function PairedAttitudeTrend({
               />
             )}
           />
+          {showEvents ? renderEventLines(refLines) : null}
           {pair.map((k) => (
             <Line
               key={k}
@@ -932,6 +1007,9 @@ export function PairedAttitudeTrend({
         rawMax={numericFull[1]}
         rawStep={0.5}
       />
+      {refLines.length > 0 ? (
+        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      ) : null}
     </div>
   );
 
@@ -1020,7 +1098,7 @@ export function PairedAttitudeTrend({
       isPlaceholderInterpretation
       interpretation={`[PLACEHOLDER -- Matt to review] ${title} over time. The two lines compare ${pairLabels[0]} and ${pairLabels[1]} at the population level, wave by wave; hover any point for its 95% CI and n.`}
       methodologyFootnote=""
-      sourceNote={sourceNote}
+      sourceNote={fullSourceNote}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: title,

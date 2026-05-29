@@ -323,6 +323,41 @@ export function SingleSeriesTooltip({
   );
 }
 
+// ── Context-events toggle ─────────────────────────────────────────────
+
+export function EventsToggle({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (b: boolean) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p
+        className="text-xs text-slate uppercase tracking-wide"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        Context events
+      </p>
+      <label className="flex items-center gap-2 cursor-pointer text-sm">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={(e) => onChange(e.target.checked)}
+          className="accent-plum"
+        />
+        <span
+          className={checked ? 'text-ink' : 'text-slate'}
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          Show event reference lines
+        </span>
+      </label>
+    </div>
+  );
+}
+
 // ── Y-axis zoom controls ──────────────────────────────────────────────
 // Mirrors Finding 01's Full / Fit / Custom control. In percent mode the
 // custom inputs are percentage points (0–100); in raw mode they are in
