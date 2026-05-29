@@ -238,46 +238,72 @@ export function FindingGenderNegativeExperience() {
     };
   }
 
+  // Effect-size-first interpretation (mirrors Finding 08 / T2-10).
+  // Leads with the SIZE of the gender gap in percentage points and
+  // names the higher group, then notes whether that gap clears the
+  // 95% margin of error as a secondary caveat. The significance rule
+  // (describeChange, feedback_significance_rule.md) is retained — it
+  // just no longer leads the sentence. No fixed percentage-point
+  // magnitude bands are imposed: unlike Spearman ρ (which has
+  // Cohen-style conventions), a difference in proportions has no
+  // canonical effect-size cutoffs, so the actual point gap IS the
+  // effect size we report.
+  const pct = (v: number) => `${(v * 100).toFixed(1)}%`;
   const interpretationSentences: string[] = [];
   for (const wave of waves) {
     const m = statForGroupWave('Men', wave);
     const w = statForGroupWave('Women', wave);
     if (m.v === null || w.v === null) continue;
-    const gap = describeChange(m.v, m.se, w.v, w.se);
-    const mPct = `${(m.v * 100).toFixed(1)}%`;
-    const wPct = `${(w.v * 100).toFixed(1)}%`;
-    if (gap === 'stable') {
+    const verdict = describeChange(m.v, m.se, w.v, w.se);
+    const sigClause =
+      verdict === 'stable'
+        ? 'this gap falls within the 95% margin of error, so it cannot be distinguished from no difference at this sample size'
+        : 'this gap exceeds the 95% margin of error';
+    const gapPts = Math.abs((w.v - m.v) * 100);
+    if (gapPts < 0.5) {
       interpretationSentences.push(
-        `In Wave ${wave}, the gender gap is not statistically meaningful at the 95% level (Men ${mPct}, Women ${wPct}).`,
+        `In Wave ${wave}, men and women report this experience at nearly the same rate (Men ${pct(m.v)}, Women ${pct(w.v)}); ${sigClause}.`,
       );
     } else {
-      const higher = gap === 'increased' ? 'Women' : 'Men';
+      const higher = w.v >= m.v ? 'Women' : 'Men';
+      const lower = w.v >= m.v ? 'men' : 'women';
+      const higherV = w.v >= m.v ? w.v : m.v;
+      const lowerV = w.v >= m.v ? m.v : w.v;
       interpretationSentences.push(
-        `In Wave ${wave}, ${higher} report this outcome more often (Men ${mPct} vs. Women ${wPct}); the gap exceeds the 95% margin of error.`,
+        `In Wave ${wave}, ${higher} report this experience about ${gapPts.toFixed(1)} points more often than ${lower} (${higher} ${pct(higherV)}, ${lower === 'men' ? 'Men' : 'Women'} ${pct(lowerV)}) — ${sigClause}.`,
       );
     }
   }
-  // Wave-to-wave change within each gender.
+  // Wave-to-wave change within each gender — magnitude first, then the
+  // significance verdict as a caveat.
   if (waves.length >= 2) {
     const earliest = waves[0];
     const latest = waves[waves.length - 1];
     for (const group of ['Men', 'Women']) {
       const e = statForGroupWave(group, earliest);
       const l = statForGroupWave(group, latest);
+      if (e.v === null || l.v === null) continue;
       const verdict = describeChange(e.v, e.se, l.v, l.se);
-      if (verdict !== 'stable' && e.v !== null && l.v !== null) {
-        const direction = verdict === 'increased' ? 'rose' : 'fell';
+      const changePts = Math.abs((l.v - e.v) * 100);
+      const groupLower = group.toLowerCase();
+      if (verdict === 'stable') {
         interpretationSentences.push(
-          `Among ${group}, the rate ${direction} from Wave ${earliest} (${(e.v * 100).toFixed(1)}%) to Wave ${latest} (${(l.v * 100).toFixed(1)}%) — exceeds the 95% margin of error.`,
+          `Among ${groupLower}, the rate is essentially flat from Wave ${earliest} to Wave ${latest} (${pct(e.v)} → ${pct(l.v)}, a ${changePts.toFixed(1)}-point move within the margin of error).`,
+        );
+      } else {
+        const dir = l.v >= e.v ? 'higher' : 'lower';
+        interpretationSentences.push(
+          `Among ${groupLower}, the rate is ${changePts.toFixed(1)} points ${dir} in Wave ${latest} than Wave ${earliest} (${pct(e.v)} → ${pct(l.v)}) — a change that exceeds the 95% margin of error.`,
         );
       }
     }
   }
+  const interpretationCaveat =
+    'This chart uses us024 (in-person negative personal experience), the closest gender-broken-out proxy in the precomputed data; per-platform negative-experience items are not aggregated by gender. Data are available in Waves 5–6 only. Confidence intervals are shown as error bars on the chart and listed in the Numbers table.';
   const interpretationText =
     interpretationSentences.length > 0
-      ? interpretationSentences.join(' ') +
-        ' Confidence intervals are shown as error bars on the chart and listed in the Numbers table.'
-      : 'Insufficient data to summarise at the 95% level for this finding.';
+      ? interpretationSentences.join(' ') + ' ' + interpretationCaveat
+      : 'Insufficient data to summarise this finding.';
 
   // CSV: long-format rows.
   const csvHeaders = [
