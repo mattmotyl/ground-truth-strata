@@ -63,9 +63,9 @@ release.
   scale and place each event line at its true calendar date (fractional
   position between waves). See `buildEventReferenceLines` /
   `snapEventToWave` in `trends-adapters.ts` (marked with a
-  `TODO(time-axis)`). Also deferred: platform-specific event overlay on
-  the F01 usage chart (filtered by the selected platform); only macro
-  events — `platforms: null` — are shown on the generic renderers today.
+  `TODO(time-axis)`). Note: all 18 events are shown on every category
+  (macro and platform-specific alike); filtering platform-specific events
+  by the currently selected platform is a possible future refinement.
 - **"Too many levels" picker warning — dropped from T3-B7 scope.** The
   original /trends variable-picker spec called for an intelligent warning
   when a chosen variable had too many response levels to chart cleanly.
@@ -73,3 +73,7 @@ release.
   that chart well, and small-n cells are already handled by suppression,
   so the warning had no variable to fire on. Revisit only if an
   open-ended (non-curated) variable picker is reintroduced.
+- **Context event label crowding.** With all 18 context events visible
+  simultaneously, Wave 6 and Wave 3/4 labels can clip at the card edge or
+  sit tight. Per-event toggles are the intended workaround. Future:
+  force-directed or rotated label placement for dense event waves.
