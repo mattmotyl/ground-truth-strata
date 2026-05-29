@@ -69,7 +69,7 @@ export default function HomePage() {
               </span>
               <span>
                 Charts default to <em>weighted</em> estimates with 95%
-                confidence intervals. 
+                confidence intervals.
               </span>
             </li>
             <li className="flex gap-3">
@@ -126,8 +126,8 @@ export default function HomePage() {
               platform comparisons
             </Link>
             ,{' '}
-            <Link href="/groups" className="text-mulberry hover:text-plum">
-              demographic differences
+            <Link href="/trends" className="text-mulberry hover:text-plum">
+              demographic splits on trends
             </Link>
             , and{' '}
             <Link
