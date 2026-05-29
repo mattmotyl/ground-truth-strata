@@ -118,7 +118,6 @@ export default function AboutPage() {
                 <th className="text-left py-2 pr-4">UAS #</th>
                 <th className="text-left py-2 pr-4">Field dates</th>
                 <th className="text-right py-2 pr-4">Targeted n</th>
-                <th className="text-right py-2 pr-4">Completed n</th>
                 <th className="text-right py-2">n in cleaned</th>
               </tr>
             </thead>
@@ -130,9 +129,6 @@ export default function AboutPage() {
                   <td className="py-2 pr-4 text-ink">{w.dates}</td>
                   <td className="py-2 pr-4 text-right">
                     {w.targeted_n.toLocaleString()}
-                  </td>
-                  <td className="py-2 pr-4 text-right">
-                    {w.completed_n.toLocaleString()}
                   </td>
                   <td className="py-2 text-right">
                     {w.n_in_cleaned.toLocaleString()}
