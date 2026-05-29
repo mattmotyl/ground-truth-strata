@@ -12,6 +12,13 @@ export type TrendsRendererKind =
   | 'attitudeSingle' // trends.json single population line
   | 'attitudePaired'; // trends.json two population lines on one chart
 
+// Endpoint anchor shown directly on the Y-axis (slate xs) for
+// non-percentage mean variables — e.g. {value: 10, label: 'very warm'}.
+export interface AxisAnchor {
+  value: number;
+  label: string;
+}
+
 export interface TrendsQuestion {
   key: string;
   kind: TrendsRendererKind;
@@ -35,10 +42,10 @@ export interface TrendsQuestion {
   pair?: [string, string];
   pairLabels?: [string, string];
   pairSubtitle?: string;
-  // Scale-anchor annotation for non-percentage mean variables, shown
-  // inside the card below the chart. Omitted for percentage variables
+  // Y-axis endpoint anchors (min/max) for non-percentage mean variables,
+  // rendered on the axis itself. Omitted for percentage variables
   // (Platform Use & Experiences, Well-Being).
-  scaleNote?: string;
+  axisAnchors?: AxisAnchor[];
 }
 
 export interface TrendsCategory {
@@ -180,8 +187,11 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         pair: ['scim_therm_lib', 'scim_therm_con'],
         pairLabels: ['Liberals', 'Conservatives'],
         pairSubtitle:
-          'Average warmth toward liberals and conservatives on a 0–10 feeling thermometer (0 = very cold, 10 = very warm).',
-        scaleNote: 'Scale: 0 = very cold · 10 = very warm',
+          'Average warmth toward liberals and conservatives on a 0–10 feeling thermometer.',
+        axisAnchors: [
+          { value: 0, label: 'very unfavorable' },
+          { value: 10, label: 'very favorable' },
+        ],
         filenameBase: 'strata_trends_thermometers',
       },
       {
@@ -192,80 +202,92 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         pair: ['scim_friends_lib', 'scim_friends_con'],
         pairLabels: ['Liberal friends', 'Conservative friends'],
         pairSubtitle:
-          'Average comfort having liberal vs. conservative friends (0 = not at all comfortable, 10 = extremely comfortable).',
-        scaleNote: 'Scale: 0 = very uncomfortable · 10 = very comfortable',
+          'Average comfort having liberal vs. conservative friends on a 0–10 scale.',
+        axisAnchors: [
+          { value: 0, label: 'not comfortable at all' },
+          { value: 10, label: 'extremely comfortable' },
+        ],
         filenameBase: 'strata_trends_friends',
       },
       {
         key: 'sc001a',
         kind: 'attitudeSingle',
         variable: 'sc001a',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001a',
       },
       {
         key: 'sc001b',
         kind: 'attitudeSingle',
         variable: 'sc001b',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001b',
       },
       {
         key: 'sc001c',
         kind: 'attitudeSingle',
         variable: 'sc001c',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001c',
       },
       {
         key: 'sc001d',
         kind: 'attitudeSingle',
         variable: 'sc001d',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001d',
       },
       {
         key: 'sc001e',
         kind: 'attitudeSingle',
         variable: 'sc001e',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001e',
       },
       {
         key: 'sc001f',
         kind: 'attitudeSingle',
         variable: 'sc001f',
-        scaleNote: 'Scale: 1 = strongly disagree · 5 = strongly agree',
+        axisAnchors: [
+          { value: 1, label: 'strongly disagree' },
+          { value: 5, label: 'strongly agree' },
+        ],
         filenameBase: 'strata_trends_sc001f',
       },
       {
         key: 'ex004a',
         kind: 'attitudeSingle',
         variable: 'ex004a',
-        scaleNote:
-          'Scale: 1 = much less regulation than now · 5 = much more than now',
+        axisAnchors: [
+          { value: 1, label: 'much less than now' },
+          { value: 5, label: 'much more than now' },
+        ],
         filenameBase: 'strata_trends_ex004a',
-      },
-      {
-        key: 'ex004b',
-        kind: 'attitudeSingle',
-        variable: 'ex004b',
-        scaleNote: 'Responses: 1 = More · 2 = Less · 3 = Keep doing what they are now',
-        filenameBase: 'strata_trends_ex004b',
-      },
-      {
-        key: 'ex004c',
-        kind: 'attitudeSingle',
-        variable: 'ex004c',
-        scaleNote: 'Responses: 1 = More · 2 = Less · 3 = Keep doing what they are now',
-        filenameBase: 'strata_trends_ex004c',
       },
       {
         key: 'rate_self',
         kind: 'attitudeSingle',
         label: 'Political ideology',
         variable: 'rate_self',
-        scaleNote: 'Scale: 0 = very liberal · 100 = very conservative',
+        axisAnchors: [
+          { value: 0, label: 'very liberal' },
+          { value: 100, label: 'very conservative' },
+        ],
         filenameBase: 'strata_trends_rate_self',
       },
     ],

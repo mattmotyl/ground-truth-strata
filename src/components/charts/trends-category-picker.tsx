@@ -34,9 +34,9 @@ export function TrendsCategoryPicker({
       <div className="mx-auto max-w-6xl px-6 py-6">
         {/* Fixed min-height (desktop) so the band never resizes when a
             shorter category's Step 2 list is shown — the chart below must
-            not shift. The Attitudes list (tallest) scrolls within its
-            max-height. */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:gap-10 lg:min-h-[300px]">
+            not shift. Sized to roughly match the /compare picker band; the
+            Attitudes list (tallest) scrolls within its max-height. */}
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-10 lg:min-h-[200px]">
           {/* Step 1 — category */}
           <div className="lg:w-[300px] lg:shrink-0 space-y-3">
             <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
@@ -73,7 +73,7 @@ export function TrendsCategoryPicker({
             <p className={EYEBROW} style={{ fontFamily: 'var(--font-mono)' }}>
               Step 2 · Pick a variable
             </p>
-            <fieldset className="flex flex-col gap-1.5 text-sm max-h-[256px] overflow-y-auto pr-2">
+            <fieldset className="flex flex-col gap-1.5 text-sm max-h-[168px] overflow-y-auto pr-2">
               <legend className="sr-only">Select a variable</legend>
               {questions.map((q) => {
                 const isActive = q.key === activeQuestion;
@@ -98,6 +98,17 @@ export function TrendsCategoryPicker({
               })}
             </fieldset>
           </div>
+
+          {/* Decorative illustration fills the empty right side without
+              adding height — same treatment as the /compare picker band. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/images/compare-illustration.webp"
+            alt=""
+            aria-hidden
+            className="hidden lg:block lg:ml-auto lg:self-center shrink-0"
+            style={{ width: 180, opacity: 0.7 }}
+          />
         </div>
       </div>
     </div>

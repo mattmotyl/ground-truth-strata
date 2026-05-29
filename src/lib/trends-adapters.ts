@@ -274,6 +274,26 @@ export function buildOutcomeRateRows(
 
 // ── Paired attitude series (two trends.json mean vars on one chart) ───
 
+// Evenly-spaced Y-axis ticks across a domain — never let Recharts
+// auto-calculate (which produced unequal intervals like 0,3,6,9,10 on a
+// 0–10 scale). Picks a "nice" step (1/2/5 × 10^n) targeting ~6 ticks; on
+// clean full-scale domains this lands exactly on the endpoints
+// (e.g. [0,10] → 0,2,4,6,8,10; [1,5] → 1,2,3,4,5; [0,100] → 0,20,…,100).
+export function axisTicks([lo, hi]: [number, number]): number[] {
+  const span = hi - lo;
+  if (!(span > 0)) return [lo];
+  const rawStep = span / 5;
+  const mag = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const norm = rawStep / mag;
+  const step = (norm < 1.5 ? 1 : norm < 3 ? 2 : norm < 7 ? 5 : 10) * mag;
+  const start = Math.ceil((lo - 1e-9) / step) * step;
+  const ticks: number[] = [];
+  for (let v = start; v <= hi + 1e-9; v += step) {
+    ticks.push(Math.round(v * 1e6) / 1e6);
+  }
+  return ticks.length ? ticks : [lo, hi];
+}
+
 export function buildPairedSeries(
   rows: TrendRow[],
   v1: string,

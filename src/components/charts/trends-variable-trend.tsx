@@ -38,12 +38,14 @@ import {
   surveyQuestionFor,
 } from '@/lib/strata-survey';
 import {
+  axisTicks,
   buildPairedSeries,
   buildPlatformFanData,
   buildRespondentSeries,
   respondentTitle,
   trendConfig,
 } from '@/lib/trends-adapters';
+import type { AxisAnchor } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
 import {
   DEFAULT_CHART_PLATFORMS,
@@ -52,6 +54,7 @@ import {
 } from './platform-multiselect';
 import { PlatformWaveTable } from './platform-wave-table';
 import {
+  AxisAnchorLabels,
   BrokenYAxisIndicator,
   LineEndLabels,
   PlatformFanTooltip,
@@ -422,7 +425,7 @@ interface RespondentTrendProps {
   questionTexts: QuestionTextsJson | null;
   variableName: string;
   filenameBase: string;
-  scaleNote?: string;
+  axisAnchors?: AxisAnchor[];
 }
 
 export function RespondentTrend({
@@ -431,7 +434,7 @@ export function RespondentTrend({
   questionTexts,
   variableName,
   filenameBase,
-  scaleNote,
+  axisAnchors,
 }: RespondentTrendProps) {
   const metaVar = meta.variables.find(
     (v) => v.variable_name === variableName,
@@ -558,6 +561,7 @@ export function RespondentTrend({
           />
           <YAxis
             domain={yDomain}
+            ticks={config.isPercent ? undefined : axisTicks(yDomain)}
             allowDecimals={config.isPercent}
             tickFormatter={(v) =>
               config.isPercent
@@ -589,6 +593,9 @@ export function RespondentTrend({
             connectNulls={false}
             isAnimationActive={false}
           />
+          {axisAnchors ? (
+            <AxisAnchorLabels anchors={axisAnchors} visible={!isZoomed} />
+          ) : null}
           <BrokenYAxisIndicator visible={isZoomed} />
         </LineChart>
       </ResponsiveContainer>
@@ -701,7 +708,6 @@ export function RespondentTrend({
       interpretation={interpretation}
       methodologyFootnote=""
       sourceNote={sourceNote}
-      scaleNote={scaleNote}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: title,
@@ -735,7 +741,7 @@ interface PairedAttitudeTrendProps {
   title: string;
   subtitle?: string;
   filenameBase: string;
-  scaleNote?: string;
+  axisAnchors?: AxisAnchor[];
 }
 
 export function PairedAttitudeTrend({
@@ -747,7 +753,7 @@ export function PairedAttitudeTrend({
   title,
   subtitle,
   filenameBase,
-  scaleNote,
+  axisAnchors,
 }: PairedAttitudeTrendProps) {
   const config = trendConfig(
     meta.variables.find((v) => v.variable_name === pair[0])?.response_type ??
@@ -848,6 +854,7 @@ export function PairedAttitudeTrend({
           />
           <YAxis
             domain={yDomain}
+            ticks={axisTicks(yDomain)}
             allowDecimals={false}
             tickFormatter={(v) => formatNumber(v as number, 0)}
             stroke="#605A6B"
@@ -883,6 +890,9 @@ export function PairedAttitudeTrend({
             swatchBySlug={colorByKey}
             labelBySlug={labelByKey}
           />
+          {axisAnchors ? (
+            <AxisAnchorLabels anchors={axisAnchors} visible={!isZoomed} />
+          ) : null}
           <BrokenYAxisIndicator visible={isZoomed} />
         </LineChart>
       </ResponsiveContainer>
@@ -1011,7 +1021,6 @@ export function PairedAttitudeTrend({
       interpretation={`[PLACEHOLDER -- Matt to review] ${title} over time. The two lines compare ${pairLabels[0]} and ${pairLabels[1]} at the population level, wave by wave; hover any point for its 95% CI and n.`}
       methodologyFootnote=""
       sourceNote={sourceNote}
-      scaleNote={scaleNote}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: title,

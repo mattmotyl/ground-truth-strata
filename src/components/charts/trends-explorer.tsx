@@ -132,7 +132,7 @@ export function TrendsExplorer() {
           questionTexts={questionTexts}
           variableName={question.variable!}
           filenameBase={question.filenameBase}
-          scaleNote={question.scaleNote}
+          axisAnchors={question.axisAnchors}
         />
       );
       break;
@@ -148,7 +148,7 @@ export function TrendsExplorer() {
           title={question.title!}
           subtitle={question.pairSubtitle}
           filenameBase={question.filenameBase}
-          scaleNote={question.scaleNote}
+          axisAnchors={question.axisAnchors}
         />
       );
       break;

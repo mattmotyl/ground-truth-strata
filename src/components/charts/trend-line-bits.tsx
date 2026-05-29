@@ -81,6 +81,57 @@ export function BrokenYAxisIndicator({ visible }: { visible: boolean }) {
   );
 }
 
+// ── Y-axis endpoint anchor labels ─────────────────────────────────────
+// Small slate labels placed directly on the axis at the min/max ticks
+// (e.g. "very favorable" at 10, "very unfavorable" at 0). Rendered just
+// inside the plot's left edge. Only meaningful at full scale, so callers
+// pass visible={!isZoomed} — when zoomed the full-scale anchors no longer
+// describe the visible range.
+
+interface AxisAnchor {
+  value: number;
+  label: string;
+}
+
+export function AxisAnchorLabels({
+  anchors,
+  visible = true,
+}: {
+  anchors: AxisAnchor[];
+  visible?: boolean;
+}) {
+  const plot = usePlotArea();
+  const yScale = useYAxisScale();
+  if (!visible || !plot || !yScale || anchors.length === 0) return null;
+  const values = anchors.map((a) => a.value);
+  const maxV = Math.max(...values);
+  const minV = Math.min(...values);
+  return (
+    <g aria-hidden>
+      {anchors.map((a, i) => {
+        const y = yScale(a.value);
+        if (typeof y !== 'number') return null;
+        // Nudge the top label down off the edge and the bottom label up,
+        // so each sits just inside the plot beside its tick.
+        const dy = a.value === maxV ? 10 : a.value === minV ? -4 : 3;
+        return (
+          <text
+            key={`anchor-${i}`}
+            x={plot.x + 6}
+            y={y + dy}
+            fontSize={9}
+            fontFamily="var(--font-mono)"
+            fill="#605A6B"
+            style={{ pointerEvents: 'none' }}
+          >
+            {a.label}
+          </text>
+        );
+      })}
+    </g>
+  );
+}
+
 // ── Per-line end labels (platform fan-out) ────────────────────────────
 
 interface LineEndLabelsProps {
