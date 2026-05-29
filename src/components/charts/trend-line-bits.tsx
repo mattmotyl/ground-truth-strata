@@ -345,6 +345,7 @@ export interface TrendEventsState {
   refLines: EventRefLine[];
   hidden: ReadonlySet<string>;
   toggle: (id: string) => void;
+  setAll: (hide: boolean) => void;
   appendContext: (base: string) => string;
 }
 
@@ -354,8 +355,21 @@ export function useTrendEvents(
   presentWaves: number[],
 ): TrendEventsState {
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
+  const [seeded, setSeeded] = useState(false);
   const available =
     events && meta ? selectableEvents(events, meta, presentWaves) : [];
+
+  // Default off: the first time events become available (data loads
+  // async, so `available` is empty on the initial render), seed `hidden`
+  // with every event id so the control loads all-unchecked. One-time
+  // only — re-seeding on later `available` changes would wipe the user's
+  // selections. Adjusting state during render (guarded) avoids a flash of
+  // visible reference lines before an effect could run.
+  if (!seeded && available.length > 0) {
+    setSeeded(true);
+    setHidden(new Set(available.map((e) => e.id)));
+  }
+
   const visible = available.filter((e) => !hidden.has(e.id));
   const refLines = groupEventsToRefLines(visible);
   const toggle = (id: string) =>
@@ -365,9 +379,11 @@ export function useTrendEvents(
       else next.add(id);
       return next;
     });
+  const setAll = (hide: boolean) =>
+    setHidden(hide ? new Set(available.map((e) => e.id)) : new Set());
   const appendContext = (base: string) =>
     refLines.length > 0 ? `${base} ${eventContextSentence(refLines)}` : base;
-  return { available, visible, refLines, hidden, toggle, appendContext };
+  return { available, visible, refLines, hidden, toggle, setAll, appendContext };
 }
 
 // Bare vertical dashed reference lines (one per wave with visible events).
@@ -437,8 +453,9 @@ export function EventLabels({
 
 // ── Context-events control (per-event checkbox list) ──────────────────
 // Scrollable list of individual macro events (one checkbox each), styled
-// to match the platform multiselect. All checked by default; unchecking
-// hides that event's reference line.
+// to match the platform multiselect. All UNchecked by default (events
+// off until the user opts in); checking shows that event's reference
+// line. A Select all / Deselect all toggle sits above the list.
 
 interface EventOption {
   id: string;
@@ -449,11 +466,14 @@ export function EventsControl({
   events,
   hidden,
   onToggle,
+  onSetAll,
 }: {
   events: EventOption[];
   hidden: ReadonlySet<string>;
   onToggle: (id: string) => void;
+  onSetAll?: (hide: boolean) => void;
 }) {
+  const allShown = events.length > 0 && events.every((e) => !hidden.has(e.id));
   return (
     <div className="space-y-2">
       <p
@@ -462,6 +482,16 @@ export function EventsControl({
       >
         Context events
       </p>
+      {onSetAll ? (
+        <button
+          type="button"
+          onClick={() => onSetAll(allShown)}
+          className="text-xs text-mulberry hover:text-plum underline-offset-2 hover:underline"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          {allShown ? 'Deselect all' : 'Select all'}
+        </button>
+      ) : null}
       <ul
         className="max-h-48 overflow-y-auto border border-mist rounded-md bg-paper px-2 py-1 space-y-0.5"
         style={{ fontFamily: 'var(--font-mono)' }}

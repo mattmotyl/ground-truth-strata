@@ -280,6 +280,7 @@ export function PlatformFanChart({
           events={evt.available}
           hidden={evt.hidden}
           onToggle={evt.toggle}
+          onSetAll={evt.setAll}
         />
       ) : null}
     </div>
@@ -662,6 +663,7 @@ export function RespondentTrend({
           events={evt.available}
           hidden={evt.hidden}
           onToggle={evt.toggle}
+          onSetAll={evt.setAll}
         />
       ) : null}
     </div>
@@ -991,6 +993,7 @@ export function PairedAttitudeTrend({
           events={evt.available}
           hidden={evt.hidden}
           onToggle={evt.toggle}
+          onSetAll={evt.setAll}
         />
       ) : null}
     </div>

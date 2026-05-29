@@ -712,6 +712,7 @@ export function FindingPlatformUsage({
           events={evt.available}
           hidden={evt.hidden}
           onToggle={evt.toggle}
+          onSetAll={evt.setAll}
         />
       ) : null}
     </div>
