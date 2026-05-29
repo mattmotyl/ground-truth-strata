@@ -145,7 +145,7 @@ export default function AboutPage() {
           Variable coverage
         </h2>
         <p className="text-ink/85 leading-relaxed">
-          The Phase 0 data dictionary catalogs <strong>{totalVars}</strong>{' '}
+          The Strata data dictionary catalogs <strong>{totalVars}</strong>{' '}
           variables across {byDomain.length} survey domains.{' '}
           <strong>{analyzable}</strong> of those have analyzable rows in
           the precomputed JSONs — the remainder are reserved for free-
