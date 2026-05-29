@@ -41,14 +41,16 @@ import {
 } from '@/lib/strata-survey';
 import {
   axisTicks,
-  buildEventReferenceLines,
   buildPairedSeries,
   buildPlatformFanData,
   buildRespondentSeries,
   eventContextSentence,
+  groupEventsToRefLines,
   respondentTitle,
+  selectableMacroEvents,
   trendConfig,
   type EventRefLine,
+  type MacroEvent,
 } from '@/lib/trends-adapters';
 import type { AxisAnchor } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
@@ -61,7 +63,7 @@ import { PlatformWaveTable } from './platform-wave-table';
 import {
   AxisAnchorLabels,
   BrokenYAxisIndicator,
-  EventsToggle,
+  EventsControl,
   LineEndLabels,
   PlatformFanTooltip,
   SingleSeriesTooltip,
@@ -78,8 +80,10 @@ function clamp01(v: number): number {
 
 // Vertical dashed reference lines for contextual events, snapped to the
 // wave category. Returned as an array of <ReferenceLine> so Recharts
-// detects them as chart children.
-function renderEventLines(refLines: EventRefLine[]) {
+// detects them as chart children. labelOffset pushes the label down from
+// the top edge — larger on charts that show Y-axis anchor labels, so the
+// Wave 1 event label clears the top anchor (e.g. "very favorable").
+function renderEventLines(refLines: EventRefLine[], labelOffset: number) {
   return refLines.map((rl) => (
     <ReferenceLine
       key={rl.waveLabel}
@@ -89,12 +93,21 @@ function renderEventLines(refLines: EventRefLine[]) {
       label={{
         value: rl.label,
         position: 'insideTop',
+        offset: labelOffset,
         fontSize: 10,
         fontFamily: 'var(--font-mono)',
         fill: '#605A6B',
       }}
     />
   ));
+}
+
+// Immutable toggle of an id in a Set (for the per-event checkbox list).
+function toggleInSet(set: ReadonlySet<string>, id: string): Set<string> {
+  const next = new Set(set);
+  if (next.has(id)) next.delete(id);
+  else next.add(id);
+  return next;
 }
 
 // =====================================================================
@@ -135,18 +148,23 @@ export function PlatformFanChart({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(0);
   const [customMax, setCustomMax] = useState(100);
-  const [showEvents, setShowEvents] = useState(true);
+  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const labelBySlug = new Map(meta.platforms.map((p) => [p.slug, p.label]));
   const chartData = buildPlatformFanData(rows, meta, chartPlatforms);
 
   const presentWaves = [...new Set(rows.map((r) => r.wave))];
-  const refLines = events
-    ? buildEventReferenceLines(events, meta, presentWaves)
+  const availableEvents: MacroEvent[] = events
+    ? selectableMacroEvents(events, meta, presentWaves)
     : [];
+  const refLines = groupEventsToRefLines(
+    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
+  );
   const fullSourceNote =
-    showEvents && refLines.length > 0
+    refLines.length > 0
       ? `${sourceNote} ${eventContextSentence(refLines)}`
       : sourceNote;
 
@@ -247,7 +265,7 @@ export function PlatformFanChart({
               />
             )}
           />
-          {showEvents ? renderEventLines(refLines) : null}
+          {renderEventLines(refLines, 8)}
           {chartPlatforms.map((slug) => (
             <Line
               key={slug}
@@ -301,8 +319,12 @@ export function PlatformFanChart({
         isPercent
         fullLabel="Full range (0–100%)"
       />
-      {refLines.length > 0 ? (
-        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      {availableEvents.length > 0 ? (
+        <EventsControl
+          events={availableEvents}
+          hidden={hiddenEvents}
+          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+        />
       ) : null}
     </div>
   );
@@ -498,7 +520,9 @@ export function RespondentTrend({
   const [customMax, setCustomMax] = useState(
     config.isPercent ? 100 : numericFull[1],
   );
-  const [showEvents, setShowEvents] = useState(true);
+  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   if (!metaVar) {
@@ -563,15 +587,18 @@ export function RespondentTrend({
     `Source: ${waveClause}Population-level weighted estimates. 95% CIs ` +
     `available on hover. Cells with n < 30 are suppressed by design. ` +
     `Precomputed JSON generated ${generatedAt}.`;
-  const refLines = events
-    ? buildEventReferenceLines(
+  const availableEvents: MacroEvent[] = events
+    ? selectableMacroEvents(
         events,
         meta,
         series.map((p) => p.wave),
       )
     : [];
+  const refLines = groupEventsToRefLines(
+    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
+  );
   const fullSourceNote =
-    showEvents && refLines.length > 0
+    refLines.length > 0
       ? `${sourceNote} ${eventContextSentence(refLines)}`
       : sourceNote;
   const interpretation = `[PLACEHOLDER -- Matt to review] ${title} over time. ${
@@ -643,7 +670,7 @@ export function RespondentTrend({
               />
             )}
           />
-          {showEvents ? renderEventLines(refLines) : null}
+          {renderEventLines(refLines, axisAnchors ? 24 : 8)}
           <Line
             type="monotone"
             dataKey="value"
@@ -684,8 +711,12 @@ export function RespondentTrend({
         rawMax={numericFull[1]}
         rawStep={0.1}
       />
-      {refLines.length > 0 ? (
-        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      {availableEvents.length > 0 ? (
+        <EventsControl
+          events={availableEvents}
+          hidden={hiddenEvents}
+          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+        />
       ) : null}
     </div>
   );
@@ -832,7 +863,9 @@ export function PairedAttitudeTrend({
   const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
   const [customMin, setCustomMin] = useState(numericFull[0]);
   const [customMax, setCustomMax] = useState(numericFull[1]);
-  const [showEvents, setShowEvents] = useState(true);
+  const [hiddenEvents, setHiddenEvents] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   const series = buildPairedSeries(trends, pair[0], pair[1], meta);
@@ -879,11 +912,14 @@ export function PairedAttitudeTrend({
     }–${waveList.length ? Math.max(...waveList) : '—'}. ` +
     'Population-level weighted means. 95% CIs available on hover. ' +
     `Precomputed JSON generated ${generatedAt}.`;
-  const refLines = events
-    ? buildEventReferenceLines(events, meta, waveList)
+  const availableEvents: MacroEvent[] = events
+    ? selectableMacroEvents(events, meta, waveList)
     : [];
+  const refLines = groupEventsToRefLines(
+    availableEvents.filter((e) => !hiddenEvents.has(e.id)),
+  );
   const fullSourceNote =
-    showEvents && refLines.length > 0
+    refLines.length > 0
       ? `${sourceNote} ${eventContextSentence(refLines)}`
       : sourceNote;
 
@@ -945,7 +981,7 @@ export function PairedAttitudeTrend({
               />
             )}
           />
-          {showEvents ? renderEventLines(refLines) : null}
+          {renderEventLines(refLines, axisAnchors ? 24 : 8)}
           {pair.map((k) => (
             <Line
               key={k}
@@ -1007,8 +1043,12 @@ export function PairedAttitudeTrend({
         rawMax={numericFull[1]}
         rawStep={0.5}
       />
-      {refLines.length > 0 ? (
-        <EventsToggle checked={showEvents} onChange={setShowEvents} />
+      {availableEvents.length > 0 ? (
+        <EventsControl
+          events={availableEvents}
+          hidden={hiddenEvents}
+          onToggle={(id) => setHiddenEvents((curr) => toggleInSet(curr, id))}
+        />
       ) : null}
     </div>
   );

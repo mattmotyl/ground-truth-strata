@@ -323,14 +323,24 @@ export function SingleSeriesTooltip({
   );
 }
 
-// ── Context-events toggle ─────────────────────────────────────────────
+// ── Context-events control (per-event checkbox list) ──────────────────
+// Scrollable list of individual macro events (one checkbox each), styled
+// to match the platform multiselect. All checked by default; unchecking
+// hides that event's reference line.
 
-export function EventsToggle({
-  checked,
-  onChange,
+interface EventOption {
+  id: string;
+  shortLabel: string;
+}
+
+export function EventsControl({
+  events,
+  hidden,
+  onToggle,
 }: {
-  checked: boolean;
-  onChange: (b: boolean) => void;
+  events: EventOption[];
+  hidden: ReadonlySet<string>;
+  onToggle: (id: string) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -340,20 +350,29 @@ export function EventsToggle({
       >
         Context events
       </p>
-      <label className="flex items-center gap-2 cursor-pointer text-sm">
-        <input
-          type="checkbox"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          className="accent-plum"
-        />
-        <span
-          className={checked ? 'text-ink' : 'text-slate'}
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          Show event reference lines
-        </span>
-      </label>
+      <ul
+        className="max-h-48 overflow-y-auto border border-mist rounded-md bg-paper px-2 py-1 space-y-0.5"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {events.map((ev) => {
+          const checked = !hidden.has(ev.id);
+          return (
+            <li key={ev.id}>
+              <label className="flex items-center gap-2 text-xs rounded px-1 py-0.5 cursor-pointer hover:bg-mist/50">
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => onToggle(ev.id)}
+                  className="accent-plum"
+                />
+                <span className={checked ? 'text-ink' : 'text-slate'}>
+                  {ev.shortLabel}
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

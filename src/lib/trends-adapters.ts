@@ -307,6 +307,15 @@ export function axisTicks([lo, hi]: [number, number]): number[] {
 // snap-to-wave with fractional positioning at the event's true date. See
 // the ROADMAP "reference lines — time-axis upgrade" note.
 
+// One macro event that snapped onto a present wave — the unit the
+// per-event Context Events checkbox list toggles.
+export interface MacroEvent {
+  id: string;
+  shortLabel: string;
+  wave: number;
+  waveLabel: string;
+}
+
 export interface EventRefLine {
   wave: number;
   waveLabel: string;
@@ -335,15 +344,18 @@ function snapEventToWave(
   return best;
 }
 
-export function buildEventReferenceLines(
+// Individual macro events available on a chart (one per checkbox in the
+// Context Events control), snapped to a present wave. Preserves source
+// order within a wave; sorted by wave.
+export function selectableMacroEvents(
   events: ContextualEventsJson,
   meta: MetaJson,
   presentWaves: number[],
-): EventRefLine[] {
+): MacroEvent[] {
   const ranges = events._meta.survey_date_ranges;
   const present = new Set(presentWaves);
   const waveDates = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-  const byWave = new Map<number, string[]>();
+  const out: MacroEvent[] = [];
   for (const ev of events.event_annotations) {
     // Macro events only (platform-specific events need the usage chart's
     // platform context — out of scope here).
@@ -352,17 +364,32 @@ export function buildEventReferenceLines(
     if (Number.isNaN(ms)) continue;
     const wave = snapEventToWave(ms, ranges);
     if (wave === null || !present.has(wave)) continue;
-    const list = byWave.get(wave);
-    if (list) list.push(ev.short_label);
-    else byWave.set(wave, [ev.short_label]);
+    out.push({
+      id: ev.id,
+      shortLabel: ev.short_label,
+      wave,
+      waveLabel: waveDateRangeLabel(waveDates.get(wave) ?? ''),
+    });
+  }
+  return out.sort((a, b) => a.wave - b.wave);
+}
+
+// Group the currently-visible events into one reference line per wave.
+export function groupEventsToRefLines(visible: MacroEvent[]): EventRefLine[] {
+  const byWave = new Map<number, MacroEvent[]>();
+  for (const ev of visible) {
+    const list = byWave.get(ev.wave);
+    if (list) list.push(ev);
+    else byWave.set(ev.wave, [ev]);
   }
   return [...byWave.keys()]
     .sort((a, b) => a - b)
     .map((wave) => {
-      const titles = byWave.get(wave)!;
+      const evs = byWave.get(wave)!;
+      const titles = evs.map((e) => e.shortLabel);
       return {
         wave,
-        waveLabel: waveDateRangeLabel(waveDates.get(wave) ?? ''),
+        waveLabel: evs[0].waveLabel,
         label: titles.length === 1 ? titles[0] : `${titles.length} events`,
         titles,
       };
