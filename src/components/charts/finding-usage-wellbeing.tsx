@@ -743,12 +743,8 @@ export function FindingUsageWellbeing() {
     <StrataChartFrame
       eyebrow="Finding 08 · Correlations"
       title="Does using social media more mean feeling worse?"
-      surveyQuestion={surveyQuestion || undefined}
-      subtitle={`Spearman ρ between time-per-day on each platform and a wellbeing/loneliness outcome at ${fullWaveLabel(selectedWave, selectedWaveDates)}. ${
-        availableWaves.length > 1
-          ? `Available in ${availableWaves.map((w) => `Wave ${w}`).join(' and ')} for this outcome — switch waves in the controls.`
-          : `Available only in Wave ${selectedWave} for this outcome (other waves lack overlapping respondents).`
-      } ${selectedOutcome.direction === 'positive_is_worse' ? 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling worse).' : 'Positive ρ means more time is associated with HIGHER scores on the outcome (feeling better).'} Bars are colored by sign: teal for positive associations, amber for negative.`}
+      subtitle={surveyQuestion || undefined}
+      titleInCard
       chart={chart}
       chartRef={chartRef}
       controls={controlsAside}
@@ -756,7 +752,8 @@ export function FindingUsageWellbeing() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel Wave ${selectedWave} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). Weighted ρ shown. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
+      methodologyFootnote=""
+      sourceNote={`Source: UAS panel ${fullWaveLabel(selectedWave, selectedWaveDates)} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). Weighted ρ shown. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

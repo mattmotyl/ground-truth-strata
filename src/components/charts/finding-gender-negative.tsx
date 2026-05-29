@@ -63,7 +63,6 @@ import { StrataChartFrame } from './strata-chart-frame';
 // =====================================================================
 
 const OUTCOME = 'us024';
-const OUTCOME_LABEL = 'in-person negative personal experience';
 
 interface ChartDatum {
   group: string; // "Men" / "Women"
@@ -474,8 +473,8 @@ export function FindingGenderNegativeExperience() {
     <StrataChartFrame
       eyebrow="Finding 06 · Demographic group differences"
       title="Do men and women experience platforms differently?"
-      subtitle={`Share of U.S. adults reporting a recent in-person ${OUTCOME_LABEL}, by gender, across ${wavesSpan}. Negative-experience items broken out by gender are not platform-indexed in the precomputed JSON, so this view uses the in-person counterpart (us024) as the closest available proxy.`}
-      surveyQuestion={surveyQuestion || undefined}
+      subtitle={surveyQuestion || undefined}
+      titleInCard
       chart={
         <>
           {chart}
@@ -486,7 +485,8 @@ export function FindingGenderNegativeExperience() {
       customNumbers={numbers}
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). Weighted estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted. Precomputed JSON generated ${generatedAt}.`}
+      methodologyFootnote=""
+      sourceNote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). Weighted estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted. Precomputed JSON generated ${generatedAt}.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

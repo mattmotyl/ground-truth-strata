@@ -457,7 +457,6 @@ export function FindingPlatformUsage({
 
   const allWaves = meta.waves.map((w) => w.wave);
   const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const wavesSpan = `Wave ${Math.min(...allWaves)}–Wave ${Math.max(...allWaves)}`;
 
   const chart = (
     <div className="relative">
@@ -549,13 +548,6 @@ export function FindingPlatformUsage({
       r.suppressed,
     ]);
 
-  const waveCount = meta.waves.length;
-  const subtitleText =
-    'Share of U.S. adults reporting each platform among the services they use, across ' +
-    wavesSpan +
-    ' (' +
-    waveCount +
-    ' survey waves, 2023–2025). Use the Platforms picker in the controls to add or remove lines.';
   // SIGNIFICANCE-AWARE INTERPRETATION COPY — see describeChange() in
   // src/lib/strata-formatters.ts for the rule. Every directional claim
   // ("increased", "decreased", "grew", "fell", etc.) below must be
@@ -590,7 +582,7 @@ export function FindingPlatformUsage({
   // data but those tools are no longer in the default chart view.
   const interpretationText =
     'Among the eight traditional social-media platforms in the default view, Facebook and YouTube have the broadest reach across U.S. adults in the most recent wave (W6), with Instagram a clear third. Four platforms show statistically meaningful changes from W1 to W6: YouTube use declined by about 4.9 percentage points, X (Twitter) by 4.9 points, and LinkedIn by 4.5 points, while Reddit grew by 4.1 points (all exceed their 95% margins of error). Facebook, Instagram, TikTok, and Snapchat remained stable across the six waves; any apparent shifts are within the margin of error. Communication utilities such as text messaging and email reach a larger share of U.S. adults than any of these platforms — toggle them on in the Platforms picker to see their trends.';
-  const methodologyFootnoteText =
+  const sourceNoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     'Weighted estimates. 95% CIs available on hover (chart line + Numbers table cells). Cells with n < 30 are suppressed by design. Precomputed JSON generated ' +
     generatedAt +
@@ -707,8 +699,8 @@ export function FindingPlatformUsage({
     <StrataChartFrame
       eyebrow="Finding 01 · Trends over time"
       title="Who uses what?"
-      subtitle={subtitleText}
-      surveyQuestion={surveyQuestion || undefined}
+      subtitle={surveyQuestion || undefined}
+      titleInCard
       chart={chart}
       chartRef={chartRef}
       controls={controlsContent}
@@ -733,7 +725,8 @@ export function FindingPlatformUsage({
       }
       isPlaceholderInterpretation
       interpretation={interpretationText}
-      methodologyFootnote={methodologyFootnoteText}
+      methodologyFootnote=""
+      sourceNote={sourceNoteText}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: 'Who uses what? Platform usage rates',
