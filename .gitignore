@@ -1,5 +1,7 @@
 # Data files — never commit raw or cleaned survey data
 /r/data/
+/r/output/
+/r/clean/
 /r/output/*.csv
 /r/output/*.rds
 /r/output/*.rda
@@ -37,11 +39,29 @@ scripts/phase*_recheck_*.R
 # .claude/settings.json IS committed.
 .claude/settings.local.json
 
-# Node
+# Node / Next.js
 node_modules/
 .next/
 out/
 .vercel/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/coverage
+/build
+*.tsbuildinfo
+next-env.d.ts
+*.pem
+
+# Playwright MCP screenshots — UI verification artifacts stay local
+# (matches the broader Strata convention of keeping audit artifacts
+# under M:\MM\Websites\strata-local\audit\)
+.playwright-mcp/
+*.png
 
 # Environment variables
 .env
@@ -59,6 +79,9 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# LibreOffice / OpenOffice lock files (e.g., docs/.~lock.data-dictionary.csv#)
+.~lock.*#
 
 # Logs
 npm-debug.log*

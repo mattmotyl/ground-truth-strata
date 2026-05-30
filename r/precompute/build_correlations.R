@@ -6,8 +6,11 @@
 # Per project_phase3_conventions:
 #   - Spearman across the board (ranks, then Pearson on ranks; weighted
 #     version uses weighted Pearson on the ranks — see weighting.R).
-#   - is_reverse_coded items (currently only ls002i, LIKERT_7) are
-#     flipped via (max_code + 1) - as.integer(factor) BEFORE correlating.
+#   - is_reverse_coded items are flipped at data-load time by
+#     r/precompute/utils/transforms.R::apply_reverse_coding (factor
+#     levels reversed in place; canonical list in REVERSE_CODED_VARS).
+#     The matrix build below reads the already-reversed columns and
+#     does no per-iteration flipping.
 #
 # Scope (after 2026-05-25 expansion pass):
 #   - All in_cleaned_csv non-platform-indexed vars with renderable
@@ -32,6 +35,58 @@ suppressPackageStartupMessages({
 source(here("r", "precompute", "utils", "cell_filter.R"))
 source(here("r", "precompute", "utils", "weighting.R"))
 source(here("r", "precompute", "utils", "coercion.R"))
+source(here("r", "precompute", "utils", "transforms.R"))
+
+# ── Output exclusions ──────────────────────────────────────────────
+# These exclusions apply to JSON output only. They do NOT affect the
+# cleaned .rds files or the R cleaning scripts.
+# Re-including any of these in a future release is a one-line change.
+
+EXCLUDED_DOMAINS <- c(
+  "AI_ATTITUDES"        # W4+ data unavailable; W1-W3 alone would mislead
+)
+
+EXCLUDED_VARIABLES <- c(
+  # Time-spent items — sparse (us019 absent W6; W4-W5 only)
+  "us019_hours", "us019_minutes",
+
+  # Conditional follow-up items — only valid in conditional_breakdowns.json.
+  # These are asked only of respondents who answered the parent question
+  # affirmatively (e.g., us004 only if us003 = yes). Including them in
+  # general correlations/trends would compute estimates on a selected
+  # subgroup, not the full sample, producing misleading results.
+  "us004", "us005",     # negative experience: impact + topic
+  "us008", "us016",     # bad for world: impact + topic
+  "us025", "us026",     # meaningful connection + useful: topic
+
+  # In-person experience items (us020-us024) intentionally included.
+  # These are the in-person counterparts to platform-indexed experience
+  # items (us002/us003/us007/us010/us012) and appear only in W5-W6.
+  # Build scripts derive waves_present_in_data from the cleaned tibble
+  # so only W5-W6 rows will be emitted — no change needed elsewhere.
+
+  # Administrative / sampling variables
+  "citizenus", "statereside", "primary_respondent",
+  "bornus", "stateborn", "language", "dateofbirth_year",
+  "regis", "cs_001"
+)
+
+# Variables excluded from specific outputs only — not globally excluded.
+# us001 (platform use, binary) is excluded from trends.json and
+# group_comparisons.json because platform_rates.json already covers
+# usage rates. It is INCLUDED in correlations.json — see Step 1a.
+EXCLUDED_VARIABLES_TRENDS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_GROUP_COMPARISONS <- c(EXCLUDED_VARIABLES, "us001")
+EXCLUDED_VARIABLES_CORRELATIONS <- EXCLUDED_VARIABLES  # us001 intentionally kept
+
+EXCLUDED_SUFFIXES <- c(
+  "_other"              # free-text 'other specify' captures — out of scope
+)
+
+EXCLUDED_TYPES <- c(
+  "STRING_OPEN"         # catches any open-text variables not already excluded
+)
+# ── End exclusions ─────────────────────────────────────────────────
 
 # ---- Sink ----
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
@@ -55,28 +110,14 @@ tryCatch({
   cleaned <- readRDS(rds_path)
   cat("Reading", meta_path, "\n")
   meta <- read_json(meta_path)
+  cleaned <- apply_reverse_coding(cleaned)
+  cleaned <- derive_loneliness(cleaned)
 
-  # ---- Reverse-coding helper ----
-  # Flip an integer-coded variable: new = (max_code + 1) - old.
-  # For Likert factors, max_code is the number of levels (extracted from
-  # the response_type, e.g. LIKERT_7 -> 7). For non-Likert reverse-coded
-  # items the caller should pass max_code explicitly.
-  apply_reverse_coding <- function(x_int, var_rec, x_full = NULL) {
-    if (!isTRUE(var_rec$is_reverse_coded)) return(x_int)
-    rt <- var_rec$response_type
-    max_code <- if (grepl("^LIKERT_\\d+", rt)) {
-      as.integer(sub("^LIKERT_(\\d+).*", "\\1", rt))
-    } else if (rt == "SCALE_0_10") {
-      10L
-    } else if (rt == "SCALE_0_100") {
-      100L
-    } else {
-      warning(sprintf("Cannot infer max_code for reverse-coded %s (%s); leaving unflipped",
-                      var_rec$variable_name, rt))
-      return(x_int)
-    }
-    (max_code + 1L) - x_int
-  }
+  # Reverse coding for is_reverse_coded items now runs at load time via
+  # r/precompute/utils/transforms.R::apply_reverse_coding(). The
+  # per-iteration helper that lived here previously has been removed —
+  # the matrix-build loop below now reads already-reversed values from
+  # `cleaned`.
 
   # ---- Build the inputs list ----
   INPUT_NUMERIC <- c("LIKERT_3", "LIKERT_4", "LIKERT_5", "LIKERT_6",
@@ -88,10 +129,23 @@ tryCatch({
   # the aggregated q_ai11_<N>_mean / q_ai13_<N>_mean battery means since
   # those have data_availability="in_cleaned_csv" with cleaned_column
   # pointing at the _mean column.
+  #
+  # EXCLUDED_VARIABLES_CORRELATIONS deliberately equals the base list
+  # (no us001). us001 is already excluded from dict_inputs because
+  # is_platform_indexed = TRUE on its meta record. Platform-use
+  # information enters this build via the derived platform_user_<slug>
+  # binaries below (Step 1a). Multiselect children, platform_user
+  # binaries, and time_per_day_min inputs are derived inputs not
+  # present in meta$variables and are intentionally retained.
+  EXTRA_EXCLUDED_CORRELATIONS <-
+    setdiff(EXCLUDED_VARIABLES_CORRELATIONS, EXCLUDED_VARIABLES)  # empty today
+
   dict_inputs <- Filter(function(v) {
     identical(v$data_availability, "in_cleaned_csv") &&
       !isTRUE(v$is_platform_indexed) &&
-      v$response_type %in% c(INPUT_NUMERIC, INPUT_BINARY)
+      v$response_type %in% c(INPUT_NUMERIC, INPUT_BINARY) &&
+      !isTRUE(v$excluded_from_outputs) &&
+      !(v$variable_name %in% EXTRA_EXCLUDED_CORRELATIONS)
   }, meta$variables)
 
   # MULTISELECT exploded vars — one input per expansion_column.
@@ -111,6 +165,17 @@ tryCatch({
       )
     })
   }), recursive = FALSE)
+
+  # NOTE on binary-predictor correlations: ex003_lonely (the UCLA
+  # loneliness binary) is picked up here as a regular BINARY_YESNO
+  # dict input via the `dict_inputs` filter above. Its correlations
+  # against any other variable use the same Spearman-with-binary
+  # interpretation as the platform_user_<slug> derivations below —
+  # rho reflects the degree to which the two groups (lonely vs not,
+  # users vs non-users) differ on the partner variable, which is
+  # closer in spirit to a group comparison than a traditional
+  # continuous-continuous correlation. UI interpretation copy should
+  # call this out for any binary x continuous pair.
 
   # ---- Derive platform_user_<slug> binary columns ----
   for (p in meta$platforms) {
@@ -182,7 +247,6 @@ tryCatch({
       x_raw <- cleaned[[col]][mask]
       is_bin <- v$response_type %in% c(INPUT_BINARY, "BINARY_DERIVED")
       x_coe <- if (is_bin) coerce_binary01(x_raw) else coerce_numeric(x_raw)
-      x_coe <- apply_reverse_coding(x_coe, v)
       M[, i] <- x_coe
     }
     wave_mats[[w]] <- M
@@ -216,13 +280,16 @@ tryCatch({
         est   <- estimate_correlation_both(x_i, x_j, wt, method = "spearman")
         gated <- apply_cell_floor(est, est$n)
         idx <- idx + 1L
+        # Unweighted estimates intentionally excluded from JSON output (Step 2).
+        # Retained in `est` / `gated` R objects for spot-check validation only.
+        # To restore: add r and p_value back to this list().
+        # `n` (unweighted joint non-missing count) and `weighted_n_eff`
+        # are both kept.
         rows[[idx]] <- list(
           var1            = var_names[i],
           var2            = var_names[j],
           wave            = as.integer(w),
           method          = "spearman",
-          r               = gated$r,
-          p_value         = gated$p_value,
           n               = gated$n,
           weighted_r      = gated$weighted_r,
           weighted_n_eff  = gated$weighted_n_eff,

@@ -80,7 +80,7 @@ These are locked in across all build scripts. Summary:
 | Correlation method | Spearman across the board | `build_correlations` |
 | Weighting | `survey` package with `final_weight`; emit both weighted and unweighted | all builds |
 | Reverse coding | Apply `(max_code + 1) − x` for `is_reverse_coded` items at composite/correlation time only (NOT for standalone trends) | `build_correlations` |
-| Political ideology tertile | Per-wave tertiles of `political_ideology_self` (0-100 numeric) | `build_group_comparisons` |
+| Political ideology group | Fixed three-way split of `political_ideology_self` (0-100 integer scale, 101 values). 0-39 Liberal (40 points), 40-60 Moderate (21 points), 61-100 Conservative (40 points) — Liberal and Conservative carry equal width; Moderate is the necessary 21-point middle band. Emitted as `grouping_var = "political_ideology_group"` in JSON (internal column name `political_ideology_tertile` retained). | `build_group_comparisons`, `build_platform_demographics` |
 | Suppression | n < 30 → emit with NA + `suppressed: true` (not omitted) | all builds via `cell_filter` |
 | Variable scope | All in-scope dict vars + MULTISELECT options + battery means; STRING_OPEN out of scope (lives in separate text files) | `build_correlations` |
 

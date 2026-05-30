@@ -1,0 +1,177 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* =====================================================================
+ * Strata color palette
+ * Maintain continuity with mattmotyl.com. Hex values are the canonical
+ * brand tokens; oklch values below are derived for shadcn semantic
+ * tokens (which expect oklch in Tailwind v4 + shadcn defaults).
+ *
+ *   --ink      #18161F   primary text, dark backgrounds
+ *   --paper    #F6F3EE   page background, light surfaces
+ *   --plum     #4B2E63   primary brand accent, headers
+ *   --slate    #605A6B   secondary text, labels
+ *   --mist     #E7E1EC   borders, dividers, subtle backgrounds
+ *   --mulberry #7A5A8F   interactive elements, hover states
+ *   --lilac    #B08CC7   dark-mode accent, secondary highlights
+ * ===================================================================== */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-serif);
+
+  /* Strata brand tokens — usable directly via class names */
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-plum: var(--plum);
+  --color-slate: var(--slate);
+  --color-mist: var(--mist);
+  --color-mulberry: var(--mulberry);
+  --color-lilac: var(--lilac);
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Strata brand tokens (hex; do not change without checking mattmotyl.com) */
+  --ink: #18161f;
+  --paper: #f6f3ee;
+  --plum: #4b2e63;
+  --slate: #605a6b;
+  --mist: #e7e1ec;
+  --mulberry: #7a5a8f;
+  --lilac: #b08cc7;
+
+  /* shadcn semantic tokens mapped to Strata palette */
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #ffffff;
+  --card-foreground: var(--ink);
+  --popover: #ffffff;
+  --popover-foreground: var(--ink);
+  --primary: var(--plum);
+  --primary-foreground: var(--paper);
+  --secondary: var(--mist);
+  --secondary-foreground: var(--ink);
+  --muted: var(--mist);
+  --muted-foreground: var(--slate);
+  --accent: var(--mulberry);
+  --accent-foreground: var(--paper);
+  --destructive: #cc0000;
+  --border: var(--mist);
+  --input: var(--mist);
+  --ring: var(--mulberry);
+
+  /* Chart tokens reserved for shadcn primitives. The actual Strata
+   * chart palettes (warm/cool/political/etc.) are defined in
+   * src/lib/strata-charts.ts and applied per chart, NOT through these
+   * tokens. */
+  --chart-1: var(--plum);
+  --chart-2: var(--mulberry);
+  --chart-3: var(--lilac);
+  --chart-4: var(--slate);
+  --chart-5: var(--mist);
+
+  --radius: 0.375rem;
+
+  --sidebar: var(--paper);
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--plum);
+  --sidebar-primary-foreground: var(--paper);
+  --sidebar-accent: var(--mist);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--mist);
+  --sidebar-ring: var(--mulberry);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    font-family: var(--font-sans), system-ui, sans-serif;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-serif), Georgia, serif;
+    color: var(--plum);
+  }
+  code,
+  kbd,
+  pre,
+  samp,
+  .font-mono {
+    font-family: var(--font-mono), ui-monospace, monospace;
+  }
+}
+
+/* =====================================================================
+ * Print (Save as PDF) fixes.
+ * Some print rasterizers drop SVG content inside a generated <clipPath>
+ * (Recharts clips bars/lines to the plot area with a useId-based id),
+ * leaving the axes but no bars/lines. Charts here are never zoomed past
+ * their domain, so dropping the clip in print is safe and makes the data
+ * render. print-color-adjust preserves chart fills and heatmap cell
+ * shading, which browsers otherwise strip when printing.
+ * ===================================================================== */
+@media print {
+  /* Scope strictly to Recharts chart internals so non-Recharts clip-path
+   * usage is untouched. This unclips the bar/line groups Recharts clips
+   * to the plot area; the broken-axis glyph has no clip-path and is
+   * unaffected (clip-path: none can only reveal, never hide). */
+  .recharts-surface [clip-path] {
+    clip-path: none !important;
+  }
+  .recharts-wrapper,
+  .recharts-surface,
+  table {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

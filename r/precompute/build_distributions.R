@@ -34,6 +34,7 @@ suppressPackageStartupMessages({
 source(here("r", "precompute", "utils", "cell_filter.R"))
 source(here("r", "precompute", "utils", "weighting.R"))
 source(here("r", "precompute", "utils", "coercion.R"))
+source(here("r", "precompute", "utils", "transforms.R"))
 
 audit_dir <- "M:/MM/Websites/strata-local/audit/output"
 ts        <- format(Sys.time(), "%Y%m%d_%H%M%S")
@@ -55,21 +56,29 @@ tryCatch({
   cleaned <- readRDS(rds_path)
   cat("Reading", meta_path, "\n")
   meta <- read_json(meta_path)
+  cleaned <- apply_reverse_coding(cleaned)
+  cleaned <- derive_loneliness(cleaned)
 
   # ---- Scope ----
   LIKERT_TYPES   <- c("LIKERT_3", "LIKERT_4", "LIKERT_5", "LIKERT_6",
                       "LIKERT_6_NOMID", "LIKERT_7")
   SCALE_INT_TYPE <- "SCALE_0_10"
 
+  # Skip variables flagged in meta.json (build_meta.R sets
+  # excluded_from_outputs = TRUE for vars matching the base
+  # EXCLUDED_VARIABLES / EXCLUDED_DOMAINS / EXCLUDED_SUFFIXES /
+  # EXCLUDED_TYPES rules). No distributions-specific extras today.
   likert_vars <- Filter(function(v) {
     identical(v$data_availability, "in_cleaned_csv") &&
       !isTRUE(v$is_platform_indexed) &&
-      v$response_type %in% LIKERT_TYPES
+      v$response_type %in% LIKERT_TYPES &&
+      !isTRUE(v$excluded_from_outputs)
   }, meta$variables)
   scale10_vars <- Filter(function(v) {
     identical(v$data_availability, "in_cleaned_csv") &&
       !isTRUE(v$is_platform_indexed) &&
-      v$response_type == SCALE_INT_TYPE
+      v$response_type == SCALE_INT_TYPE &&
+      !isTRUE(v$excluded_from_outputs)
   }, meta$variables)
 
   COUNT_VARS <- list(
@@ -113,16 +122,16 @@ tryCatch({
         indicator[is.na(x_wave)] <- NA_integer_
         est   <- estimate_proportion_both(indicator, wt_wave)
         gated <- apply_cell_floor(est, est$n)
+        # Unweighted estimates intentionally excluded from JSON output (Step 2).
+        # Retained in `est` / `gated` R objects for spot-check validation only.
+        # To restore: add value, se, ci_lower, ci_upper back to this list().
+        # `n` (unweighted observed count) and `weighted_n_eff` are both kept.
         rows[[length(rows) + 1]] <<- list(
           variable_name     = variable_name,
           wave              = as.integer(w),
           bin_index         = as.integer(bin$bin_index),
           bin_label         = bin$bin_label,
           metric_type       = metric_type,
-          value             = gated$prop,
-          se                = gated$se,
-          ci_lower          = gated$ci_lower,
-          ci_upper          = gated$ci_upper,
           n                 = gated$n,
           weighted_value    = gated$weighted_prop,
           weighted_se       = gated$weighted_se,
