@@ -721,7 +721,7 @@ export function FindingPlatformUsage({
 
   return (
     <StrataChartFrame
-      eyebrow="Finding 01 · Trends over time"
+      eyebrow="Trends over time"
       title="Who uses what?"
       subtitle={surveyQuestion || undefined}
       titleInCard

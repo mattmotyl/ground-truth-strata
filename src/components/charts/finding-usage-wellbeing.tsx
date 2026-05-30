@@ -756,7 +756,7 @@ export function FindingUsageWellbeing() {
 
   return (
     <StrataChartFrame
-      eyebrow="Finding 08 · Correlations"
+      eyebrow="Correlations"
       title="Does using social media more mean feeling worse?"
       subtitle="Each bar shows the correlation between daily time spent on that platform and the selected wellbeing outcome."
       surveyQuestion={surveyHeader}

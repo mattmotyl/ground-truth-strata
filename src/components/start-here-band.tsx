@@ -1,74 +1,44 @@
 import Link from 'next/link';
 
-interface Finding {
-  n: number;
+interface StartCard {
   title: string;
   blurb: string;
-  chart: string;
   href: string;
 }
 
-const FINDINGS: Finding[] = [
+// Five plain-language entry points for new visitors. No "Finding ##"
+// numbering — just an inviting question per card. Cards deep-link into
+// the relevant view: /trends reads ?category=&q=, /explore reads ?tab=.
+const CARDS: StartCard[] = [
   {
-    n: 1,
-    title: 'Who uses what?',
-    blurb: 'Platform usage rates across six waves, 2023–2025.',
-    chart: 'Trend line, one line per platform',
-    href: '/trends?finding=who-uses-what',
-  },
-  {
-    n: 2,
-    title: 'Where do people have negative personal experiences?',
+    title: 'What platforms are most popular?',
     blurb:
-      'Share of users reporting a recent negative personal experience on each platform.',
-    chart: 'Ranked horizontal bar',
-    href: '/compare?finding=negative-experiences',
+      'See how many U.S. adults use each platform and how that has shifted across six waves, 2023–2025.',
+    href: '/trends', // opens on Platform usage by default
   },
   {
-    n: 3,
-    title: 'Where is content bad for the world?',
+    title: 'Where do people have negative experiences?',
     blurb:
-      'Share of users who say a platform is bad for the world, by platform.',
-    chart: 'Ranked horizontal bar',
-    href: '/compare?finding=bftw',
+      'Compare how often users report a recent negative experience on each platform.',
+    href: '/trends?category=platform&q=nux',
   },
   {
-    n: 4,
-    title: 'Where do people learn things?',
-    blurb: 'Share of users who say a platform is useful or informative.',
-    chart: 'Ranked horizontal bar',
-    href: '/compare?finding=useful',
-  },
-  {
-    n: 5,
-    title: 'Where do people connect?',
-    blurb: 'Share reporting meaningful connections on each platform.',
-    chart: 'Ranked horizontal bar',
-    href: '/compare?finding=connections',
-  },
-  {
-    n: 6,
-    title: 'Do men and women experience platforms differently?',
+    title: 'How do platform users feel about their wellbeing?',
     blurb:
-      'Gender differences in negative experiences across waves.',
-    chart: 'Grouped bar with 95% CI',
-    href: '/groups?finding=gender-negative',
+      'Track life satisfaction, loneliness, and related measures over time.',
+    href: '/trends?category=wellbeing',
   },
   {
-    n: 7,
-    title: 'Which platforms are most politically skewed?',
+    title: 'How do these measures move together?',
     blurb:
-      'Liberal / moderate / conservative composition of each platform’s user base.',
-    chart: 'Stacked horizontal bar',
-    href: '/compare?finding=political-composition',
+      'Explore the correlations between wellbeing, political, and social-media measures in an interactive matrix.',
+    href: '/explore?tab=matrix',
   },
   {
-    n: 8,
-    title: 'Does using social media more mean feeling worse?',
+    title: 'How does one platform’s experience compare to another’s?',
     blurb:
-      'Correlation between platform use frequency and loneliness / wellbeing.',
-    chart: 'Diverging bar from national average',
-    href: '/explore?finding=usage-wellbeing',
+      'Open a single platform’s report card — who uses it, what they experience, and how its users feel.',
+    href: '/platforms',
   },
 ];
 
@@ -88,38 +58,34 @@ export function StartHereBand() {
             Start here
           </h2>
           <p className="text-sm text-slate">
-            Eight curated findings to orient new visitors.
+            Five places to start digging into the data.
           </p>
         </div>
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {FINDINGS.map((f) => (
-            <li key={f.n}>
+        {/* 6-col track on lg so each card spans 2 (= 3 per row); the 4th
+            card starts at column 2 so the trailing two cards center in
+            the bottom row (cols 2–3 and 4–5, leaving 1 and 6 empty). */}
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+          {CARDS.map((c, i) => (
+            <li
+              key={c.title}
+              className={
+                'lg:col-span-2' + (i === 3 ? ' lg:col-start-2' : '')
+              }
+            >
               <Link
-                href={f.href}
+                href={c.href}
                 className="block h-full rounded-md border border-mist bg-paper p-4 hover:border-mulberry hover:shadow-sm transition-all"
               >
-                <div
-                  className="text-xs text-slate mb-2"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                  FINDING {String(f.n).padStart(2, '0')}
-                </div>
                 <h3 className="text-base text-plum mb-2 leading-snug">
-                  {f.title}
+                  {c.title}
                 </h3>
-                <p className="text-sm text-ink/80 mb-3 leading-relaxed">
-                  {f.blurb}
-                </p>
-                <p
-                  className="text-xs text-slate"
-                  style={{ fontFamily: 'var(--font-mono)' }}
-                >
-                  {f.chart}
+                <p className="text-sm text-ink/80 leading-relaxed">
+                  {c.blurb}
                 </p>
               </Link>
             </li>
           ))}
-        </ol>
+        </ul>
       </div>
     </section>
   );

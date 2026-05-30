@@ -457,7 +457,7 @@ export function CorrelationPairExplorer() {
 
   return (
     <StrataChartFrame
-      eyebrow="Explore · Variable pairs"
+      eyebrow="Explore · Variable pairs over time"
       title={`How are ${toNounPhrase(predLabel)} and ${toNounPhrase(
         outLabel,
       )} related?`}

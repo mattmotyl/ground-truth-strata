@@ -1145,7 +1145,7 @@ export function FindingPoliticalSkew() {
 
   return (
     <StrataChartFrame
-      eyebrow="Finding 07 · Platform comparison"
+      eyebrow="Platform comparison"
       title="Which platforms are most politically skewed?"
       surveyQuestion={surveyQuestion || undefined}
       subtitle={

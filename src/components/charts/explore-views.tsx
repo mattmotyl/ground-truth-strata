@@ -1,29 +1,32 @@
 'use client';
 
 import { useState } from 'react';
-import { FindingUsageWellbeing } from './finding-usage-wellbeing';
 import { CorrelationPairExplorer } from './correlation-pair-explorer';
 import { CorrelationHeatmap } from './correlation-heatmap';
+// DISABLED v0.1 — platform-minutes predictor unvalidated, restore post-precompute
+// import { FindingUsageWellbeing } from './finding-usage-wellbeing';
 
-// /explore view switcher. Three genuinely different correlation views,
-// each backed by correlations.json:
-//   • Platform correlations — Finding 08, platform-indexed predictor
-//     (time-per-day) vs a wellbeing outcome, one bar per platform.
-//   • Variable pairs — any two respondent-level variables, ρ per wave.
+// /explore view switcher. Two respondent-level correlation views, each
+// backed by correlations.json:
+//   • Variable pairs over time — any two respondent-level variables, ρ per wave.
 //   • Correlation matrix — all pairwise ρ among respondent-level vars.
+// The Platform correlations view (FindingUsageWellbeing, Finding 08) is
+// disabled in v0.1 — its time-per-day predictor is unvalidated; restore
+// once the per-platform correlations are precomputed. See comments below.
 // Button-based switcher (not the base-ui Tabs primitive) to match the
 // app's existing button-picker convention on /trends and /compare.
 
-type ExploreView = 'platforms' | 'pairs' | 'matrix';
+type ExploreView = 'pairs' | 'matrix';
 
 const VIEWS: Array<{ id: ExploreView; label: string }> = [
-  { id: 'platforms', label: 'Platform correlations' },
-  { id: 'pairs', label: 'Variable pairs' },
+  // DISABLED v0.1 — platform-minutes predictor unvalidated, restore post-precompute
+  // { id: 'platforms', label: 'Platform correlations' },
+  { id: 'pairs', label: 'Variable pairs over time' },
   { id: 'matrix', label: 'Correlation matrix' },
 ];
 
 export function ExploreViews() {
-  const [view, setView] = useState<ExploreView>('platforms');
+  const [view, setView] = useState<ExploreView>('pairs');
 
   return (
     <div className="space-y-2">
@@ -55,7 +58,8 @@ export function ExploreViews() {
         })}
       </div>
 
-      {view === 'platforms' ? <FindingUsageWellbeing /> : null}
+      {/* DISABLED v0.1 — platform-minutes predictor unvalidated, restore post-precompute */}
+      {/* {view === 'platforms' ? <FindingUsageWellbeing /> : null} */}
       {view === 'pairs' ? <CorrelationPairExplorer /> : null}
       {view === 'matrix' ? <CorrelationHeatmap /> : null}
     </div>

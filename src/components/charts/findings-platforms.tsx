@@ -87,7 +87,7 @@ function buildRankedInterpretation(
 export function Finding02NegativeExperiences() {
   return (
     <FindingPlatformRankedBar
-      eyebrow="Finding 02 · Platform comparison"
+      eyebrow="Platform comparison"
       title="Where do people have negative personal experiences?"
       subtitle="Share of platform users reporting a recent negative personal experience on each platform."
       metric="nux_rate"
@@ -111,7 +111,7 @@ export function Finding02NegativeExperiences() {
 export function Finding03BadForWorld() {
   return (
     <FindingPlatformRankedBar
-      eyebrow="Finding 03 · Platform comparison"
+      eyebrow="Platform comparison"
       title="Where is content bad for the world?"
       subtitle="Share of platform users who say a platform’s content is bad for the world."
       metric="bftw_rate"
@@ -135,7 +135,7 @@ export function Finding03BadForWorld() {
 export function Finding04Useful() {
   return (
     <FindingPlatformRankedBar
-      eyebrow="Finding 04 · Platform comparison"
+      eyebrow="Platform comparison"
       title="Where do people learn things?"
       subtitle="Share of platform users who say a platform is useful or informative."
       metric="useful_rate"
@@ -159,7 +159,7 @@ export function Finding04Useful() {
 export function Finding05Connections() {
   return (
     <FindingPlatformRankedBar
-      eyebrow="Finding 05 · Platform comparison"
+      eyebrow="Platform comparison"
       title="Where do people connect?"
       subtitle="Share of platform users reporting meaningful connections on each platform."
       metric="mcxn_rate"

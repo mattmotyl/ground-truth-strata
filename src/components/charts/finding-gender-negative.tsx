@@ -495,7 +495,7 @@ export function FindingGenderNegativeExperience() {
 
   return (
     <StrataChartFrame
-      eyebrow="Finding 06 · Demographic group differences"
+      eyebrow="Demographic group differences"
       title="Do men and women experience platforms differently?"
       subtitle={surveyQuestion || undefined}
       titleInCard
