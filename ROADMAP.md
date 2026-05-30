@@ -16,6 +16,20 @@ release.
 - **Cross-wave correlations** (e.g. wellbeing W1 vs W6 for the same
   panelist) require a new precompute pass — correlations.json only
   contains same-wave pairs. Track A task for a future session.
+- **Per-platform predictor correlations (restore the Platform
+  Correlations tab).** The /explore "Platform correlations" tab (F08,
+  time-per-day × wellbeing among users) is DISABLED in v0.1 (commented
+  out in `explore-views.tsx`) — its time-per-day predictor is
+  unvalidated, and it plus the binary `platform_user_<slug>` are the
+  only platform-indexed predictors that exist in correlations.json. To
+  give the tab real value, precompute (Track A, `build_correlations.R`)
+  weighted Spearman ρ between each per-platform item — the us018a–g
+  habit/attitude scale (W4–6), us002 frequency, and the
+  us003/us007/us010/us012 experience flags — among that platform's
+  users, against each respondent-level wellbeing measure. Caveats:
+  per-platform denominators (small-n suppression), us018 is
+  non-validated, binary flags read as point-biserial, all observational.
+  Re-enable the tab once the JSON exists and is validated.
 
 ## Deferred / future enhancements
 
@@ -31,20 +45,26 @@ release.
 - **Paired / repeated-measures SE** for longitudinal change claims
   (current significance rule uses the conservative independent-samples
   pooled SE).
-- **Deep linking / URL state persistence** for theme, question, wave,
-  platform selection, and zoom mode.
+- **URL state persistence (partial).** Shipped 2026-05-30: the landing
+  Start Here cards deep-link into /trends (`?category=<id>&q=<questionKey>`)
+  and /explore (`?tab=`); both pages read the query params and validate
+  against the registry/views, falling back to defaults. Still deferred:
+  persisting wave / platform / zoom / picker selections in the URL, and
+  deep-linking /platforms (platform picker) and /compare (theme/question).
 - **Grayscale-friendly fallback** for significance-colored bars.
 - **Loading states / Suspense fallbacks** for the large JSON files
   beyond the current plain "Loading…" text.
-- **/explore full correlation heatmap / corrplot scaffold.** The
-  /explore route currently shows only Finding 08. A full pairwise
-  correlation heatmap (Chart Type #5/#9 in CHART_COMPONENT_MAP.md,
-  sourced from correlations.json) is deferred — it was the larger half
-  of the original T3-B4 spec, split out so the rename could ship on its
-  own.
-- **/explore two-variable scatter with regression line.** A variable
-  picker that plots any two variables against each other with a fitted
-  regression line. Deferred alongside the correlation heatmap above.
+- **/explore correlation matrix + variable pairs — SHIPPED 2026-05-30.**
+  The /explore route now has a two-tab layout: a pairwise **correlation
+  matrix** (lower-triangle, ≤12 respondent-level vars, per-wave,
+  plain-language axis labels) and a **variable-pairs-over-time** view (ρ
+  per wave for any two respondent-level variables). The old Finding-08
+  "Platform correlations" view is disabled (see the per-platform
+  precompute item above). NOT built / not feasible: a true two-variable
+  **scatter with regression line** — correlations.json holds only
+  precomputed ρ per pair (no raw respondent points), so there is nothing
+  to scatter. A scatter would need a different, per-respondent data
+  export, which is out of scope for the precomputed-JSON architecture.
 - **/platforms — Usage frequency distribution section.** Listed in the
   original PHASE4_UI_SPEC /platforms checklist but dropped from the
   T3-B5 build scope. Would show the us002 frequency-of-use distribution
