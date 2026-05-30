@@ -50,8 +50,6 @@ export function SectionHabits({
     waveChoice !== null && availSet.has(waveChoice) ? waveChoice : latest;
 
   const datesByWave = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-
   const series =
     effectiveWave !== null
       ? platformHabitsToSeries(
@@ -204,7 +202,7 @@ export function SectionHabits({
       : '';
   const sourceNote =
     effectiveWave !== null
-      ? `Source: UAS panel ${waveLabel}, ${platformLabel} users. Weighted estimates. 95% CIs as error bars at bar tips and in the hover tooltip; n in tooltip. Platform habit/attitude scale, Waves 4–6 only; items are non-validated. Cells with n < 30 are suppressed by design${suppNote}. Precomputed JSON generated ${generatedAt}.`
+      ? `Source: UAS panel ${waveLabel}, ${platformLabel} users. Weighted estimates. 95% CIs as error bars at bar tips and in the hover tooltip; n in tooltip. Platform habit/attitude scale, Waves 4–6 only; items are non-validated. Cells with n < 30 are suppressed by design${suppNote}.`
       : undefined;
 
   return (

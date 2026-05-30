@@ -742,8 +742,6 @@ function CompareChart(props: CompareChartProps) {
 
   const waveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-
   // Subtitle = the verbatim survey question (3-tier lookup) for A/B/C.
   // Theme D demographics are panel-provided (no survey item), so they
   // use a short composition descriptor. The title (registry slug) is
@@ -931,7 +929,7 @@ function CompareChart(props: CompareChartProps) {
     tooltipBased
       ? 'in the hover tooltip'
       : 'as error bars at bar tips and in the hover tooltip'
-  }.${nClause}${extraNote} Cells with n < 30 are suppressed by design${suppressedNote}. Precomputed JSON generated ${generatedAt}.`;
+  }.${nClause}${extraNote} Cells with n < 30 are suppressed by design${suppressedNote}.`;
 
   // CSV — heatmap: one row per platform × option; stacked: per
   // platform × segment; ranked: per platform.

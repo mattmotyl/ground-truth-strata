@@ -40,9 +40,7 @@ export function SectionUsage({
     waveDatesByWave,
   );
 
-  const wavesWithData = data.filter((p) => p.value !== null).map((p) => p.wave);
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const waveSpan =
+  const wavesWithData = data.filter((p) => p.value !== null).map((p) => p.wave);  const waveSpan =
     waves.length > 0
       ? `Waves ${Math.min(...waves)}–${Math.max(...waves)}`
       : '';
@@ -74,7 +72,7 @@ export function SectionUsage({
     p.value === null,
   ]);
 
-  const sourceNote = `Source: UAS panel ${waveSpan} (2023–2025). Weighted estimates. 95% CI shown as the shaded band and in the hover tooltip; n shown in tooltip. Cells with n < 30 are suppressed by design. Precomputed JSON generated ${generatedAt}.`;
+  const sourceNote = `Source: UAS panel ${waveSpan} (2023–2025). Weighted estimates. 95% CI shown as the shaded band and in the hover tooltip; n shown in tooltip. Cells with n < 30 are suppressed by design.`;
 
   return (
     <ReportSection

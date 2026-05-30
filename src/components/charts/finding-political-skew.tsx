@@ -490,8 +490,6 @@ export function FindingPoliticalSkew() {
     if (!significant) return palette.moderate;
     return skew < 0 ? palette.liberal : palette.conservative;
   };
-
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
 
@@ -1168,7 +1166,7 @@ export function FindingPoliticalSkew() {
       methodologyFootnote={`Source: UAS panel Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)} (UAS514–UAS519). Weighted estimates. Significance vs. the national mean uses pooled SE (sqrt(SE_p² + SE_nat²)); a platform is colored as "skewed" only if |platform mean − national mean| > 1.96 × pooled SE. Error bars on the chart are the platform-user 95% CI. National mean for the selected wave (${formatNumber(
         chartData[0]?.nationalMean ?? 50,
         1,
-      )}) is computed from trends.json (variable=rate_self).${excludedFromChartNote} Precomputed JSON generated ${generatedAt}.`}
+      )}) is computed from trends.json (variable=rate_self).${excludedFromChartNote}`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

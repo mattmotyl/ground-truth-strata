@@ -61,8 +61,6 @@ export function SectionWellbeing({
   }, [shouldLoad, groupRows]);
 
   const datesByWave = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-
   const waves = groupRows ? wellbeingWaves(groupRows, platformSlug) : [];
   const waveColumns: WaveColumn[] = waves.map((w) => ({
     wave: w,
@@ -72,7 +70,7 @@ export function SectionWellbeing({
     ? platformWellbeingTable(groupRows, platformSlug, WELLBEING_ITEMS, waves)
     : [];
 
-  const sourceNote = `Source: UAS panel, ${platformLabel} users by survey wave. Weighted estimates; 95% CI and n shown on hover. Life-satisfaction items group the 7-point scale into Agree (5–7) / Neutral (4) / Disagree (1–3). “Feels negative most of the time” is reverse-coded: “Doesn’t feel negative” is the wellbeing-positive direction. Loneliness (UCLA 3-item) was measured in Waves 2, 5, and 6 only; blank cells in other waves mean the item was not asked, not suppression. Cells with n < 30 are suppressed (—) by design. Precomputed JSON generated ${generatedAt}.`;
+  const sourceNote = `Source: UAS panel, ${platformLabel} users by survey wave. Weighted estimates; 95% CI and n shown on hover. Life-satisfaction items group the 7-point scale into Agree (5–7) / Neutral (4) / Disagree (1–3). “Feels negative most of the time” is reverse-coded: “Doesn’t feel negative” is the wellbeing-positive direction. Loneliness (UCLA 3-item) was measured in Waves 2, 5, and 6 only; blank cells in other waves mean the item was not asked, not suppression. Cells with n < 30 are suppressed (—) by design.`;
 
   const csvHeaders = [
     'platform_slug',

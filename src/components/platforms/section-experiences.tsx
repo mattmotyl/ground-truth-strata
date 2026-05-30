@@ -125,8 +125,6 @@ export function SectionExperiences({
 
   const waves = meta.waves.map((w) => w.wave).sort((a, b) => a - b);
   const datesByWave = new Map(meta.waves.map((w) => [w.wave, w.dates]));
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-
   const trends = platformExperienceTrends(
     rows,
     platformSlug,
@@ -147,7 +145,7 @@ export function SectionExperiences({
 
   const followUpItems = EXPERIENCE_ITEMS.filter((i) => i.followUps.length > 0);
 
-  const sourceNote = `Source: UAS panel Waves 1–6, ${platformLabel} users. Weighted estimates; 95% CI as shaded bands on the trend charts and on hover. Trend arrows compare the first and last waves with data using a 95% significance rule (↑/↓ only when the change exceeds its margin of error; → otherwise). Follow-up breakdowns are among users who reported the experience; respondents could select multiple options, so percentages may sum to more than 100%. Cells with n < 30 are suppressed by design. Precomputed JSON generated ${generatedAt}.`;
+  const sourceNote = `Source: UAS panel Waves 1–6, ${platformLabel} users. Weighted estimates; 95% CI as shaded bands on the trend charts and on hover. Trend arrows compare the first and last waves with data using a 95% significance rule (↑/↓ only when the change exceeds its margin of error; → otherwise). Follow-up breakdowns are among users who reported the experience; respondents could select multiple options, so percentages may sum to more than 100%. Cells with n < 30 are suppressed by design.`;
 
   // CSV — the four experience-rate trends in long format.
   const csvHeaders = [

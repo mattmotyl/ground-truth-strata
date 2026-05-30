@@ -410,7 +410,6 @@ export function PlatformMetricTrend({
     );
   }
 
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const allWaves = meta.waves.map((w) => w.wave);
   const subtitle = formatSurveyQuestion(
     surveyQuestionFor(surveyVar, questionTexts, meta),
@@ -420,7 +419,7 @@ export function PlatformMetricTrend({
       ...allWaves,
     )}, 2023–2025. Weighted estimates among each platform’s users. ` +
     '95% CIs available on hover. Cells with n < 30 are suppressed by ' +
-    `design. Precomputed JSON generated ${generatedAt}.`;
+    'design.';
 
   return (
     <PlatformFanChart
@@ -530,7 +529,6 @@ export function RespondentTrend({
   })();
   const isZoomed = yMode !== 'full';
 
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const title = respondentTitle(metaVar);
   const subtitle = formatSurveyQuestion(
     surveyQuestionFor(variableName, questionTexts, meta),
@@ -541,8 +539,7 @@ export function RespondentTrend({
     : `UAS panel waves ${Math.min(...waveList)}–${Math.max(...waveList)}. `;
   const sourceNote =
     `Source: ${waveClause}Population-level weighted estimates. 95% CIs ` +
-    `available on hover. Cells with n < 30 are suppressed by design. ` +
-    `Precomputed JSON generated ${generatedAt}.`;
+    `available on hover. Cells with n < 30 are suppressed by design.`;
   const fullSourceNote = evt.appendContext(sourceNote);
   const interpretation = `[WORK IN PROGRESS] ${title} over time. ${
     isSingleWave
@@ -851,7 +848,6 @@ export function PairedAttitudeTrend({
   })();
   const isZoomed = yMode !== 'full';
 
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const subtitleText =
     subtitle ??
     formatSurveyQuestion(surveyQuestionFor(pair[0], questionTexts, meta));
@@ -860,8 +856,7 @@ export function PairedAttitudeTrend({
     `Source: UAS panel waves ${
       waveList.length ? Math.min(...waveList) : '—'
     }–${waveList.length ? Math.max(...waveList) : '—'}. ` +
-    'Population-level weighted means. 95% CIs available on hover. ' +
-    `Precomputed JSON generated ${generatedAt}.`;
+    'Population-level weighted means. 95% CIs available on hover.';
   const fullSourceNote = evt.appendContext(sourceNote);
 
   const csvHeaders = [

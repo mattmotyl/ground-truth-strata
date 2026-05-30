@@ -212,8 +212,6 @@ export function FindingGenderNegativeExperience() {
     const palette = STRATA_PALETTES.qualitative8;
     return palette[idx % palette.length];
   };
-
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const wavesSpan =
     waves.length > 0
       ? `Wave ${Math.min(...waves)}–Wave ${Math.max(...waves)}`
@@ -512,7 +510,7 @@ export function FindingGenderNegativeExperience() {
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote=""
-      sourceNote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). Weighted estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted. Precomputed JSON generated ${generatedAt}.`}
+      sourceNote={`Source: UAS panel ${wavesSpan} (UAS${meta.waves.find((w) => w.wave === waves[0])?.uas_num ?? '?'}–UAS${meta.waves.find((w) => w.wave === waves[waves.length - 1])?.uas_num ?? '?'}). Weighted estimates. Error bars and tooltip show 95% CIs. Suppression rule: cells with n < 30 omitted.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

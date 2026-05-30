@@ -82,8 +82,6 @@ export function WellbeingPlatformTrend({
 
   const rows = buildOutcomeRateRows(groupRows, outcome, bucket, meta);
   const waves = [...new Set(rows.map((r) => r.wave))].sort((a, b) => a - b);
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-
   // Value framing for copy: binary loneliness vs. the Likert agree band
   // (relabeled for the reverse-coded ls002i).
   const valueLabel =
@@ -104,7 +102,7 @@ export function WellbeingPlatformTrend({
     `Source: UAS panel ${waveRange}. Weighted estimates among each ` +
     `platform’s users (conditional on platform use), shown as ${valueLabel}.` +
     `${reverseClause} 95% CIs available on hover. Cells with n < 30 are ` +
-    `suppressed by design. Precomputed JSON generated ${generatedAt}.`;
+    `suppressed by design.`;
 
   const interpretation = `[WORK IN PROGRESS] ${title} over time, split by platform. Each line is ${valueLabel} among that platform's users, wave by wave; the table and tooltip carry the 95% CIs and user counts. Estimates are conditional on platform use.${reverseClause}`;
 

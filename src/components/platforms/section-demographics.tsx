@@ -42,9 +42,7 @@ export function SectionDemographics({
     DEMOGRAPHIC_VARS,
     waves,
   );
-
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
-  const sourceNote = `Source: UAS panel, ${platformLabel} users by survey wave. Weighted estimates; 95% CI and n shown on hover. Cells with n < 30 are suppressed (—) by design. Percentages within each variable group may not sum to 100% due to rounding, missing values, or suppressed cells. Race/ethnicity categories are non-Hispanic except “Hispanic.” Precomputed JSON generated ${generatedAt}.`;
+  const sourceNote = `Source: UAS panel, ${platformLabel} users by survey wave. Weighted estimates; 95% CI and n shown on hover. Cells with n < 30 are suppressed (—) by design. Percentages within each variable group may not sum to 100% due to rounding, missing values, or suppressed cells. Race/ethnicity categories are non-Hispanic except “Hispanic.”`;
 
   const csvHeaders = [
     'platform_slug',

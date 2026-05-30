@@ -579,8 +579,6 @@ export function FindingPlatformRankedBar({
     selectedWaveSorted: sortedRows,
     allWaveRows: allRows,
   });
-
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === effectiveWave)?.dates ?? '';
   const wavesSpan = `Wave ${Math.min(...availableWaves)}–Wave ${Math.max(...availableWaves)}`;
@@ -808,7 +806,7 @@ export function FindingPlatformRankedBar({
   const methodologyFootnoteText =
     `Source: UAS panel ${wavesSpan} (UAS514–UAS519), 2023–2025. Weighted estimates. 95% CIs shown as error bars at bar tips and in hover tooltip. n shown in tooltip is the count of respondents asked about each platform. Cells with n < 30 are suppressed by design${
       suppressedNote ? ` (this wave: ${suppressedNote})` : ''
-    }. Precomputed JSON generated ${generatedAt}.`;
+    }.`;
 
   const viewModeToggle = (
     <div className="space-y-2">
