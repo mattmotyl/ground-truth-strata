@@ -27,19 +27,45 @@ import {
 import { WellbeingPlatformTrend } from './trends-wellbeing-trend';
 import { TrendsCategoryPicker } from './trends-category-picker';
 
+// Resolve a (possibly deep-linked) category + question to a valid pair,
+// falling back to the platform/usage default. An unknown question within
+// a valid category drops to that category's first question.
+function resolveInitial(
+  categoryId?: string,
+  questionKey?: string,
+): { categoryId: string; questionKey: string } {
+  const cat =
+    TRENDS_CATEGORIES.find((c) => c.id === categoryId) ?? TRENDS_CATEGORIES[0];
+  const q =
+    (questionKey && cat.questions.find((x) => x.key === questionKey)) ||
+    cat.questions[0];
+  return { categoryId: cat.id, questionKey: q.key };
+}
+
 // /trends orchestrator (T3-B7 redesign). Two-step category → question
 // picker; F01 platform-usage is the default landing view. Each renderer
 // owns its own platform/wave/zoom state (see ROADMAP for the
-// cross-category persistence follow-up).
-export function TrendsExplorer() {
+// cross-category persistence follow-up). `initialCategory` / `initialQuestion`
+// support deep-linking from the landing Start Here cards (?category=&q=).
+export function TrendsExplorer({
+  initialCategory,
+  initialQuestion,
+}: {
+  initialCategory?: string;
+  initialQuestion?: string;
+} = {}) {
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [trends, setTrends] = useState<TrendRow[] | null>(null);
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [events, setEvents] = useState<ContextualEventsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [categoryId, setCategoryId] = useState<string>('platform');
-  const [questionKey, setQuestionKey] = useState<string>('usage');
+  const [categoryId, setCategoryId] = useState<string>(
+    () => resolveInitial(initialCategory, initialQuestion).categoryId,
+  );
+  const [questionKey, setQuestionKey] = useState<string>(
+    () => resolveInitial(initialCategory, initialQuestion).questionKey,
+  );
 
   useEffect(() => {
     Promise.all([

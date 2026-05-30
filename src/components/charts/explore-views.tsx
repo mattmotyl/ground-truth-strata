@@ -25,8 +25,12 @@ const VIEWS: Array<{ id: ExploreView; label: string }> = [
   { id: 'matrix', label: 'Correlation matrix' },
 ];
 
-export function ExploreViews() {
-  const [view, setView] = useState<ExploreView>('pairs');
+// `initialTab` supports deep-linking from the landing Start Here card
+// (?tab=matrix). Anything other than a known view falls back to 'pairs'.
+export function ExploreViews({ initialTab }: { initialTab?: string } = {}) {
+  const [view, setView] = useState<ExploreView>(
+    initialTab === 'matrix' || initialTab === 'pairs' ? initialTab : 'pairs',
+  );
 
   return (
     <div className="space-y-2">
