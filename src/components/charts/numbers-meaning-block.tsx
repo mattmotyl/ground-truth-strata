@@ -2,6 +2,12 @@
 
 import type { ReactNode } from 'react';
 
+// Provisional-copy disclaimer. Interpretation prose is Matt-authored and not
+// yet finalized; until a box's `isPlaceholder` flag is cleared we flag it two
+// ways (top strip + faint diagonal watermark) so viewers heed the caution.
+const WIP_DISCLAIMER =
+  'Work in progress — interpretation is provisional; confirm all claims against the data.';
+
 export interface StatRow {
   key: string;
   label: string;
@@ -77,26 +83,47 @@ export function NumbersMeaningBlock({
         )}
       </div>
 
-      <div className="bg-white p-5 space-y-3">
-        <div className="flex items-center gap-2">
+      <div className="relative overflow-hidden bg-white flex flex-col">
+        {isPlaceholder ? (
+          <>
+            {/* Faint diagonal watermark behind the interpretation text.
+             * Centered (not clipped via overflow) so it survives the
+             * overflow:visible PNG-export pass. Decorative only. */}
+            <div
+              aria-hidden
+              className="pointer-events-none select-none absolute inset-0 z-0 flex items-center justify-center"
+            >
+              <span
+                className="whitespace-nowrap font-black uppercase tracking-[0.3em] text-2xl sm:text-4xl text-mulberry/[0.25] -rotate-[18deg]"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                Work in progress
+              </span>
+            </div>
+            {/* Full-width caution strip flush with the column edges. */}
+            <div
+              className="relative z-10 flex items-start gap-2 border-b border-amber-300/70 bg-amber-50 px-5 py-2 text-amber-900"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              <span aria-hidden className="leading-none">
+                ⚠
+              </span>
+              <span className="text-[11px] uppercase tracking-wide leading-snug">
+                {WIP_DISCLAIMER}
+              </span>
+            </div>
+          </>
+        ) : null}
+        <div className="relative z-10 p-5 space-y-3">
           <p
             className="text-xs text-slate uppercase tracking-wide"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
             What the numbers mean
           </p>
-          {isPlaceholder ? (
-            <span
-              className="text-[10px] uppercase tracking-wider bg-mulberry/10 text-mulberry px-2 py-0.5 rounded"
-              style={{ fontFamily: 'var(--font-mono)' }}
-              title="Matt has not yet reviewed this interpretation."
-            >
-              Work in progress
-            </span>
-          ) : null}
-        </div>
-        <div className="text-base text-ink leading-relaxed">
-          {interpretation}
+          <div className="text-base text-ink leading-relaxed">
+            {interpretation}
+          </div>
         </div>
       </div>
     </div>
