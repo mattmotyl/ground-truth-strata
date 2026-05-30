@@ -13,12 +13,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import {
-  loadCorrelations,
-  loadMeta,
-  loadQuestionTexts,
-  type QuestionTextsJson,
-} from '@/lib/strata-data';
+import { loadCorrelations, loadMeta } from '@/lib/strata-data';
 import type {
   CorrelationRow,
   MetaJson,
@@ -29,10 +24,6 @@ import {
   formatNumber,
   fullWaveLabel,
 } from '@/lib/strata-formatters';
-import {
-  formatSurveyQuestion,
-  surveyQuestionFor,
-} from '@/lib/strata-survey';
 import {
   DEFAULT_CHART_PLATFORMS,
   PlatformMultiselect,
@@ -59,34 +50,74 @@ import { StrataChartFrame } from './strata-chart-frame';
 // feedback_significance_rule.md and T2-10.
 // =====================================================================
 
+// Plain-language outcome labels (no variable codes — codes surface only
+// in THE NUMBERS caption and CSV). ls002i is reverse-coded in
+// correlations.json (reversal applied at data load), so "higher" now
+// means the respondent does NOT feel negative — i.e. wellbeing-positive.
+// Its direction is therefore positive_is_better, which FLIPS the
+// directional reading from the earlier code (which treated ls002i as
+// positive_is_worse under its raw "negative feeling" framing). Flagged
+// for Matt: this aligns the sign with the reverse-coded data + the new
+// "Doesn't Feel Negative" label.
 const OUTCOME_OPTIONS: Array<{
   variable: string;
   label: string;
   direction: 'positive_is_worse' | 'positive_is_better';
 }> = [
+  { variable: 'ex003_lonely', label: 'Lonely', direction: 'positive_is_worse' },
   {
-    variable: 'ex003a',
-    label: 'Loneliness — lacks companionship (ex003a)',
-    direction: 'positive_is_worse',
+    variable: 'ls002l',
+    label: 'Satisfied With Life Overall',
+    direction: 'positive_is_better',
   },
   {
-    variable: 'ex003b',
-    label: 'Loneliness — feels left out (ex003b)',
-    direction: 'positive_is_worse',
+    variable: 'ls002j',
+    label: 'Life Is Going Well',
+    direction: 'positive_is_better',
   },
   {
-    variable: 'ex003c',
-    label: 'Loneliness — feels isolated (ex003c)',
-    direction: 'positive_is_worse',
+    variable: 'ls002k',
+    label: 'Life Is Going Well (In Most Ways)',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002d',
+    label: 'Satisfied With Mental Health',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002c',
+    label: 'Satisfied With Social Life',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002g',
+    label: 'Satisfied With Family Life',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002a',
+    label: 'Satisfied With Physical Health',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002b',
+    label: 'Satisfied With Financial Situation',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002e',
+    label: 'Satisfied With Leisure Time',
+    direction: 'positive_is_better',
+  },
+  {
+    variable: 'ls002f',
+    label: 'Satisfied With Work or Daily Activities',
+    direction: 'positive_is_better',
   },
   {
     variable: 'ls002i',
-    label: 'Life satisfaction — negative feeling (ls002i, reverse-coded)',
-    direction: 'positive_is_worse',
-  },
-  {
-    variable: 'ls002l',
-    label: 'Life satisfaction — overall (ls002l)',
+    label: "Doesn't Feel Negative Most of the Time (reverse-coded)",
     direction: 'positive_is_better',
   },
 ];
@@ -151,10 +182,8 @@ function BrokenXAxisIndicator({ visible }: { visible: boolean }) {
 export function FindingUsageWellbeing() {
   const [rows, setRows] = useState<CorrelationRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
-  const [questionTexts, setQuestionTexts] =
-    useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [outcomeVar, setOutcomeVar] = useState<string>('ex003c');
+  const [outcomeVar, setOutcomeVar] = useState<string>('ls002l');
   // Wave: time_per_day_minutes exists in W4 and W5 in correlations.json
   // (UAS519/W6 has zero entries for this variable, so it's correctly
   // absent from the precompute). Default to the most recent available
@@ -188,9 +217,8 @@ export function FindingUsageWellbeing() {
   const chartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    Promise.all([loadCorrelations(), loadMeta(), loadQuestionTexts()])
-      .then(([all, m, qt]) => {
-        setQuestionTexts(qt);
+    Promise.all([loadCorrelations(), loadMeta()])
+      .then(([all, m]) => {
         // Keep only correlations between any time_per_day_min_<slug>
         // and any of our outcome candidates.
         const outcomeVars = new Set(OUTCOME_OPTIONS.map((o) => o.variable));
@@ -318,7 +346,6 @@ export function FindingUsageWellbeing() {
   })();
   const isZoomed = xMode !== 'full';
 
-  const generatedAt = new Date(meta.generated_at).toLocaleDateString('en-US');
   const selectedWaveDates =
     meta.waves.find((w) => w.wave === selectedWave)?.dates ?? '';
 
@@ -385,7 +412,7 @@ export function FindingUsageWellbeing() {
       : `Time-per-day correlations against this outcome are available only in Wave ${selectedWave} in the precomputed JSON; other waves do not have overlapping respondents on both items.`;
   const caveat = `Spearman ρ is bounded by [-1, +1]; for context, |ρ| < 0.10 is typically considered very small (often within sampling noise) and |ρ| < 0.30 is still small. This is an observational survey: associations do not imply causation. ${waveAvailabilityClause}`;
   const interpretationText = [
-    `Outcome variable: ${selectedOutcome.label}. ${selectedOutcome.direction === 'positive_is_worse' ? 'Higher scores indicate WORSE wellbeing.' : 'Higher scores indicate BETTER wellbeing.'}`,
+    `Wellbeing measure: ${selectedOutcome.label}. ${selectedOutcome.direction === 'positive_is_worse' ? 'Higher scores indicate WORSE wellbeing.' : 'Higher scores indicate BETTER wellbeing.'}`,
     notableSection,
     nullSection,
     caveat,
@@ -552,7 +579,7 @@ export function FindingUsageWellbeing() {
           className="text-xs text-slate uppercase tracking-wide"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          Wellbeing outcome
+          Wellbeing measure
         </p>
         <fieldset className="flex flex-col gap-1 text-sm">
           <legend className="sr-only">Wellbeing outcome variable</legend>
@@ -715,35 +742,24 @@ export function FindingUsageWellbeing() {
         style={{ fontFamily: 'var(--font-mono)' }}
       >
         Spearman ρ between time spent on each platform (minutes per
-        day) and the selected wellbeing outcome at W{selectedWave}.
+        day) and the selected wellbeing outcome ({selectedOutcome.variable})
+        at W{selectedWave}.
       </p>
     </>
   );
 
-  // F08 plots a correlation between TWO variables: a composite
-  // time-per-day-in-minutes measure (built from us019_hours +
-  // us019_minutes; see strata-composites.ts) and the selected
-  // wellbeing/loneliness outcome. Surface both as a single bold
-  // header — predictor first, outcome second — so a reader sees
-  // exactly what's being correlated.
-  const timeInfo = surveyQuestionFor(
-    'time_per_day_minutes',
-    questionTexts,
-    meta,
-  );
-  const outcomeInfo = surveyQuestionFor(outcomeVar, questionTexts, meta);
-  const surveyQuestion = [
-    timeInfo ? `Predictor — ${formatSurveyQuestion(timeInfo)}` : '',
-    outcomeInfo ? `Outcome — ${formatSurveyQuestion(outcomeInfo)}` : '',
-  ]
-    .filter(Boolean)
-    .join('  ·  ');
+  // F08 correlates a fixed predictor — self-reported daily minutes on
+  // each platform — against the selected wellbeing measure. The bold
+  // header states the relationship in "outcome ~ predictor" form (no
+  // predictor/outcome jargon); the subtitle explains what each bar is.
+  const surveyHeader = `${selectedOutcome.label} ~ Self-Reported Daily Minutes on Platform`;
 
   return (
     <StrataChartFrame
       eyebrow="Finding 08 · Correlations"
       title="Does using social media more mean feeling worse?"
-      subtitle={surveyQuestion || undefined}
+      subtitle="Each bar shows the correlation between daily time spent on that platform and the selected wellbeing outcome."
+      surveyQuestion={surveyHeader}
       titleInCard
       chart={chart}
       chartRef={chartRef}
@@ -753,7 +769,7 @@ export function FindingUsageWellbeing() {
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote=""
-      sourceNote={`Source: UAS panel ${fullWaveLabel(selectedWave, selectedWaveDates)} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Spearman ρ (per the Phase 3 convention — do not relabel as Pearson). Weighted ρ shown. This is an observational survey — associations do not imply causation. Precomputed JSON generated ${generatedAt}.`}
+      sourceNote={`Source: UAS panel ${fullWaveLabel(selectedWave, selectedWaveDates)} (UAS${meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}). Weighted Spearman ρ, a rank-based correlation measure. Correlations are per-wave and based on weighted survey estimates.`}
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

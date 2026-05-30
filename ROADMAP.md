@@ -4,6 +4,19 @@ Deferred enhancements that are intentionally out of scope for v0.1.0.
 Tracked here so they are not lost; none of these block the current
 release.
 
+## Data-integrity follow-ups (pre-deployment)
+
+- **correlations.json contains AI_ATTITUDES tokens** (`ai_useds*`,
+  `q_ai8a_*`) despite the `EXCLUDED_DOMAINS` lock that should strip the
+  AI domain from all outputs. The /explore variable picker and heatmap
+  are meta-driven and do not surface them (they are option-exploded
+  columns absent from meta.json), so they do not leak into the UI — but
+  the underlying file violates the locked AI v0.1.0 exclusion. Rebuild
+  the correlations pipeline to strip these before deployment.
+- **Cross-wave correlations** (e.g. wellbeing W1 vs W6 for the same
+  panelist) require a new precompute pass — correlations.json only
+  contains same-wave pairs. Track A task for a future session.
+
 ## Deferred / future enhancements
 
 - **/compare heatmap "Show top 8 / full table" toggle.** The Theme A
