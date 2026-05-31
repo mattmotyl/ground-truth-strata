@@ -26,10 +26,30 @@ const jetBrains = JetBrains_Mono({
   display: 'swap',
 });
 
+const SITE_DESCRIPTION =
+  'A data explorer for the six-wave Understanding America Study panel on social media and technology, 2023–2025.';
+
 export const metadata: Metadata = {
-  title: 'Ground Truth Strata',
-  description:
-    'A data explorer for the six-wave Understanding America Study panel on social media and technology, 2023–2025.',
+  metadataBase: new URL('https://strata.mattmotyl.com'),
+  title: {
+    default: 'Ground Truth Strata',
+    template: '%s · Ground Truth Strata',
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: 'Ground Truth Strata',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'Ground Truth Strata',
+    url: 'https://strata.mattmotyl.com',
+    title: 'Ground Truth Strata',
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Ground Truth Strata',
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({

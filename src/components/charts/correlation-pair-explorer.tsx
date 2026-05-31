@@ -34,6 +34,7 @@ import {
   waveDateRangeLabel,
 } from '@/lib/strata-formatters';
 import { StrataChartFrame } from './strata-chart-frame';
+import { GlossaryTerm } from '@/components/ui/glossary-term';
 
 // =====================================================================
 // /explore — Variable-pair correlation explorer.
@@ -476,7 +477,15 @@ export function CorrelationPairExplorer() {
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote=""
-      sourceNote={`Source: UAS panel. Weighted Spearman ρ, a rank-based correlation measure. Correlations are per-wave and based on weighted survey estimates.${waveCoverageNote}`}
+      sourceNote={
+        <>
+          Source: UAS panel. Weighted{' '}
+          <GlossaryTerm slug="spearman">Spearman ρ</GlossaryTerm>, a
+          rank-based correlation measure. Correlations are per-wave and based
+          on <GlossaryTerm slug="weighted-estimate">weighted survey
+          estimates</GlossaryTerm>.{waveCoverageNote}
+        </>
+      }
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle: `Correlation between ${predLabel} and ${outLabel} (weighted Spearman ρ)`,

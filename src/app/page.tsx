@@ -68,8 +68,9 @@ export default function HomePage() {
                 02
               </span>
               <span>
-                Charts default to <em>weighted</em> estimates with 95%
-                confidence intervals.
+                Charts are interactive — hover any point for its exact
+                value, confidence interval, and sample size, and download
+                any chart or its data.
               </span>
             </li>
             <li className="flex gap-3">
@@ -95,14 +96,15 @@ export default function HomePage() {
                 04
               </span>
               <span>
-                Cells with fewer than 30 respondents are suppressed by
-                design.{' '}
+                I flag technical terms with a dotted underline. Hover for a
+                quick explanation, or open the{' '}
                 <Link
-                  href="/about"
+                  href="/glossary"
                   className="text-mulberry hover:text-plum underline"
                 >
-                  Read the methodology →
-                </Link>
+                  glossary
+                </Link>{' '}
+                for longer ones with examples.
               </span>
             </li>
           </ol>

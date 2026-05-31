@@ -7,6 +7,7 @@ import {
   type StatRow,
 } from './numbers-meaning-block';
 import { type CitationMetadata } from './citation-widget';
+import { GlossaryText } from '@/components/ui/glossary-text';
 
 interface StrataChartFrameProps {
   eyebrow: string;
@@ -129,7 +130,7 @@ export function StrataChartFrame({
                 className="text-xs text-slate leading-relaxed pt-3 border-t border-mist"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                {sourceNote}
+                <GlossaryText text={sourceNote} />
               </p>
             ) : null}
           </div>
@@ -148,7 +149,7 @@ export function StrataChartFrame({
               className="text-xs text-slate leading-relaxed max-w-2xl"
               style={{ fontFamily: 'var(--font-mono)' }}
             >
-              {methodologyFootnote}
+              <GlossaryText text={methodologyFootnote} />
             </p>
             <ChartActions
               chartRef={chartRef}
