@@ -3,6 +3,7 @@ import { DM_Sans, DM_Serif_Display, JetBrains_Mono } from 'next/font/google';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 
 const dmSans = DM_Sans({
@@ -68,6 +69,7 @@ export default function RootLayout({
           <main className="flex-1 flex flex-col">{children}</main>
           <SiteFooter />
         </TooltipProvider>
+        <Analytics />
       </body>
     </html>
   );
