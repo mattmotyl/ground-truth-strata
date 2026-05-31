@@ -93,6 +93,20 @@ export default function HomePage() {
                 for longer ones with examples.
               </span>
             </li>
+            <li className="flex gap-3">
+              <span
+                aria-hidden
+                className="text-mulberry shrink-0"
+                style={{ fontFamily: 'var(--font-mono)' }}
+              >
+                04
+              </span>
+              <span>
+                Charts are interactive — hover any point for its exact
+                value, confidence interval, and sample size, and download
+                any chart or its data.
+              </span>
+            </li>
           </ol>
         </div>
       </section>
