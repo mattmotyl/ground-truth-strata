@@ -324,6 +324,14 @@ tryCatch({
         if (length(groups_present) == 0) next
 
         for (g in groups_present) {
+          # Skip the unconsumed "Non-user" side of platform_user_* groupings.
+          # The UI (getPlatformOutcomeComparison in strata-data.ts) only ever
+          # reads group == "User"; "Non-user" is never surfaced anywhere. This
+          # drops ~35% of group_comparisons.json (~2.4 MB) with no UI impact.
+          # One-line revert if a future "users vs non-users" view is added.
+          if (startsWith(g_col, "platform_user_") &&
+              identical(as.character(g), "Non-user")) next
+
           sub <- !is.na(g_wave) & g_wave == g
           x_s <- x_wave[sub]
           w_s <- wt_wave[sub]
