@@ -22,6 +22,7 @@ import { CHART_FONTS } from '@/lib/strata-charts';
 import { formatN, formatNumber, fullWaveLabel } from '@/lib/strata-formatters';
 import { surveyQuestionFor } from '@/lib/strata-survey';
 import { StrataChartFrame } from './strata-chart-frame';
+import { GlossaryTerm } from '@/components/ui/glossary-term';
 
 // =====================================================================
 // /explore — Correlation matrix (heatmap).
@@ -527,12 +528,20 @@ export function CorrelationHeatmap() {
       isPlaceholderInterpretation
       interpretation={interpretationText}
       methodologyFootnote=""
-      sourceNote={`Source: UAS panel ${fullWaveLabel(
-        selectedWave,
-        selectedWaveDates,
-      )} (UAS${
-        meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'
-      }). Weighted Spearman ρ, a rank-based correlation measure. Correlations are per-wave and based on weighted survey estimates.`}
+      sourceNote={
+        <>
+          Source: UAS panel{' '}
+          {fullWaveLabel(selectedWave, selectedWaveDates)} (UAS
+          {meta.waves.find((w) => w.wave === selectedWave)?.uas_num ?? '?'}).
+          Weighted <GlossaryTerm slug="spearman">Spearman ρ</GlossaryTerm>, a
+          rank-based correlation measure. Correlations are per-wave and based
+          on{' '}
+          <GlossaryTerm slug="weighted-estimate">
+            weighted survey estimates
+          </GlossaryTerm>
+          .
+        </>
+      }
       csv={{ headers: csvHeaders, rows: csvRows }}
       citation={{
         findingTitle:

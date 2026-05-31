@@ -68,19 +68,6 @@ export default function HomePage() {
                 02
               </span>
               <span>
-                Charts default to <em>weighted</em> estimates with 95%
-                confidence intervals.
-              </span>
-            </li>
-            <li className="flex gap-3">
-              <span
-                aria-hidden
-                className="text-mulberry shrink-0"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                03
-              </span>
-              <span>
                 Read the <em>What the numbers mean</em> column for
                 plain-language context. Every chart shows its{' '}
                 <em>n</em> and methodology footnote.
@@ -92,17 +79,18 @@ export default function HomePage() {
                 className="text-mulberry shrink-0"
                 style={{ fontFamily: 'var(--font-mono)' }}
               >
-                04
+                03
               </span>
               <span>
-                Cells with fewer than 30 respondents are suppressed by
-                design.{' '}
+                I flag technical terms with a dotted underline. Hover for a
+                quick explanation, or open the{' '}
                 <Link
-                  href="/about"
+                  href="/glossary"
                   className="text-mulberry hover:text-plum underline"
                 >
-                  Read the methodology →
-                </Link>
+                  glossary
+                </Link>{' '}
+                for longer ones with examples.
               </span>
             </li>
           </ol>

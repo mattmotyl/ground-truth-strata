@@ -3,6 +3,8 @@
 import { type ReactNode, type RefObject } from 'react';
 import Link from 'next/link';
 
+import { GlossaryText } from '@/components/ui/glossary-text';
+
 // Shared section card for the /platforms report card. Each section is an
 // anchor target for the jump-nav (id), a titled white card holding a
 // chart or table, an optional source note, and at most one or two
@@ -87,7 +89,7 @@ export function ReportSection({
             className="text-xs text-slate leading-relaxed pt-3 border-t border-mist"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            {sourceNote}
+            <GlossaryText text={sourceNote} />
           </p>
         ) : null}
       </div>

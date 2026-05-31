@@ -51,6 +51,13 @@ export function SiteFooter() {
               className="text-mulberry hover:text-plum transition-colors"
             >
               Full methodology and attribution →
+            </Link>{' '}
+            ·{' '}
+            <Link
+              href="/glossary"
+              className="text-mulberry hover:text-plum transition-colors"
+            >
+              Glossary →
             </Link>
           </p>
         </div>
