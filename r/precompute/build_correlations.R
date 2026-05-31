@@ -149,8 +149,14 @@ tryCatch({
   }, meta$variables)
 
   # MULTISELECT exploded vars — one input per expansion_column.
+  # Honor excluded_from_outputs here exactly as dict_inputs does above:
+  # without this, AI multiselect parents (ai_used, q_ai8a_1..7) — all flagged
+  # excluded_from_outputs = TRUE — leaked their ~102 option-columns into the
+  # correlations even though AI is out of scope. gms00N (PLATFORM_USE,
+  # excluded_from_outputs = FALSE) is unaffected and stays in.
   multiselect_parents <- Filter(function(v) {
-    identical(v$data_availability, "in_cleaned_csv_exploded")
+    identical(v$data_availability, "in_cleaned_csv_exploded") &&
+      !isTRUE(v$excluded_from_outputs)
   }, meta$variables)
   multiselect_inputs <- unlist(lapply(multiselect_parents, function(v) {
     children <- unlist(v$expansion_columns)
