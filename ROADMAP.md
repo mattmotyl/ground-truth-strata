@@ -6,13 +6,14 @@ release.
 
 ## Data-integrity follow-ups (pre-deployment)
 
-- **correlations.json contains AI_ATTITUDES tokens** (`ai_useds*`,
-  `q_ai8a_*`) despite the `EXCLUDED_DOMAINS` lock that should strip the
-  AI domain from all outputs. The /explore variable picker and heatmap
-  are meta-driven and do not surface them (they are option-exploded
-  columns absent from meta.json), so they do not leak into the UI — but
-  the underlying file violates the locked AI v0.1.0 exclusion. Rebuild
-  the correlations pipeline to strip these before deployment.
+- **[RESOLVED 2026-05-30, commit 0357c4b] correlations.json AI_ATTITUDES
+  tokens** (`ai_useds*`, `q_ai8a_*`). Root cause was NOT `EXCLUDED_DOMAINS`
+  (that constant was declared in `build_correlations.R` but never applied —
+  dead code): the `multiselect_parents` filter omitted the
+  `excluded_from_outputs` check that `dict_inputs` already had, so the AI
+  exploded option-columns (flagged `excluded_from_outputs: true`) leaked in.
+  Fixed by adding that check; regenerated correlations.json 5.30 → 2.00 MB.
+  `gms00N` (PLATFORM_USE) intentionally retained.
 - **Cross-wave correlations** (e.g. wellbeing W1 vs W6 for the same
   panelist) require a new precompute pass — correlations.json only
   contains same-wave pairs. Track A task for a future session.
