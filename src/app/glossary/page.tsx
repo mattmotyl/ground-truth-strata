@@ -34,9 +34,10 @@ export default function GlossaryPage() {
           not scarier.
         </p>
         <p className="text-sm text-slate italic leading-relaxed">
-          The plain-language examples and lighter asides below are written to
-          aid understanding and are being reviewed for accuracy. Definitions
-          marked “draft” are still being finalized.
+          Each entry pairs a precise definition with a plain-language example
+          (and the occasional lighter aside) to make the idea click — the
+          examples illustrate the term rather than restate the formal
+          methodology.
         </p>
       </header>
 
