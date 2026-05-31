@@ -47,7 +47,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'A confidence interval is a range around a survey estimate that reflects sampling uncertainty — the fact that we surveyed a sample, not every American. A 95% confidence interval is constructed so that, across many repeated samples, about 95% of such intervals would contain the true population value. Wider intervals signal more uncertainty (often from smaller samples); narrower intervals signal more precision. It is not the probability that the true value falls inside this one particular interval.',
     example:
       'If we estimate 62% of adults use a platform with a 95% interval of 59%–65%, read it as: "our best guess is 62%, and the true number is very plausibly somewhere between 59 and 65." It is the estimate wearing a margin of safety rather than pretending to be a single exact number — the honest version of "about 62%, give or take."',
-    status: 'draft',
+    status: 'final',
     related: ['margin-of-error', 'weighted-estimate'],
   },
   {
@@ -58,7 +58,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'An effect size measures how large a relationship is, separately from whether it is statistically detectable. For the correlations in Strata, the relevant effect size is the magnitude of ρ — how far it sits from zero, regardless of sign. Strata reads |ρ| in four bands: negligible (below 0.1), weak (0.1 to 0.3), moderate (0.3 to 0.5), and strong (0.5 or above). Negligible associations are drawn in muted grey so that noise-level relationships do not read as findings. In practice, correlations in survey data like this tend to be modest: most here fall below 0.4, so a “moderate” association is often the strongest you will encounter — which is normal, not disappointing.',
     example:
       'Direction tells you which way two things move together; effect size tells you how much. A ρ of 0.05 is technically positive but so faint that it may just be a mirage in the data. A ρ of 0.45 is a real, noticeable pull. With a big enough sample, even the mirage can become “statistically significant” — which is exactly why we also look at magnitude. Significance says “it is probably not zero”; effect size asks “but is it big enough to care about?”',
-    status: 'draft',
+    status: 'final',
     source: 'Bands match Strata’s correlation color bands (explore-adapters.ts).',
     related: ['spearman', 'point-biserial'],
   },
@@ -70,7 +70,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'When responses are weighted, they no longer all count equally, so a weighted estimate behaves as if it came from a smaller sample than the raw headcount. The effective sample size (sometimes written n_eff) is that adjusted number — it captures how much statistical precision remains after weighting. The more uneven the weights, the further the effective sample size falls below the actual number of respondents.',
     example:
       'Picture a tug-of-war where some players are far stronger than others. Even with 1,000 people on the rope, if a handful do most of the pulling it "effectively" behaves like a smaller, lopsided team. Weighting can do the same to a sample: 1,000 respondents might carry the statistical weight of, say, 700. Strata reports the honest ~700, not the flattering 1,000.',
-    status: 'draft',
+    status: 'final',
     related: ['weighted-estimate'],
   },
   {
@@ -81,7 +81,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'The margin of error is the "± value" you add to and subtract from an estimate to get its 95% confidence interval. It packs sampling uncertainty into a single number: a result of 62% with a ±3-point margin of error means the 95% interval runs from roughly 59% to 65%. Margins of error shrink as sample size grows, and they say nothing about non-sampling problems such as poorly worded questions.',
     example:
       'It is the "give or take" attached to a poll: "62%, give or take 3 points" is a margin of error of 3. When two numbers sit within each other\'s margins of error, treating one as clearly bigger than the other is exactly how people end up confidently wrong on election night.',
-    status: 'draft',
+    status: 'final',
     related: ['confidence-interval'],
   },
   {
@@ -92,7 +92,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'A point-biserial correlation measures the association between a binary variable (e.g., uses a platform: yes/no) and a continuous or ordinal one (e.g., a wellbeing score). It is algebraically the Pearson correlation with one variable coded 0/1, and it ranges from −1 to +1. It answers a simple question: do the "1"s tend to score higher or lower than the "0"s, and how consistently?',
     example:
       'Split people into coffee-drinkers (1) and non-drinkers (0) and compare their typing speeds. A positive point-biserial means drinkers tend to type faster; negative means slower. Same idea as any correlation — one of the two variables just happens to be a plain yes/no switch.',
-    status: 'draft',
+    status: 'final',
     related: ['spearman', 'effect-size'],
   },
   {
@@ -137,7 +137,7 @@ export const GLOSSARY: GlossaryEntry[] = [
     long: 'Tertiles split a measure into three groups. With sample-based tertiles, the cut points are chosen so each wave’s respondents divide into roughly equal thirds. With a fixed split, the cut points are held constant across waves so the groups mean the same thing over time, even if their sizes differ. These types of splits are often more informative than simply splitting the data on a fixed threshold (e.g., the middle point of the distribution). Strata notes which approach a chart uses, because it changes how comparisons across waves should be read.',
     example:
       'Like sorting a class into bottom third, middle third, and top third by score. "Tertile" is just the fancy word for those thirds — quartiles cut into four, tertiles into three. No one will judge you for picturing three buckets.',
-    status: 'draft',
+    status: 'final',
   },
   {
     slug: 'wave',
