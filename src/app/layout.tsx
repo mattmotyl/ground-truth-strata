@@ -39,6 +39,27 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: 'Ground Truth Strata',
   alternates: { canonical: '/' },
+  // app/favicon.ico covers the canonical /favicon.ico (sizes="any").
+  // These add the crisp PNG sizes, Apple touch icon, and Android icons
+  // from public/images/ (the favicon set in public/images).
+  icons: {
+    icon: [
+      { url: '/images/favicon-16x16.png', type: 'image/png', sizes: '16x16' },
+      { url: '/images/favicon-32x32.png', type: 'image/png', sizes: '32x32' },
+      { url: '/images/favicon-48x48.png', type: 'image/png', sizes: '48x48' },
+      {
+        url: '/images/android-chrome-192x192.png',
+        type: 'image/png',
+        sizes: '192x192',
+      },
+      {
+        url: '/images/android-chrome-512x512.png',
+        type: 'image/png',
+        sizes: '512x512',
+      },
+    ],
+    apple: [{ url: '/images/apple-touch-icon.png', sizes: '180x180' }],
+  },
   openGraph: {
     type: 'website',
     siteName: 'Ground Truth Strata',
