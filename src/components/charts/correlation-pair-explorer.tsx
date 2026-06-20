@@ -35,6 +35,12 @@ import {
 } from '@/lib/strata-formatters';
 import { StrataChartFrame } from './strata-chart-frame';
 import { GlossaryTerm } from '@/components/ui/glossary-term';
+import {
+  DEFAULT_OUTCOME,
+  DEFAULT_PREDICTOR,
+  encodePairsState,
+} from '@/lib/explore-url-state';
+import { useUrlSync } from '@/lib/use-url-sync';
 
 // =====================================================================
 // /explore — Variable-pair correlation explorer.
@@ -52,9 +58,9 @@ import { GlossaryTerm } from '@/components/ui/glossary-term';
 
 // Default pair: political self-placement × overall life satisfaction.
 // Both are fielded across multiple waves, so the default view shows the
-// over-waves bar layout rather than a degenerate single bar.
-const DEFAULT_PREDICTOR = 'rate_self';
-const DEFAULT_OUTCOME = 'ls002l';
+// over-waves bar layout rather than a degenerate single bar. The default
+// constants now live in explore-url-state.ts (shared with the URL encoder
+// and the server-side OG metadata).
 
 interface ChartDatum {
   wave: number;
@@ -166,13 +172,23 @@ function VariableSelect({
   );
 }
 
-export function CorrelationPairExplorer() {
+export function CorrelationPairExplorer({
+  initialPredictor,
+  initialOutcome,
+}: { initialPredictor?: string; initialOutcome?: string } = {}) {
   const [rows, setRows] = useState<CorrelationRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [predictor, setPredictor] = useState<string>(DEFAULT_PREDICTOR);
-  const [outcome, setOutcome] = useState<string>(DEFAULT_OUTCOME);
+  const [predictor, setPredictor] = useState<string>(
+    initialPredictor ?? DEFAULT_PREDICTOR,
+  );
+  const [outcome, setOutcome] = useState<string>(
+    initialOutcome ?? DEFAULT_OUTCOME,
+  );
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): reflect the chosen pair in the URL.
+  useUrlSync(encodePairsState(predictor, outcome));
 
   useEffect(() => {
     Promise.all([loadCorrelations(), loadMeta()])
@@ -458,6 +474,7 @@ export function CorrelationPairExplorer() {
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow="Explore · Variable pairs over time"
       title={`How are ${toNounPhrase(predLabel)} and ${toNounPhrase(
         outLabel,

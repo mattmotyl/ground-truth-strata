@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { CorrelationPairExplorer } from './correlation-pair-explorer';
 import { CorrelationHeatmap } from './correlation-heatmap';
+import type { ResolvedExploreState } from '@/lib/explore-url-state';
 // DISABLED v0.1 — platform-minutes predictor unvalidated, restore post-precompute
 // import { FindingUsageWellbeing } from './finding-usage-wellbeing';
 
@@ -25,12 +26,14 @@ const VIEWS: Array<{ id: ExploreView; label: string }> = [
   { id: 'matrix', label: 'Correlation matrix' },
 ];
 
-// `initialTab` supports deep-linking from the landing Start Here card
-// (?tab=matrix). Anything other than a known view falls back to 'pairs'.
-export function ExploreViews({ initialTab }: { initialTab?: string } = {}) {
-  const [view, setView] = useState<ExploreView>(
-    initialTab === 'matrix' || initialTab === 'pairs' ? initialTab : 'pairs',
-  );
+// `initial` is the share-link state decoded server-side in explore/page.tsx
+// (tab + each view's slice). The mounted sub-view owns the URL writeback
+// (see useUrlSync in each); ExploreViews only seeds the active view and
+// hands each sub-view its slice.
+export function ExploreViews({
+  initial,
+}: { initial?: ResolvedExploreState } = {}) {
+  const [view, setView] = useState<ExploreView>(initial?.tab ?? 'pairs');
 
   return (
     <div className="space-y-2">
@@ -64,8 +67,18 @@ export function ExploreViews({ initialTab }: { initialTab?: string } = {}) {
 
       {/* DISABLED v0.1 — platform-minutes predictor unvalidated, restore post-precompute */}
       {/* {view === 'platforms' ? <FindingUsageWellbeing /> : null} */}
-      {view === 'pairs' ? <CorrelationPairExplorer /> : null}
-      {view === 'matrix' ? <CorrelationHeatmap /> : null}
+      {view === 'pairs' ? (
+        <CorrelationPairExplorer
+          initialPredictor={initial?.predictor}
+          initialOutcome={initial?.outcome}
+        />
+      ) : null}
+      {view === 'matrix' ? (
+        <CorrelationHeatmap
+          initialWave={initial?.wave}
+          initialSelected={initial?.vars}
+        />
+      ) : null}
     </div>
   );
 }

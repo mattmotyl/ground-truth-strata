@@ -23,6 +23,13 @@ import { formatN, formatNumber, fullWaveLabel } from '@/lib/strata-formatters';
 import { surveyQuestionFor } from '@/lib/strata-survey';
 import { StrataChartFrame } from './strata-chart-frame';
 import { GlossaryTerm } from '@/components/ui/glossary-term';
+import {
+  DEFAULT_MATRIX_VARS as DEFAULT_SELECTED,
+  DEFAULT_MATRIX_WAVE as DEFAULT_WAVE,
+  MAX_MATRIX_VARS,
+  encodeMatrixState,
+} from '@/lib/explore-url-state';
+import { useUrlSync } from '@/lib/use-url-sync';
 
 // =====================================================================
 // /explore — Correlation matrix (heatmap).
@@ -40,21 +47,10 @@ import { GlossaryTerm } from '@/components/ui/glossary-term';
 // error. No CI / no p-values in correlations.json.
 // =====================================================================
 
-const DEFAULT_WAVE = 6;
-const MAX_MATRIX_VARS = 12;
 const CELL = 50; // px — square cell size (sized for a 2-dp ρ label)
-
-// Default selection: the 7 well-being / loneliness measures fielded in
-// Wave 6, so the matrix renders immediately on first load.
-const DEFAULT_SELECTED: readonly string[] = [
-  'ls002k',
-  'ls002l',
-  'ls002j',
-  'ls002d',
-  'ls002i',
-  'ls002c',
-  'ex003_lonely',
-];
+// DEFAULT_WAVE, MAX_MATRIX_VARS, and DEFAULT_SELECTED now live in
+// explore-url-state.ts (shared with the URL encoder + server OG metadata),
+// imported above with their local aliases.
 
 // Extra descriptive text shown in THE NUMBERS box for measures that have
 // no single verbatim survey question (a derived index / a 0–100 scale).
@@ -76,17 +72,23 @@ function readableTextColor(hex: string): string {
   return lum > 0.6 ? '#18161F' : '#FFFFFF';
 }
 
-export function CorrelationHeatmap() {
+export function CorrelationHeatmap({
+  initialWave,
+  initialSelected,
+}: { initialWave?: number; initialSelected?: string[] } = {}) {
   const [rows, setRows] = useState<CorrelationRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [questionTexts, setQuestionTexts] =
     useState<QuestionTextsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
-  const [wave, setWave] = useState<number>(DEFAULT_WAVE);
+  const [wave, setWave] = useState<number>(initialWave ?? DEFAULT_WAVE);
   const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(DEFAULT_SELECTED),
+    () => new Set(initialSelected ?? DEFAULT_SELECTED),
   );
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): reflect wave + selected variables.
+  useUrlSync(encodeMatrixState(wave, [...selected]));
 
   useEffect(() => {
     Promise.all([loadCorrelations(), loadMeta(), loadQuestionTexts()])
@@ -517,6 +519,7 @@ export function CorrelationHeatmap() {
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow="Explore · Correlation matrix"
       title="How do these measures move together?"
       subtitle="Pairwise Spearman correlations among respondent-level survey measures. Pick a wave and choose up to 12 variables; hover any cell for the exact ρ and sample size."
