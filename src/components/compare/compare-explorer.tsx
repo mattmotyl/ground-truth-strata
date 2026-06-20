@@ -82,6 +82,7 @@ import {
   encodeCompareState,
   type ResolvedCompareState,
 } from '@/lib/compare-url-state';
+import { useUrlSync } from '@/lib/use-url-sync';
 
 // Solid bar colors.
 const AGREE_COLOR = '#4B2E63'; // plum — % agree
@@ -287,13 +288,11 @@ export function CompareExplorer({
       .catch(setError);
   }, []);
 
-  // Two-way URL sync (share feature). Reflect the live view in the address
-  // bar so "share this view" is simply "share the current URL". Uses
-  // replaceState (not push) so changing controls never pollutes the back
-  // button; the encoder omits defaults so a pristine view yields a clean
-  // /compare URL. Runs on mount too, which harmlessly normalizes the URL.
-  useEffect(() => {
-    const qs = encodeCompareState({
+  // Two-way URL sync (share feature): keep the address bar in step with the
+  // live view so "share this view" is simply "share the current URL". The
+  // encoder omits defaults, so a pristine view yields a clean /compare URL.
+  useUrlSync(
+    encodeCompareState({
       theme,
       questionKey,
       platforms,
@@ -304,23 +303,8 @@ export function CompareExplorer({
       customMax,
       breakdown,
       drilldown,
-    });
-    const url = qs
-      ? `${window.location.pathname}?${qs}`
-      : window.location.pathname;
-    window.history.replaceState(null, '', url);
-  }, [
-    theme,
-    questionKey,
-    platforms,
-    wave,
-    responseType,
-    xMode,
-    customMin,
-    customMax,
-    breakdown,
-    drilldown,
-  ]);
+    }),
+  );
 
   // Lazy-load the large wellbeing file on first entry to Theme C.
   useEffect(() => {
