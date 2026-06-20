@@ -48,6 +48,11 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
+import { useUrlSync } from '@/lib/use-url-sync';
+import {
+  encodeTrendsPlatformState,
+  type TrendsYMode,
+} from '@/lib/trends-url-state';
 import {
   EventLabels,
   EventsControl,
@@ -319,19 +324,29 @@ function TwoLineXTick(props: AxisTickProps) {
 }
 
 interface FindingPlatformUsageProps {
-  // Optional override for default visible set (e.g., set by a URL query
-  // param in a later milestone).
+  // Share feature: category + question (from the orchestrator) are encoded
+  // into the URL alongside this chart's platforms + zoom slice.
+  category: string;
+  questionKey: string;
   initialPlatforms?: string[];
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
   // Contextual events (T3-B7) — passed by TrendsExplorer so the usage
   // chart can show the same per-event reference lines as the other
-  // categories. Optional so the component still works standalone.
+  // categories.
   events?: ContextualEventsJson | null;
 }
 
 export function FindingPlatformUsage({
+  category,
+  questionKey,
   initialPlatforms,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
   events = null,
-}: FindingPlatformUsageProps = {}) {
+}: FindingPlatformUsageProps) {
   const [rows, setRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [questionTexts, setQuestionTexts] =
@@ -348,10 +363,23 @@ export function FindingPlatformUsage({
   // 'fit'    : [min - 5%, max + 5%] of visible data, clamped to [0, 1]
   // 'custom' : [customMin/100, customMax/100], user-entered bounds
   const [yMode, setYMode] =
-    useState<'full' | 'fit' | 'custom'>('full');
-  const [customMin, setCustomMin] = useState<number>(0);
-  const [customMax, setCustomMax] = useState<number>(100);
+    useState<'full' | 'fit' | 'custom'>(initialYMode ?? 'full');
+  const [customMin, setCustomMin] = useState<number>(initialCustomMin ?? 0);
+  const [customMax, setCustomMax] = useState<number>(initialCustomMax ?? 100);
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): category + question come from the
+  // orchestrator; platforms + zoom are this chart's own state.
+  useUrlSync(
+    encodeTrendsPlatformState(
+      category,
+      questionKey,
+      chartPlatforms,
+      yMode,
+      customMin,
+      customMax,
+    ),
+  );
 
   useEffect(() => {
     Promise.all([loadPlatformRates(), loadMeta(), loadQuestionTexts()])
@@ -721,6 +749,7 @@ export function FindingPlatformUsage({
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow="Trends over time"
       title="Who uses what?"
       subtitle={surveyQuestion || undefined}

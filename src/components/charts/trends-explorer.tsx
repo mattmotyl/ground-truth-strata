@@ -17,6 +17,7 @@ import {
   TRENDS_CATEGORIES,
   getTrendsCategory,
 } from '@/lib/trends-categories';
+import type { ResolvedTrendsState } from '@/lib/trends-url-state';
 import { stripConstructPrefix } from '@/lib/trends-adapters';
 import { FindingPlatformUsage } from './finding-platform-usage';
 import {
@@ -48,12 +49,8 @@ function resolveInitial(
 // cross-category persistence follow-up). `initialCategory` / `initialQuestion`
 // support deep-linking from the landing Start Here cards (?category=&q=).
 export function TrendsExplorer({
-  initialCategory,
-  initialQuestion,
-}: {
-  initialCategory?: string;
-  initialQuestion?: string;
-} = {}) {
+  initial,
+}: { initial?: ResolvedTrendsState } = {}) {
   const [meta, setMeta] = useState<MetaJson | null>(null);
   const [trends, setTrends] = useState<TrendRow[] | null>(null);
   const [questionTexts, setQuestionTexts] =
@@ -61,10 +58,10 @@ export function TrendsExplorer({
   const [events, setEvents] = useState<ContextualEventsJson | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [categoryId, setCategoryId] = useState<string>(
-    () => resolveInitial(initialCategory, initialQuestion).categoryId,
+    () => resolveInitial(initial?.category, initial?.questionKey).categoryId,
   );
   const [questionKey, setQuestionKey] = useState<string>(
-    () => resolveInitial(initialCategory, initialQuestion).questionKey,
+    () => resolveInitial(initial?.category, initial?.questionKey).questionKey,
   );
 
   useEffect(() => {
@@ -129,10 +126,31 @@ export function TrendsExplorer({
     category.questions.find((q) => q.key === questionKey) ??
     category.questions[0];
 
+  // Share-link hydration applies only to the originally-linked view; once
+  // the user navigates to another category/question the renderers reset to
+  // their defaults (matching the existing remount-on-question-change
+  // behavior). category + questionKey are always passed down so the mounted
+  // renderer can write the URL via useUrlSync.
+  const atInitialView =
+    initial != null &&
+    categoryId === initial.category &&
+    questionKey === initial.questionKey;
+  const initialSlice = atInitialView ? initial : undefined;
+
   let body: React.ReactNode = null;
   switch (question.kind) {
     case 'f01':
-      body = <FindingPlatformUsage events={events} />;
+      body = (
+        <FindingPlatformUsage
+          events={events}
+          category={categoryId}
+          questionKey={questionKey}
+          initialPlatforms={initialSlice?.platforms}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
+        />
+      );
       break;
     case 'platformMetric':
       body = (
@@ -145,6 +163,12 @@ export function TrendsExplorer({
           surveyVar={question.surveyVar!}
           title={question.title!}
           filenameBase={question.filenameBase}
+          category={categoryId}
+          questionKey={questionKey}
+          initialPlatforms={initialSlice?.platforms}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
         />
       );
       break;
@@ -160,6 +184,12 @@ export function TrendsExplorer({
           title={question.title!}
           subtitle={question.subtitle}
           filenameBase={question.filenameBase}
+          category={categoryId}
+          questionKey={questionKey}
+          initialPlatforms={initialSlice?.platforms}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
         />
       );
       break;
@@ -174,6 +204,11 @@ export function TrendsExplorer({
           variableName={question.variable!}
           filenameBase={question.filenameBase}
           axisAnchors={question.axisAnchors}
+          category={categoryId}
+          questionKey={questionKey}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
         />
       );
       break;
@@ -191,6 +226,11 @@ export function TrendsExplorer({
           subtitle={question.pairSubtitle}
           filenameBase={question.filenameBase}
           axisAnchors={question.axisAnchors}
+          category={categoryId}
+          questionKey={questionKey}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
         />
       );
       break;

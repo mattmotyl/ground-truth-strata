@@ -53,6 +53,12 @@ import {
   MAX_CHART_PLATFORMS,
   PlatformMultiselect,
 } from './platform-multiselect';
+import { useUrlSync } from '@/lib/use-url-sync';
+import {
+  encodeTrendsAttitudeState,
+  encodeTrendsPlatformState,
+  type TrendsYMode,
+} from '@/lib/trends-url-state';
 import { PlatformWaveTable } from './platform-wave-table';
 import {
   AxisAnchorLabels,
@@ -94,6 +100,14 @@ interface PlatformFanChartProps {
   interpretation: string;
   filenameBase: string;
   citationVariables: string[];
+  // Share feature: category + question (from the orchestrator) are encoded
+  // into the URL alongside this chart's platforms + zoom slice.
+  category: string;
+  questionKey: string;
+  initialPlatforms?: string[];
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
 }
 
 export function PlatformFanChart({
@@ -107,14 +121,35 @@ export function PlatformFanChart({
   interpretation,
   filenameBase,
   citationVariables,
+  category,
+  questionKey,
+  initialPlatforms,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
 }: PlatformFanChartProps) {
-  const [chartPlatforms, setChartPlatforms] = useState<string[]>(() => [
-    ...DEFAULT_CHART_PLATFORMS,
-  ]);
-  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
-  const [customMin, setCustomMin] = useState(0);
-  const [customMax, setCustomMax] = useState(100);
+  const [chartPlatforms, setChartPlatforms] = useState<string[]>(() =>
+    initialPlatforms ? [...initialPlatforms] : [...DEFAULT_CHART_PLATFORMS],
+  );
+  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>(
+    initialYMode ?? 'full',
+  );
+  const [customMin, setCustomMin] = useState(initialCustomMin ?? 0);
+  const [customMax, setCustomMax] = useState(initialCustomMax ?? 100);
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): category + question come from the
+  // orchestrator; platforms + zoom are this chart's own state.
+  useUrlSync(
+    encodeTrendsPlatformState(
+      category,
+      questionKey,
+      chartPlatforms,
+      yMode,
+      customMin,
+      customMax,
+    ),
+  );
 
   const labelBySlug = new Map(meta.platforms.map((p) => [p.slug, p.label]));
   const chartData = buildPlatformFanData(rows, meta, chartPlatforms);
@@ -306,6 +341,7 @@ export function PlatformFanChart({
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow={eyebrow}
       title={title}
       subtitle={subtitle || undefined}
@@ -361,6 +397,12 @@ interface PlatformMetricTrendProps {
   surveyVar: string;
   title: string;
   filenameBase: string;
+  category: string;
+  questionKey: string;
+  initialPlatforms?: string[];
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
 }
 
 export function PlatformMetricTrend({
@@ -371,6 +413,12 @@ export function PlatformMetricTrend({
   surveyVar,
   title,
   filenameBase,
+  category,
+  questionKey,
+  initialPlatforms,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
 }: PlatformMetricTrendProps) {
   const [rows, setRows] = useState<PlatformRateRow[] | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -433,6 +481,12 @@ export function PlatformMetricTrend({
       interpretation={`[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`}
       filenameBase={filenameBase}
       citationVariables={[surveyVar]}
+      category={category}
+      questionKey={questionKey}
+      initialPlatforms={initialPlatforms}
+      initialYMode={initialYMode}
+      initialCustomMin={initialCustomMin}
+      initialCustomMax={initialCustomMax}
     />
   );
 }
@@ -451,6 +505,11 @@ interface RespondentTrendProps {
   variableName: string;
   filenameBase: string;
   axisAnchors?: AxisAnchor[];
+  category: string;
+  questionKey: string;
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
 }
 
 export function RespondentTrend({
@@ -461,6 +520,11 @@ export function RespondentTrend({
   variableName,
   filenameBase,
   axisAnchors,
+  category,
+  questionKey,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
 }: RespondentTrendProps) {
   const metaVar = meta.variables.find(
     (v) => v.variable_name === variableName,
@@ -469,14 +533,28 @@ export function RespondentTrend({
   const numericFull: [number, number] =
     config.yDomain === 'fit' ? [0, 100] : config.yDomain;
 
-  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
+  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>(
+    initialYMode ?? 'full',
+  );
   const [customMin, setCustomMin] = useState(
-    config.isPercent ? 0 : numericFull[0],
+    initialCustomMin ?? (config.isPercent ? 0 : numericFull[0]),
   );
   const [customMax, setCustomMax] = useState(
-    config.isPercent ? 100 : numericFull[1],
+    initialCustomMax ?? (config.isPercent ? 100 : numericFull[1]),
   );
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): attitude renderers have no platform
+  // dimension, so only category + question + zoom are encoded.
+  useUrlSync(
+    encodeTrendsAttitudeState(
+      category,
+      questionKey,
+      yMode,
+      customMin,
+      customMax,
+    ),
+  );
 
   const series = buildRespondentSeries(
     trends,
@@ -735,6 +813,7 @@ export function RespondentTrend({
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow="Trends over time · Attitudes"
       title={title}
       subtitle={subtitle || undefined}
@@ -783,6 +862,11 @@ interface PairedAttitudeTrendProps {
   filenameBase: string;
   axisAnchors?: AxisAnchor[];
   events: ContextualEventsJson | null;
+  category: string;
+  questionKey: string;
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
 }
 
 export function PairedAttitudeTrend({
@@ -796,6 +880,11 @@ export function PairedAttitudeTrend({
   filenameBase,
   axisAnchors,
   events,
+  category,
+  questionKey,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
 }: PairedAttitudeTrendProps) {
   const config = trendConfig(
     meta.variables.find((v) => v.variable_name === pair[0])?.response_type ??
@@ -805,10 +894,24 @@ export function PairedAttitudeTrend({
   const numericFull: [number, number] =
     config.yDomain === 'fit' ? [0, 10] : config.yDomain;
 
-  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>('full');
-  const [customMin, setCustomMin] = useState(numericFull[0]);
-  const [customMax, setCustomMax] = useState(numericFull[1]);
+  const [yMode, setYMode] = useState<'full' | 'fit' | 'custom'>(
+    initialYMode ?? 'full',
+  );
+  const [customMin, setCustomMin] = useState(initialCustomMin ?? numericFull[0]);
+  const [customMax, setCustomMax] = useState(initialCustomMax ?? numericFull[1]);
   const chartRef = useRef<HTMLDivElement | null>(null);
+
+  // Two-way URL sync (share feature): two population lines, no platform
+  // dimension — encode category + question + zoom.
+  useUrlSync(
+    encodeTrendsAttitudeState(
+      category,
+      questionKey,
+      yMode,
+      customMin,
+      customMax,
+    ),
+  );
 
   const series = buildPairedSeries(trends, pair[0], pair[1], meta);
   const evt = useTrendEvents(
@@ -1062,6 +1165,7 @@ export function PairedAttitudeTrend({
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow="Trends over time · Attitudes"
       title={title}
       subtitle={subtitleText || undefined}

@@ -20,6 +20,7 @@ import {
   surveyQuestionFor,
 } from '@/lib/strata-survey';
 import { PlatformFanChart } from './trends-variable-trend';
+import { type TrendsYMode } from '@/lib/trends-url-state';
 
 // Well-Being category renderer (T3-B7). Respondent wellbeing outcomes
 // split by platform use: one line per platform among that platform's
@@ -37,6 +38,12 @@ interface WellbeingPlatformTrendProps {
   title: string;
   subtitle?: string;
   filenameBase: string;
+  category: string;
+  questionKey: string;
+  initialPlatforms?: string[];
+  initialYMode?: TrendsYMode;
+  initialCustomMin?: number;
+  initialCustomMax?: number;
 }
 
 export function WellbeingPlatformTrend({
@@ -48,6 +55,12 @@ export function WellbeingPlatformTrend({
   title,
   subtitle,
   filenameBase,
+  category,
+  questionKey,
+  initialPlatforms,
+  initialYMode,
+  initialCustomMin,
+  initialCustomMax,
 }: WellbeingPlatformTrendProps) {
   const [groupRows, setGroupRows] = useState<GroupComparisonRow[] | null>(null);
   const [error, setError] = useState<Error | null>(null);
@@ -118,6 +131,12 @@ export function WellbeingPlatformTrend({
       interpretation={interpretation}
       filenameBase={filenameBase}
       citationVariables={[outcome]}
+      category={category}
+      questionKey={questionKey}
+      initialPlatforms={initialPlatforms}
+      initialYMode={initialYMode}
+      initialCustomMin={initialCustomMin}
+      initialCustomMax={initialCustomMax}
     />
   );
 }
