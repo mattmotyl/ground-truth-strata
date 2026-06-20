@@ -47,6 +47,9 @@ interface StrataChartFrameProps {
   // Optional element rendered directly above the title block (e.g. the
   // "← Back to …" breadcrumb shown during a Theme A drill-down).
   breadcrumb?: ReactNode;
+  // Show the Share button in the chart actions toolbar. Default false;
+  // only callers with two-way URL state (/compare in v1) opt in.
+  enableShare?: boolean;
 }
 
 export function StrataChartFrame({
@@ -69,6 +72,7 @@ export function StrataChartFrame({
   titleInCard = false,
   sourceNote,
   breadcrumb,
+  enableShare = false,
 }: StrataChartFrameProps) {
   const titleBlock = (
     <div className="space-y-1.5">
@@ -156,6 +160,7 @@ export function StrataChartFrame({
               csv={csv}
               filenameBase={filenameBase}
               citation={citation}
+              enableShare={enableShare}
             />
           </div>
         </div>

@@ -16,18 +16,15 @@
 // (EXCLUDED_PLATFORM_SLUGS in src/lib/strata-data.ts) so they never
 // reach this component.
 
-export const DEFAULT_CHART_PLATFORMS: readonly string[] = [
-  'facebook',
-  'youtube',
-  'instagram',
-  'tiktok',
-  'snapchat',
-  'reddit',
-  'linkedin',
-  'twitter_x',
-];
+// Canonical definitions live in the plain (non-client) constants module so
+// server code can read them too; re-exported here for the existing
+// importers that reference them via this component.
+import {
+  DEFAULT_CHART_PLATFORMS,
+  MAX_CHART_PLATFORMS,
+} from '@/lib/platform-constants';
 
-export const MAX_CHART_PLATFORMS = 16;
+export { DEFAULT_CHART_PLATFORMS, MAX_CHART_PLATFORMS };
 
 interface PlatformOption {
   slug: string;

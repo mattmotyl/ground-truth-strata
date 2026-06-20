@@ -78,6 +78,10 @@ import {
 } from '@/components/charts/platform-multiselect';
 import { type StatRow } from '@/components/charts/numbers-meaning-block';
 import { TwoStepPicker } from './two-step-picker';
+import {
+  encodeCompareState,
+  type ResolvedCompareState,
+} from '@/lib/compare-url-state';
 
 // Solid bar colors.
 const AGREE_COLOR = '#4B2E63'; // plum — % agree
@@ -213,25 +217,36 @@ function computeXDomain(
 
 const EYEBROW = 'text-xs text-slate uppercase tracking-wide';
 
-export function CompareExplorer() {
-  const [theme, setTheme] = useState<ThemeId>('A');
+// `initial` is the share-link state decoded server-side in compare/page.tsx
+// (validated + fully resolved). When absent (no params), every field falls
+// back to its normal default, so behavior is identical to before.
+export function CompareExplorer({
+  initial,
+}: { initial?: ResolvedCompareState } = {}) {
+  const [theme, setTheme] = useState<ThemeId>(initial?.theme ?? 'A');
   const [questionKey, setQuestionKey] = useState<string>(
-    () => getTheme('A').questions[0].key,
+    () => initial?.questionKey ?? getTheme('A').questions[0].key,
   );
   // Platform selection PERSISTS across theme/question switches (spec
   // line 790) — it's owned here, never reset by handleThemeChange.
-  const [platforms, setPlatforms] = useState<string[]>(() => [
-    ...DEFAULT_CHART_PLATFORMS,
-  ]);
-  const [wave, setWave] = useState<number>(6);
-  const [responseType, setResponseType] = useState<ResponseType>('agree');
-  const [xMode, setXMode] = useState<'full' | 'fit' | 'custom'>('full');
-  const [customMin, setCustomMin] = useState<number>(0);
-  const [customMax, setCustomMax] = useState<number>(100);
+  const [platforms, setPlatforms] = useState<string[]>(() =>
+    initial?.platforms ? [...initial.platforms] : [...DEFAULT_CHART_PLATFORMS],
+  );
+  const [wave, setWave] = useState<number>(initial?.wave ?? 6);
+  const [responseType, setResponseType] = useState<ResponseType>(
+    initial?.responseType ?? 'agree',
+  );
+  const [xMode, setXMode] = useState<'full' | 'fit' | 'custom'>(
+    initial?.xMode ?? 'full',
+  );
+  const [customMin, setCustomMin] = useState<number>(initial?.customMin ?? 0);
+  const [customMax, setCustomMax] = useState<number>(initial?.customMax ?? 100);
   // Theme A demographic group-split (T3-B6). null = "No breakdown" (the
   // default ranked bar). Persists across Theme A question switches; reset
   // to null only on theme change (see handleThemeChange).
-  const [breakdown, setBreakdown] = useState<string | null>(null);
+  const [breakdown, setBreakdown] = useState<string | null>(
+    initial?.breakdown ?? null,
+  );
 
   const [allRows, setAllRows] = useState<PlatformRateRow[] | null>(null);
   const [meta, setMeta] = useState<MetaJson | null>(null);
@@ -256,7 +271,9 @@ export function CompareExplorer() {
   const [platformGroupRows, setPlatformGroupRows] = useState<
     PlatformGroupComparisonRow[] | null
   >(null);
-  const [drilldown, setDrilldown] = useState<FollowUp | null>(null);
+  const [drilldown, setDrilldown] = useState<FollowUp | null>(
+    initial?.drilldown ?? null,
+  );
   const [error, setError] = useState<Error | null>(null);
   const chartRef = useRef<HTMLDivElement | null>(null);
 
@@ -269,6 +286,41 @@ export function CompareExplorer() {
       })
       .catch(setError);
   }, []);
+
+  // Two-way URL sync (share feature). Reflect the live view in the address
+  // bar so "share this view" is simply "share the current URL". Uses
+  // replaceState (not push) so changing controls never pollutes the back
+  // button; the encoder omits defaults so a pristine view yields a clean
+  // /compare URL. Runs on mount too, which harmlessly normalizes the URL.
+  useEffect(() => {
+    const qs = encodeCompareState({
+      theme,
+      questionKey,
+      platforms,
+      wave,
+      responseType,
+      xMode,
+      customMin,
+      customMax,
+      breakdown,
+      drilldown,
+    });
+    const url = qs
+      ? `${window.location.pathname}?${qs}`
+      : window.location.pathname;
+    window.history.replaceState(null, '', url);
+  }, [
+    theme,
+    questionKey,
+    platforms,
+    wave,
+    responseType,
+    xMode,
+    customMin,
+    customMax,
+    breakdown,
+    drilldown,
+  ]);
 
   // Lazy-load the large wellbeing file on first entry to Theme C.
   useEffect(() => {
@@ -1383,6 +1435,7 @@ function CompareChart(props: CompareChartProps) {
 
   return (
     <StrataChartFrame
+      enableShare
       eyebrow={`Compare · ${activeThemeLabel}`}
       title={isDrill && drilldown ? drilldown.heatmapTitle : question.title}
       subtitle={subtitle}
