@@ -48,6 +48,8 @@ import {
   PlatformMultiselect,
 } from './platform-multiselect';
 import { StrataChartFrame } from './strata-chart-frame';
+import { renderPlatformInterpretation } from './trends-variable-trend';
+import { PLATFORM_EXPERIENCES_SCOPE_NOTE } from '@/lib/trends-categories';
 import { useUrlSync } from '@/lib/use-url-sync';
 import {
   encodeTrendsPlatformState,
@@ -601,9 +603,12 @@ export function FindingPlatformUsage({
   // is described as "remained stable" / "shifts within the margin of
   // error."
   //
-  // For the new DEFAULT_CHART_PLATFORMS (traditional social media; see
-  // platform-multiselect.tsx), computed offline from
-  // public/data/platform_rates.json (metric=usage_rate, weighted):
+  // Scoped to the same 11 traditional social platforms as the Platform
+  // Experiences copy (the 8 chart defaults + Pinterest, Nextdoor, Discord;
+  // see PLATFORM_EXPERIENCES_SCOPE_NOTE). Computed offline from
+  // public/data/platform_rates.json (metric=usage_rate, weighted), reach
+  // among ALL U.S. adults — arithmetic in
+  // strata-local/audit/scripts/usage_set11.mjs:
   //
   //   slug         W1 -> W6 (diff)    1.96 * pooled_SE   verdict
   //   ----------------------------------------------------------------
@@ -615,19 +620,16 @@ export function FindingPlatformUsage({
   //   reddit       11.5% -> 15.5%  (+4.05pp)   2.25pp   INCREASED
   //   linkedin     18.4% -> 13.9%  (-4.48pp)   2.66pp   DECREASED
   //   twitter_x    18.5% -> 13.6%  (-4.91pp)   2.74pp   DECREASED
+  //   pinterest    16.9% -> 13.3%  (-3.63pp)   2.60pp   DECREASED
+  //   nextdoor     12.2% ->  9.9%  (-2.29pp)   2.45pp   stable
+  //   discord       7.3% ->  5.9%  (-1.34pp)   1.69pp   stable
   //
-  // Four of the eight default platforms cross the significance
-  // threshold W1->W6 (YouTube, Reddit, LinkedIn, X). Reddit is the
-  // only one that increased; the others declined. The remaining four
-  // (Facebook, Instagram, TikTok, Snapchat) shifted within the
-  // margin of error.
-  //
-  // [PLACEHOLDER -- Matt to review]: framing rewritten for the new
-  // default selection; prior copy described email/text_messaging as
-  // the highest-usage tools, which is still true in the underlying
-  // data but those tools are no longer in the default chart view.
+  // Five of the eleven cross the threshold W1->W6: YouTube, X, LinkedIn,
+  // and Pinterest declined; Reddit rose. The other six are stable.
+  // Signed off by Matt 2026-06-20. No UI-state references ("default
+  // view" / "toggle on" removed); "social platforms compared" framing.
   const interpretationText =
-    'Among the eight traditional social-media platforms in the default view, Facebook and YouTube have the broadest reach across U.S. adults in the most recent wave (W6), with Instagram a clear third. Four platforms show statistically meaningful changes from W1 to W6: YouTube use declined by about 4.9 percentage points, X (Twitter) by 4.9 points, and LinkedIn by 4.5 points, while Reddit grew by 4.1 points (all exceed their 95% margins of error). Facebook, Instagram, TikTok, and Snapchat remained stable across the six waves; any apparent shifts are within the margin of error. Communication utilities such as text messaging and email reach a larger share of U.S. adults than any of these platforms — toggle them on in the Platforms picker to see their trends.';
+    'Among the social platforms compared, Facebook and YouTube have the broadest reach across U.S. adults in the most recent wave (about 64% and 62%), with Instagram a clear third (about 40%); Discord and Nextdoor reach the fewest (about 6% and 10%). From Wave 1 to Wave 6, five platforms show statistically meaningful changes: reach declined for YouTube (about 5 points), X (Twitter) (about 5 points), LinkedIn (about 4.5 points), and Pinterest (about 3.6 points), while Reddit grew (about 4 points) — all beyond their 95% margins of error. The other six held steady. Communication tools such as text messaging and email reach more U.S. adults than any of these social platforms.';
   const sourceNoteText =
     'Source: UAS panel waves 1–6 (UAS514–UAS519), 2023–2025. ' +
     'Weighted estimates. 95% CIs available on hover (chart line + Numbers table cells). Cells with n < 30 are suppressed by design.';
@@ -776,8 +778,10 @@ export function FindingPlatformUsage({
           </p>
         </>
       }
-      isPlaceholderInterpretation
-      interpretation={interpretationText}
+      interpretation={renderPlatformInterpretation(
+        interpretationText,
+        PLATFORM_EXPERIENCES_SCOPE_NOTE,
+      )}
       methodologyFootnote=""
       sourceNote={evt.appendContext(sourceNoteText)}
       csv={{ headers: csvHeaders, rows: csvRows }}
