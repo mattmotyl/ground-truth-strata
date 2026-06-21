@@ -137,6 +137,15 @@ export function StrataChartFrame({
                 <GlossaryText text={sourceNote} />
               </p>
             ) : null}
+            {/* Brand + URL attribution. Lives inside chartRef so it is
+                captured in the PNG export — a shared image then points
+                viewers back to the site. Subtle on-screen, too. */}
+            <p
+              className="text-[11px] text-slate/70 pt-1"
+              style={{ fontFamily: 'var(--font-mono)' }}
+            >
+              Ground Truth Strata · strata.mattmotyl.com
+            </p>
           </div>
 
           {chartFooter}
