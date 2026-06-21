@@ -184,6 +184,8 @@ export function TrendsExplorer({
           bucket={question.bucket ?? null}
           title={question.title!}
           subtitle={question.subtitle}
+          interpretation={question.interpretation}
+          furtherReading={question.furtherReading}
           filenameBase={question.filenameBase}
           category={categoryId}
           questionKey={questionKey}

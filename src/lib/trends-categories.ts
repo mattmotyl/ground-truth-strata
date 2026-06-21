@@ -19,6 +19,12 @@ export interface AxisAnchor {
   label: string;
 }
 
+// External "Further reading" link shown under an interpretation.
+export interface FurtherReadingLink {
+  label: string;
+  href: string;
+}
+
 export interface TrendsQuestion {
   key: string;
   kind: TrendsRendererKind;
@@ -31,6 +37,9 @@ export interface TrendsQuestion {
   // falls back to a templated placeholder. See the arithmetic comment
   // block above TRENDS_CATEGORIES.
   interpretation?: string;
+  // Optional "Further reading" links rendered beneath the interpretation
+  // (e.g. Matt's published reports for added context). External links.
+  furtherReading?: FurtherReadingLink[];
   // Chart title slug. Omitted for attitudeSingle (RespondentTrend derives
   // it from meta).
   title?: string;
@@ -113,6 +122,67 @@ export const PLATFORM_EXPERIENCES_SCOPE_NOTE =
   'Reddit, LinkedIn, X, Pinterest, Nextdoor, and Discord — traditional ' +
   'social platforms with adequate sample in all six waves.';
 
+// =====================================================================
+// SIGNIFICANCE-GATED INTERPRETATION COPY — Well-Being. Same rule + same
+// 11-platform scope as Platform Use & Experiences above, but sourced from
+// group_comparisons.json (User rows, conditional on platform USE) and
+// reshaped by buildOutcomeRateRows(). Reproducible arithmetic + per-item
+// coverage: strata-local/audit/scripts/trends_wellbeing_arithmetic.mjs
+//
+// WAVE COVERAGE VARIES BY ITEM (stated in each interpretation):
+//   ex003_lonely    Waves 2,5,6 only    (compare W2->W6)
+//   ls002a          Waves 1-4 only      (compare W1->W4; dropped after W4)
+//   ls002l/d/c/h/i  Waves 1-6
+//
+// All 11 scope platforms have full coverage of each item's present waves
+// AND n>=100, so the set is unchanged; WELLBEING_PLATFORM_SET_NOTE restates
+// it with "every wave this item was asked" and carries the demographics-
+// confound caveat (between-platform differences may track WHO uses each
+// platform — Matt's framing; applies to every item, hence the footnote).
+//
+//   item (var) — measure (wave window)        significant movers (rest stable)
+//   ----------------------------------------------------------------------
+//   ex003_lonely — % lonely (W2->W6)              (6/11 stable)
+//     fell: facebook -6.84, instagram -7.11, tiktok -8.95, youtube -4.87,
+//           twitter_x -11.39 (each vs its pooled-SE threshold). Most
+//           smaller platforms also edged down but within wider CIs; the
+//           breadth reads as a society-wide decline in loneliness
+//           (Matt-endorsed; report linked via furtherReading).
+//   ls002l — satisfied w/ life (W1->W6)           (11/11 stable)
+//   ls002a — satisfied w/ physical health (W1->W4)(11/11 stable)
+//   ls002d — satisfied w/ mental health (W1->W6)  (10/11 stable)
+//     rose: snapchat +8.76 vs 8.09 (marginal pass — reported per rule)
+//   ls002c — satisfied w/ social life (W1->W6)    (10/11 stable)
+//     rose: tiktok +12.70 vs 7.37
+//   ls002h — happy most of the time (W1->W6)      (10/11 stable)
+//     rose: instagram +6.21 vs 5.53 (marginal pass — reported per rule)
+//   ls002i — feel negative (reverse; plotted band = "don't feel
+//            negative"; W1->W6)                   (11/11 stable)
+//
+// Signed off by Matt 2026-06-20. NOTE: the panel re-interviews the SAME
+// people each wave (>75% response, >95% platform retention for the big
+// platforms), so wave-over-wave aggregate comparisons are valid — do NOT
+// caveat these as "different respondents across waves."
+// =====================================================================
+export const WELLBEING_PLATFORM_SET_NOTE =
+  'Platforms compared: Facebook, YouTube, Instagram, TikTok, Snapchat, ' +
+  'Reddit, LinkedIn, X, Pinterest, Nextdoor, and Discord — traditional ' +
+  'social platforms with adequate sample in every wave this item was ' +
+  'asked. Differences between platforms may reflect who uses each platform ' +
+  '(for example, TikTok’s users are on average far younger than ' +
+  'Facebook’s) as much as the platforms themselves.';
+
+// Matt's published reports, linked as "Further reading" under the relevant
+// Well-Being interpretations for added context + credibility.
+const LONELINESS_REPORT: FurtherReadingLink = {
+  label: 'Social technology and loneliness',
+  href: 'https://psychoftech.substack.com/p/social-technology-and-loneliness',
+};
+const WELLBEING_REPORT: FurtherReadingLink = {
+  label: 'Well-being across social media platforms',
+  href: 'https://psychoftech.substack.com/p/well-being-across-social-media-platforms',
+};
+
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
   {
     id: 'platform',
@@ -185,6 +255,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         subtitle:
           'Share of each platform’s users who score as lonely on the UCLA 3-item loneliness scale (sum of three items ≥ 6). Asked in Waves 2, 5, and 6 only.',
         filenameBase: 'strata_trends_lonely',
+        interpretation:
+          'Among the social platforms compared, the share of users who score as lonely on the UCLA loneliness scale is highest for Discord and Snapchat users in the most recent wave (about 40% and 37%) and lowest for Nextdoor and X (Twitter) users (about 27%). This item was asked only in Waves 2, 5, and 6. From Wave 2 to Wave 6 the lonely share fell among users of several large platforms — Facebook, Instagram, TikTok, YouTube, and X — each beyond its 95% margin of error, and edged downward on most of the others within their wider margins of error. A decline this broad most likely reflects a society-wide drop in loneliness over the period rather than anything specific to any one platform.',
+        furtherReading: [LONELINESS_REPORT],
       },
       {
         key: 'ls002l',
@@ -194,6 +267,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002l',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002l',
+        interpretation:
+          'Among the social platforms compared, agreement that “I am satisfied with my life” is high and broadly similar across platforms in the most recent wave — from about 82% of LinkedIn users at the top to about 67% of Discord users, with most clustered near 78%. No platform changes meaningfully from Wave 1 to Wave 6: every estimate stays within its 95% margin of error, so life satisfaction among each platform’s users is best read as stable across the survey period.',
+        furtherReading: [WELLBEING_REPORT],
       },
       {
         key: 'ls002a',
@@ -203,6 +279,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002a',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002a',
+        interpretation:
+          'Among the social platforms compared, agreement that “I am satisfied with my physical health” runs from about 68% of LinkedIn users down to about 49% of Discord users in the most recent wave this item was asked — Wave 4; the question was not carried in Waves 5 or 6. No platform changes meaningfully from Wave 1 to Wave 4: every estimate stays within its 95% margin of error, so these shares are best read as stable.',
+        furtherReading: [WELLBEING_REPORT],
       },
       {
         key: 'ls002d',
@@ -212,6 +291,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002d',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002d',
+        interpretation:
+          'Among the social platforms compared, agreement that “I am satisfied with my mental health” is highest among Nextdoor and LinkedIn users in the most recent wave (about 78% and 76%) and lowest among Discord users (about 54%). One platform changes meaningfully from Wave 1 to Wave 6: agreement rose among Snapchat users (about 60% → 68%, just beyond its 95% margin of error); the other ten were stable.',
+        furtherReading: [WELLBEING_REPORT],
       },
       {
         key: 'ls002c',
@@ -221,6 +303,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002c',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002c',
+        interpretation:
+          'Among the social platforms compared, agreement that “I am satisfied with my social life” is highest among Nextdoor, LinkedIn, and X (Twitter) users in the most recent wave (about 72%, 72%, and 69%) and lowest among Discord and Reddit users (about 55% and 61%). One platform changes meaningfully from Wave 1 to Wave 6: agreement rose sharply among TikTok users (about 54% → 67%, well beyond its 95% margin of error); the other ten were stable.',
+        furtherReading: [WELLBEING_REPORT],
       },
       {
         key: 'ls002h',
@@ -230,6 +315,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002h',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002h',
+        interpretation:
+          'Among the social platforms compared, agreement that “I feel happy most of the time” is highest among LinkedIn and Nextdoor users in the most recent wave (about 76% and 75%) and lowest among Discord users (about 63%). One platform changes meaningfully from Wave 1 to Wave 6: agreement rose among Instagram users (about 67% → 73%, just beyond its 95% margin of error); the other ten were stable.',
+        furtherReading: [WELLBEING_REPORT],
       },
       {
         key: 'ls002i',
@@ -239,6 +327,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         outcome: 'ls002i',
         bucket: 'agree',
         filenameBase: 'strata_trends_ls002i',
+        interpretation:
+          'Among the social platforms compared, this item is reverse-coded, so the chart shows the share who do not agree that “I feel negative most of the time.” That share is highest among Nextdoor and LinkedIn users in the most recent wave (about 76% and 75%) and lowest among Discord users (about 57%). No platform changes meaningfully from Wave 1 to Wave 6: every estimate stays within its 95% margin of error, so these shares are best read as stable.',
+        furtherReading: [WELLBEING_REPORT],
       },
     ],
   },

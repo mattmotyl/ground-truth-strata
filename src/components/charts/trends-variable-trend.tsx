@@ -46,7 +46,7 @@ import {
   respondentTitle,
   trendConfig,
 } from '@/lib/trends-adapters';
-import type { AxisAnchor } from '@/lib/trends-categories';
+import type { AxisAnchor, FurtherReadingLink } from '@/lib/trends-categories';
 import { PLATFORM_EXPERIENCES_SCOPE_NOTE } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
 import {
@@ -80,6 +80,46 @@ const SINGLE_LINE_COLOR = '#4B2E63'; // plum
 
 function clamp01(v: number): number {
   return Math.max(0, Math.min(1, v));
+}
+
+// Composes a signed-off interpretation paragraph with an optional
+// "Further reading" links line and a scope footnote (smaller mono, top
+// border). Shared by the Platform-Experiences and Well-Being renderers so
+// the link + footnote styling stays identical across both.
+export function renderPlatformInterpretation(
+  text: string,
+  scopeNote: string,
+  furtherReading?: FurtherReadingLink[],
+): ReactNode {
+  return (
+    <>
+      <p>{text}</p>
+      {furtherReading && furtherReading.length > 0 ? (
+        <p className="mt-3 text-sm text-slate">
+          Further reading:{' '}
+          {furtherReading.map((l, i) => (
+            <span key={l.href}>
+              {i > 0 ? ', ' : ''}
+              <a
+                href={l.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-mulberry hover:text-plum underline underline-offset-2"
+              >
+                {l.label}
+              </a>
+            </span>
+          ))}
+        </p>
+      ) : null}
+      <p
+        className="mt-3 pt-3 border-t border-mist text-xs text-slate leading-relaxed"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {scopeNote}
+      </p>
+    </>
+  );
 }
 
 
@@ -486,19 +526,9 @@ export function PlatformMetricTrend({
   // states which platforms the superlatives compare. Absent signed-off
   // copy, fall back to a provisional templated line and keep the
   // [WORK IN PROGRESS] flag (no footnote).
-  const interpretationNode: ReactNode = interpretation ? (
-    <>
-      <p>{interpretation}</p>
-      <p
-        className="mt-3 pt-3 border-t border-mist text-xs text-slate leading-relaxed"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {PLATFORM_EXPERIENCES_SCOPE_NOTE}
-      </p>
-    </>
-  ) : (
-    `[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`
-  );
+  const interpretationNode: ReactNode = interpretation
+    ? renderPlatformInterpretation(interpretation, PLATFORM_EXPERIENCES_SCOPE_NOTE)
+    : `[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`;
 
   return (
     <PlatformFanChart

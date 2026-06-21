@@ -19,7 +19,14 @@ import {
   formatSurveyQuestion,
   surveyQuestionFor,
 } from '@/lib/strata-survey';
-import { PlatformFanChart } from './trends-variable-trend';
+import {
+  PlatformFanChart,
+  renderPlatformInterpretation,
+} from './trends-variable-trend';
+import {
+  WELLBEING_PLATFORM_SET_NOTE,
+  type FurtherReadingLink,
+} from '@/lib/trends-categories';
 import { type TrendsYMode } from '@/lib/trends-url-state';
 
 // Well-Being category renderer (T3-B7). Respondent wellbeing outcomes
@@ -37,6 +44,11 @@ interface WellbeingPlatformTrendProps {
   bucket: LikertBucket | null;
   title: string;
   subtitle?: string;
+  // Signed-off interpretation copy + optional further-reading links from
+  // the question config. When present the copy renders verbatim (with the
+  // Well-Being scope footnote) and clears the [WORK IN PROGRESS] flag.
+  interpretation?: string;
+  furtherReading?: FurtherReadingLink[];
   filenameBase: string;
   category: string;
   questionKey: string;
@@ -54,6 +66,8 @@ export function WellbeingPlatformTrend({
   bucket,
   title,
   subtitle,
+  interpretation,
+  furtherReading,
   filenameBase,
   category,
   questionKey,
@@ -117,7 +131,16 @@ export function WellbeingPlatformTrend({
     `${reverseClause} 95% CIs available on hover. Cells with n < 30 are ` +
     `suppressed by design.`;
 
-  const interpretation = `[WORK IN PROGRESS] ${title} over time, split by platform. Each line is ${valueLabel} among that platform's users, wave by wave; the table and tooltip carry the 95% CIs and user counts. Estimates are conditional on platform use.${reverseClause}`;
+  // Signed-off copy renders verbatim (with the Well-Being scope footnote +
+  // any further-reading links) and clears the WIP flag; absent it, fall
+  // back to a provisional templated line and keep the flag.
+  const interpretationNode = interpretation
+    ? renderPlatformInterpretation(
+        interpretation,
+        WELLBEING_PLATFORM_SET_NOTE,
+        furtherReading,
+      )
+    : `[WORK IN PROGRESS] ${title} over time, split by platform. Each line is ${valueLabel} among that platform's users, wave by wave; the table and tooltip carry the 95% CIs and user counts. Estimates are conditional on platform use.${reverseClause}`;
 
   return (
     <PlatformFanChart
@@ -128,7 +151,8 @@ export function WellbeingPlatformTrend({
       title={title}
       subtitle={subtitleText || undefined}
       sourceNote={sourceNote}
-      interpretation={interpretation}
+      interpretation={interpretationNode}
+      isPlaceholderInterpretation={interpretation == null}
       filenameBase={filenameBase}
       citationVariables={[outcome]}
       category={category}
