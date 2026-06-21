@@ -162,6 +162,7 @@ export function TrendsExplorer({
           metric={question.metric!}
           surveyVar={question.surveyVar!}
           title={question.title!}
+          interpretation={question.interpretation}
           filenameBase={question.filenameBase}
           category={categoryId}
           questionKey={questionKey}

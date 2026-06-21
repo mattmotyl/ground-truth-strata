@@ -25,6 +25,12 @@ export interface TrendsQuestion {
   // Picker radio label. When omitted, the explorer derives it from the
   // variable's meta `construct` (domain prefix stripped).
   label?: string;
+  // Signed-off, significance-gated "What the numbers mean" copy, rendered
+  // verbatim (no dynamic recompute). When present, the renderer drops the
+  // [WORK IN PROGRESS] placeholder flag for that question; when absent it
+  // falls back to a templated placeholder. See the arithmetic comment
+  // block above TRENDS_CATEGORIES.
+  interpretation?: string;
   // Chart title slug. Omitted for attitudeSingle (RespondentTrend derives
   // it from meta).
   title?: string;
@@ -54,6 +60,59 @@ export interface TrendsCategory {
   questions: TrendsQuestion[];
 }
 
+// =====================================================================
+// SIGNIFICANCE-GATED INTERPRETATION COPY — Platform Use & Experiences.
+// Per Matt's rule (describeChange() in src/lib/strata-formatters.ts), a
+// directional claim ("increased"/"decreased"/"climbed"/"fell") is allowed
+// only when
+//   |v_last - v_first| > 1.96 * sqrt(se_first^2 + se_last^2)
+// using each PlatformRateRow's precomputed weighted_se; otherwise the
+// series is described as "stable". Computed offline from
+// public/data/platform_rates.json (bucket==null rows), W1->W6 (all four
+// items are present in every wave).
+//
+// SCOPE: superlatives ("most/least common") and the stable/changed counts
+// range over an 11-platform set of TRADITIONAL SOCIAL platforms with full
+// six-wave coverage and adequate sample (n>=100 every wave) — the 8 chart
+// defaults PLUS Pinterest, Nextdoor, Discord. This is NOT the chart's
+// default-8 selection: ranging superlatives over the default 8 made some
+// claims false against the fuller data (e.g. Dating Apps outranked
+// Facebook on negative experiences; WhatsApp/Discord, not Facebook, lead
+// meaningful connections). Excluded: private-messaging/comms tools
+// (WhatsApp, Text Messaging, FaceTime, Email), dating (Dating Apps),
+// low-n (Twitch), and partial-coverage platforms (Threads = W2-6,
+// Bluesky = W6 only). The set is stated to the reader in a footnote
+// (PLATFORM_EXPERIENCES_SCOPE_NOTE). Reproducible arithmetic + the
+// all-platform coverage audit that justified the set live in
+//   strata-local/audit/scripts/trends_platform_experiences_set11.mjs
+//   strata-local/audit/scripts/trends_platform_experiences_coverage.mjs
+//
+//   metric (var) — what it measures        W1 -> W6 movers (rest: stable)
+//   ----------------------------------------------------------------------
+//   nux_rate (us003) — negative personal experience          (9/11 stable)
+//     tiktok    14.3% -> 9.1%  (-5.19pp vs 4.58pp thresh)  DECREASED
+//     reddit    14.7% -> 8.3%  (-6.39pp vs 5.65pp thresh)  DECREASED
+//   bftw_rate (us007) — content considered bad for the world (11/11 stable)
+//     (no platform crosses threshold W1->W6 — all stable)
+//   mcxn_rate (us010) — meaningful connection               (11/11 stable)
+//     (no platform crosses threshold W1->W6 — all stable)
+//   useful_rate (us012) — learned something useful           (9/11 stable)
+//     reddit    30.3% -> 47.8% (+17.44pp vs 8.07pp thresh) INCREASED
+//     nextdoor  11.1% -> 19.1% (+7.97pp vs 7.74pp thresh) INCREASED (marginal)
+//
+// Signed off by Matt 2026-06-20. "Among the social platforms compared"
+// wording avoids referencing UI/back-end state; the copy is static (does
+// not recompute when the user changes the platform selection).
+// =====================================================================
+
+// Scope footnote rendered beneath each Platform-Experiences interpretation
+// (see the SCOPE note above). Stated so a reader who lifts the text knows
+// exactly which platforms the superlatives compare and why.
+export const PLATFORM_EXPERIENCES_SCOPE_NOTE =
+  'Platforms compared: Facebook, YouTube, Instagram, TikTok, Snapchat, ' +
+  'Reddit, LinkedIn, X, Pinterest, Nextdoor, and Discord — traditional ' +
+  'social platforms with adequate sample in all six waves.';
+
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
   {
     id: 'platform',
@@ -74,6 +133,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         metric: 'nux_rate',
         surveyVar: 'us003',
         filenameBase: 'strata_trends_nux',
+        interpretation:
+          'Among the social platforms compared, reporting a negative personal experience in the past four weeks is most common on X (Twitter) and Facebook in the most recent wave (about 22% and 19% of their users), with Nextdoor close behind (about 17%), and least common on Pinterest and Snapchat (about 1% and 3%). From Wave 1 to Wave 6, two platforms show a statistically meaningful change: the rate fell on TikTok (about 14% → 9%) and on Reddit (about 15% → 8%), both beyond their 95% margins of error. The other nine held steady. Each rate is among that platform’s own users.',
       },
       {
         key: 'bftw',
@@ -83,6 +144,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         metric: 'bftw_rate',
         surveyVar: 'us007',
         filenameBase: 'strata_trends_bftw',
+        interpretation:
+          'Among the social platforms compared, reporting content considered bad for the world — misleading, hateful, or unnecessarily divisive — in the past four weeks is most common among X (Twitter) and Facebook users in the most recent wave (about 33% and 25%) and least common among Discord and Pinterest users (about 1% or below). No platform changes meaningfully from Wave 1 to Wave 6: every rate stays within its 95% margin of error, so these shares are best read as stable across the survey period. Each rate is among that platform’s own users.',
       },
       {
         key: 'mcxn',
@@ -92,6 +155,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         metric: 'mcxn_rate',
         surveyVar: 'us010',
         filenameBase: 'strata_trends_mcxn',
+        interpretation:
+          'Among the social platforms compared, meaningful connections in the past four weeks are reported most often by Discord and Facebook users in the most recent wave (about 35% each), with Snapchat and Instagram close behind (about 30% and 25%), and least often by Nextdoor and Pinterest users (about 6% and 7%). No platform changes meaningfully from Wave 1 to Wave 6: each rate stays within its 95% margin of error across the survey period. Each rate is among that platform’s own users.',
       },
       {
         key: 'useful',
@@ -101,6 +166,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         metric: 'useful_rate',
         surveyVar: 'us012',
         filenameBase: 'strata_trends_useful',
+        interpretation:
+          'Among the social platforms compared, learning something useful in the past four weeks is reported most often by YouTube and Reddit users in the most recent wave (about 51% and 48% of their users), with Pinterest close behind (about 42%), and least often by Snapchat users (about 6%). Two platforms show a statistically meaningful change from Wave 1 to Wave 6: the rate climbed on Reddit (about 30% → 48%) and on Nextdoor (about 11% → 19%), both beyond their 95% margins of error. The other nine held steady. Each rate is among that platform’s own users.',
       },
     ],
   },

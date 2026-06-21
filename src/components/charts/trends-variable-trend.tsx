@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   CartesianGrid,
   Line,
@@ -47,6 +47,7 @@ import {
   trendConfig,
 } from '@/lib/trends-adapters';
 import type { AxisAnchor } from '@/lib/trends-categories';
+import { PLATFORM_EXPERIENCES_SCOPE_NOTE } from '@/lib/trends-categories';
 import { StrataChartFrame } from './strata-chart-frame';
 import {
   DEFAULT_CHART_PLATFORMS,
@@ -97,7 +98,13 @@ interface PlatformFanChartProps {
   title: string;
   subtitle?: string;
   sourceNote: string;
-  interpretation: string;
+  interpretation: ReactNode;
+  // Whether to flag the interpretation as provisional ([WORK IN PROGRESS]
+  // strip + watermark). Defaults to true so callers that still use
+  // templated copy (e.g. Well-Being) keep the caution until their copy is
+  // signed off; Platform-Experiences passes false once a question carries
+  // hand-authored, significance-gated copy.
+  isPlaceholderInterpretation?: boolean;
   filenameBase: string;
   citationVariables: string[];
   // Share feature: category + question (from the orchestrator) are encoded
@@ -119,6 +126,7 @@ export function PlatformFanChart({
   subtitle,
   sourceNote,
   interpretation,
+  isPlaceholderInterpretation = true,
   filenameBase,
   citationVariables,
   category,
@@ -367,7 +375,7 @@ export function PlatformFanChart({
           </p>
         </>
       }
-      isPlaceholderInterpretation
+      isPlaceholderInterpretation={isPlaceholderInterpretation}
       interpretation={interpretation}
       methodologyFootnote=""
       sourceNote={fullSourceNote}
@@ -396,6 +404,10 @@ interface PlatformMetricTrendProps {
   metric: string;
   surveyVar: string;
   title: string;
+  // Signed-off, significance-gated copy from the question config. When
+  // present it renders verbatim and clears the placeholder flag; when
+  // absent the templated [WORK IN PROGRESS] fallback below is used.
+  interpretation?: string;
   filenameBase: string;
   category: string;
   questionKey: string;
@@ -412,6 +424,7 @@ export function PlatformMetricTrend({
   metric,
   surveyVar,
   title,
+  interpretation,
   filenameBase,
   category,
   questionKey,
@@ -469,6 +482,24 @@ export function PlatformMetricTrend({
     '95% CIs available on hover. Cells with n < 30 are suppressed by ' +
     'design.';
 
+  // Signed-off copy renders verbatim, followed by the scope footnote that
+  // states which platforms the superlatives compare. Absent signed-off
+  // copy, fall back to a provisional templated line and keep the
+  // [WORK IN PROGRESS] flag (no footnote).
+  const interpretationNode: ReactNode = interpretation ? (
+    <>
+      <p>{interpretation}</p>
+      <p
+        className="mt-3 pt-3 border-t border-mist text-xs text-slate leading-relaxed"
+        style={{ fontFamily: 'var(--font-mono)' }}
+      >
+        {PLATFORM_EXPERIENCES_SCOPE_NOTE}
+      </p>
+    </>
+  ) : (
+    `[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`
+  );
+
   return (
     <PlatformFanChart
       meta={meta}
@@ -478,7 +509,8 @@ export function PlatformMetricTrend({
       title={title}
       subtitle={subtitle || undefined}
       sourceNote={sourceNote}
-      interpretation={`[WORK IN PROGRESS] ${title} over time, by platform. Each line is the weighted % of that platform's users reporting this, wave by wave; the table and tooltip carry the 95% CIs and user counts.`}
+      interpretation={interpretationNode}
+      isPlaceholderInterpretation={interpretation == null}
       filenameBase={filenameBase}
       citationVariables={[surveyVar]}
       category={category}
