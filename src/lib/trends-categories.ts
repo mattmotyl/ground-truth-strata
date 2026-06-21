@@ -174,13 +174,16 @@ export const WELLBEING_PLATFORM_SET_NOTE =
 
 // Matt's published reports, linked as "Further reading" under the relevant
 // Well-Being interpretations for added context + credibility.
+// UTM tags so referral traffic is attributable in the report owner's
+// analytics (Matt drives readers to these from strata.mattmotyl.com).
+const REPORT_UTM = '?utm_source=strata.mattmotyl.com&utm_medium=referral';
 const LONELINESS_REPORT: FurtherReadingLink = {
   label: 'Social technology and loneliness',
-  href: 'https://psychoftech.substack.com/p/social-technology-and-loneliness',
+  href: `https://psychoftech.substack.com/p/social-technology-and-loneliness${REPORT_UTM}`,
 };
 const WELLBEING_REPORT: FurtherReadingLink = {
   label: 'Well-being across social media platforms',
-  href: 'https://psychoftech.substack.com/p/well-being-across-social-media-platforms',
+  href: `https://psychoftech.substack.com/p/well-being-across-social-media-platforms${REPORT_UTM}`,
 };
 
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
