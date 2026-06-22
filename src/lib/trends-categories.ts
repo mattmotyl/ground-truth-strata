@@ -266,6 +266,58 @@ export const ATTITUDE_GROUPINGS: GroupingDef[] = [
   },
 ];
 
+// Matt's published political-attitudes reports, linked as "Further reading"
+// under the thermometers / friends / rate_self interpretations (the
+// political items). UTM-tagged via REPORT_UTM for referral attribution.
+const SOCIAL_MEDIA_POLITICS_2023: FurtherReadingLink = {
+  label: 'Social media and politics, 2023',
+  href: `https://psychoftech.substack.com/p/social-media-and-politics-from-2023${REPORT_UTM}`,
+};
+const POLITICAL_ATTITUDES_ON_SM: FurtherReadingLink = {
+  label: 'Political attitudes on social media',
+  href: `https://psychoftech.substack.com/p/political-attitudes-on-social-media${REPORT_UTM}`,
+};
+
+// =====================================================================
+// SIGNIFICANCE-GATED INTERPRETATION COPY — Attitudes. Same describeChange
+// rule as the other categories. Three source shapes:
+//  - thermometers/friends (attitudeByGroup): group_comparisons.json MEANS
+//    by respondent group, 0–10, all six waves. Per-group verdicts via
+//    describeChange(meanW1, seW1, meanWlast, seWlast).
+//  - sc001a–f / ex004a (attitudeDistribution): % per response category from
+//    distributions.json; the directional verdict is MEAN-gated from
+//    trends.json (weighted_mean/se), because a rigorous top-box proportion
+//    SE is not precomputed. The % are shown descriptively (Matt prefers
+//    de-emphasizing inferential stats and approved this).
+//  - rate_self (attitudeSingle): population mean, 0–100, all six waves.
+//
+// WAVE WINDOWS (stated in each interpretation): thermometers / friends /
+// rate_self = W1–6; sc001a–f = W1–2 only; ex004a = W5–6 only.
+//
+//   item — measure                         verdict (movers)
+//   ----------------------------------------------------------------------
+//   thermometers by ideology, 0–10: in-group ~7.5 vs out-group ~4.2, gap
+//     ~3.3 FLAT W1–6; only mover = liberals' warmth toward conservatives
+//     +0.38 (3.21->3.59) UP.
+//   friends by ideology, 0–10: all groups STABLE; asymmetry — liberals'
+//     own-vs-other gap 3.0 > conservatives' 2.2.
+//   sc001a waste of time:    stable (2.98->2.91); disagree 28->35% (n.s.)
+//   sc001b strengthens rel:  INCREASED (2.87->3.03); agree 26->33%
+//   sc001c facilitates learn:INCREASED (2.95->3.07); agree 27->34%
+//   sc001d good at managing: stable (3.76->3.80); ~72% agree
+//   sc001e in control:       stable (3.98->4.02); ~81% agree (highest)
+//   sc001f hard to resist:   stable (2.61->2.63); ~48% disagree
+//   ex004a tech regulation (W5–6): stable (3.39->3.37); ~49% want more
+//   rate_self ideology 0–100: stable (~52 every wave)
+//
+// Signed off by Matt 2026-06-21. UAS is a longitudinal panel (same people
+// re-interviewed each wave), so wave-over-wave aggregate comparisons are
+// valid — no cross-sectional caveat. Reproducible arithmetic:
+//   strata-local/audit/scripts/attitudes_friends_breakout.mjs
+//   strata-local/audit/scripts/trends_attitudes_arithmetic.mjs
+//   strata-local/audit/scripts/attitudes_breakout_preview.mjs
+// =====================================================================
+
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
   {
     id: 'platform',
@@ -433,6 +485,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
           { value: 10, label: 'very warm' },
         ],
         filenameBase: 'strata_trends_thermometers',
+        interpretation:
+          'One way to measure attitudes toward groups is to ask people how warm or cold they feel toward those groups on a 0 to 10 scale, where higher numbers mean more warmth (liking) and lower numbers mean more coldness (disliking), and 5 is neutral. Across everyone in the study, average warmth toward liberals and toward conservatives both sit near the midpoint and barely move across the six waves (warmth toward liberals runs about 5.7 to 5.9, toward conservatives about 5.6 to 5.8). That overall average hides a wide partisan split. Grouped by the respondent’s own ideology, people rate their own side warmly and the other side coldly: by the most recent wave liberals give liberals 7.1 and conservatives 3.6, while conservatives give conservatives 7.9 and liberals 4.8, and moderates sit in between on both (5.9 and 5.6). The distance between how warmly people rate their own side versus the other side averages about 3.3 points and is essentially flat across all six waves. The one change large enough to be statistically meaningful is liberals’ warmth toward conservatives edging up from 3.2 to 3.6, a slight narrowing, though the gap between the parties stays large. The same question can also be broken out by gender, age, education, or race.',
+        furtherReading: [SOCIAL_MEDIA_POLITICS_2023, POLITICAL_ATTITUDES_ON_SM],
       },
       {
         key: 'friends',
@@ -450,6 +505,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
           { value: 10, label: 'extremely comfortable' },
         ],
         filenameBase: 'strata_trends_friends',
+        interpretation:
+          'People were also asked how comfortable they would be having friends who are liberal and friends who are conservative, each on a 0 to 10 scale where higher numbers mean more comfort. Across everyone in the study, people report fairly high comfort with both liberal friends (about 6.9) and conservative friends (about 6.7), and neither average moves across the six waves. Split by the respondent’s own ideology, everyone is most comfortable with same-side friends, and the two sides are not symmetric: by the most recent wave liberals report 7.6 comfort with liberal friends versus 4.6 with conservative friends, an own-versus-other gap of 3.0 points, while conservatives report 8.5 with conservative friends versus 6.3 with liberal friends, a gap of 2.2 points. In other words, conservatives report being more comfortable with friends on the other side than liberals do. None of these group trends shows a statistically meaningful change across the waves, so the pattern holds steady throughout. The same question can also be broken out by gender, age, education, or race.',
+        furtherReading: [SOCIAL_MEDIA_POLITICS_2023, POLITICAL_ATTITUDES_ON_SM],
       },
       {
         key: 'sc001a',
@@ -457,6 +515,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001a',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001a',
+        interpretation:
+          'Few people see social media as a waste of their time: about a quarter agree that it is (25%), roughly 40% are neutral, and around a third disagree (35%). The share disagreeing rose somewhat across the period (28% to 35%) as fewer people stayed in the neutral middle, though the average did not shift by enough to be statistically meaningful, leaving the item broadly stable. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'sc001b',
@@ -464,6 +524,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001b',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001b',
+        interpretation:
+          'Views that social media strengthens and supports relationships became more positive: agreement rose from 26% to 33% while disagreement fell from 31% to 26%, a change large enough to be statistically meaningful in the item’s average. Even so, a plurality (40%) remained neutral. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'sc001c',
@@ -471,6 +533,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001c',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001c',
+        interpretation:
+          'The sense that social media facilitates learning and growth strengthened: agreement rose from 27% to 34% while disagreement fell from 27% to 24%, a change large enough to be statistically meaningful in the item’s average. A plurality (42%) remained neutral. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'sc001d',
@@ -478,6 +542,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001d',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001d',
+        interpretation:
+          'Most people credit themselves with managing their social-media use well: about 72% agree, roughly a fifth are neutral, and fewer than 1 in 10 disagree. The average holds steady, with no statistically meaningful change. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'sc001e',
@@ -485,6 +551,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001e',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001e',
+        interpretation:
+          'People overwhelmingly feel in control of how they use social media: about 81% agree that they are, while only about 5% disagree and the rest are neutral. The average holds steady, with no statistically meaningful change. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'sc001f',
@@ -492,6 +560,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'sc001f',
         optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001f',
+        interpretation:
+          'Opinion is divided on how hard social media is to resist: about a quarter (25%) agree they find it hard to resist, while roughly half (48%) disagree and the rest are neutral. The average is unchanged, with no statistically meaningful movement. These figures come from the first two waves of the study, the only waves in which this question was asked.',
       },
       {
         key: 'ex004a',
@@ -500,6 +570,8 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
         variable: 'ex004a',
         optionLabels: REGULATION_5,
         filenameBase: 'strata_trends_ex004a',
+        interpretation:
+          'Opinion leans toward more government oversight of major technology companies: about half (49%) want them regulated more than they are now (33% a little more, 17% much more), about 31% want regulation kept the same, and roughly 1 in 5 (20%) want less. This balance is stable across the period, with no statistically meaningful change. Respondents answered on a scale running from much less to much more regulation, and the question was asked only in the fifth and sixth waves of the study.',
       },
       {
         key: 'rate_self',
@@ -511,6 +583,9 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
           { value: 100, label: 'very conservative' },
         ],
         filenameBase: 'strata_trends_rate_self',
+        interpretation:
+          'Respondents placed themselves on a 0 to 100 scale where 0 is the most liberal and 100 is the most conservative. The average sits almost exactly at the midpoint, about 52, and stays there across all six waves, never moving more than a point. In other words, the public’s average political self-placement held steady over the period, with the typical respondent describing themselves as squarely in the middle.',
+        furtherReading: [SOCIAL_MEDIA_POLITICS_2023, POLITICAL_ATTITUDES_ON_SM],
       },
     ],
   },

@@ -572,6 +572,11 @@ interface RespondentTrendProps {
   variableName: string;
   filenameBase: string;
   axisAnchors?: AxisAnchor[];
+  // Signed-off, significance-gated copy + optional further-reading links.
+  // When present the copy renders verbatim and clears the [WORK IN PROGRESS]
+  // flag; absent, the templated placeholder below is used.
+  interpretation?: string;
+  furtherReading?: FurtherReadingLink[];
   category: string;
   questionKey: string;
   initialYMode?: TrendsYMode;
@@ -587,6 +592,8 @@ export function RespondentTrend({
   variableName,
   filenameBase,
   axisAnchors,
+  interpretation,
+  furtherReading,
   category,
   questionKey,
   initialYMode,
@@ -686,11 +693,13 @@ export function RespondentTrend({
     `Source: ${waveClause}Population-level weighted estimates. 95% CIs ` +
     `available on hover. Cells with n < 30 are suppressed by design.`;
   const fullSourceNote = evt.appendContext(sourceNote);
-  const interpretation = `[WORK IN PROGRESS] ${title} over time. ${
-    isSingleWave
-      ? 'Only one survey wave carries this item, so no trend is shown.'
-      : 'The line shows the weighted population estimate wave by wave; hover any point for its 95% CI and n.'
-  }`;
+  const interpretationNode: ReactNode = interpretation
+    ? renderPlatformInterpretation(interpretation, '', furtherReading)
+    : `[WORK IN PROGRESS] ${title} over time. ${
+        isSingleWave
+          ? 'Only one survey wave carries this item, so no trend is shown.'
+          : 'The line shows the weighted population estimate wave by wave; hover any point for its 95% CI and n.'
+      }`;
 
   const csvHeaders = [
     'variable_name',
@@ -890,8 +899,8 @@ export function RespondentTrend({
       controls={controls}
       chartFooter={chartFooter}
       customNumbers={numbers}
-      isPlaceholderInterpretation
-      interpretation={interpretation}
+      isPlaceholderInterpretation={interpretation == null}
+      interpretation={interpretationNode}
       methodologyFootnote=""
       sourceNote={fullSourceNote}
       csv={{ headers: csvHeaders, rows: csvRows }}

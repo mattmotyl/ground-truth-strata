@@ -209,6 +209,8 @@ export function TrendsExplorer({
           variableName={question.variable!}
           filenameBase={question.filenameBase}
           axisAnchors={question.axisAnchors}
+          interpretation={question.interpretation}
+          furtherReading={question.furtherReading}
           category={categoryId}
           questionKey={questionKey}
           initialYMode={initialSlice?.yMode}
