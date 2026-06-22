@@ -10,7 +10,6 @@ export type TrendsRendererKind =
   | 'platformMetric' // platform_rates.json fan-out (experience rates)
   | 'wellbeing' // group_comparisons.json platform-split (User rows)
   | 'attitudeSingle' // trends.json single population line
-  | 'attitudePaired' // trends.json two population lines on one chart
   | 'attitudeDistribution' // distributions.json diverging Likert bars
   | 'attitudeByGroup'; // group_comparisons.json by-respondent-group means
 
@@ -69,10 +68,6 @@ export interface TrendsQuestion {
   // agree (or much-less -> much-more) order, matching the distributions.json
   // bin_index order for this item.
   optionLabels?: string[];
-  // attitudePaired:
-  pair?: [string, string];
-  pairLabels?: [string, string];
-  pairSubtitle?: string;
   // attitudeByGroup: the two outcome variables shown as side-by-side
   // small-multiple panels, each split by the selected respondent group.
   vars?: [string, string];

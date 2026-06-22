@@ -22,7 +22,6 @@ import type { ResolvedTrendsState } from '@/lib/trends-url-state';
 import { stripConstructPrefix } from '@/lib/trends-adapters';
 import { FindingPlatformUsage } from './finding-platform-usage';
 import {
-  PairedAttitudeTrend,
   PlatformMetricTrend,
   RespondentTrend,
 } from './trends-variable-trend';
@@ -208,28 +207,6 @@ export function TrendsExplorer({
           questionTexts={questionTexts}
           events={events}
           variableName={question.variable!}
-          filenameBase={question.filenameBase}
-          axisAnchors={question.axisAnchors}
-          category={categoryId}
-          questionKey={questionKey}
-          initialYMode={initialSlice?.yMode}
-          initialCustomMin={initialSlice?.customMin}
-          initialCustomMax={initialSlice?.customMax}
-        />
-      );
-      break;
-    case 'attitudePaired':
-      body = (
-        <PairedAttitudeTrend
-          key={question.key}
-          meta={meta}
-          trends={trends}
-          questionTexts={questionTexts}
-          events={events}
-          pair={question.pair!}
-          pairLabels={question.pairLabels!}
-          title={question.title!}
-          subtitle={question.pairSubtitle}
           filenameBase={question.filenameBase}
           axisAnchors={question.axisAnchors}
           category={categoryId}
