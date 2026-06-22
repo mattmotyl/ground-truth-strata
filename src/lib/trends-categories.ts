@@ -11,7 +11,8 @@ export type TrendsRendererKind =
   | 'wellbeing' // group_comparisons.json platform-split (User rows)
   | 'attitudeSingle' // trends.json single population line
   | 'attitudePaired' // trends.json two population lines on one chart
-  | 'attitudeDistribution'; // distributions.json diverging Likert bars
+  | 'attitudeDistribution' // distributions.json diverging Likert bars
+  | 'attitudeByGroup'; // group_comparisons.json by-respondent-group means
 
 // Endpoint anchor shown directly on the Y-axis (slate xs) for
 // non-percentage mean variables — e.g. {value: 10, label: 'very warm'}.
@@ -24,6 +25,16 @@ export interface AxisAnchor {
 export interface FurtherReadingLink {
   label: string;
   href: string;
+}
+
+// A respondent-group breakout for the attitudeByGroup renderer. `groups`
+// lists the exact group values (as they appear in group_comparisons.json)
+// in display order. Party is intentionally absent (W1-3 only).
+export interface GroupingDef {
+  key: string; // URL token + state key, e.g. 'ideology'
+  label: string; // selector label, e.g. 'Ideology'
+  groupingVar: string; // group_comparisons.json grouping_var
+  groups: string[]; // exact group values, display order
 }
 
 export interface TrendsQuestion {
@@ -62,6 +73,11 @@ export interface TrendsQuestion {
   pair?: [string, string];
   pairLabels?: [string, string];
   pairSubtitle?: string;
+  // attitudeByGroup: the two outcome variables shown as side-by-side
+  // small-multiple panels, each split by the selected respondent group.
+  vars?: [string, string];
+  panelTitles?: [string, string];
+  valueDomain?: [number, number];
   // Y-axis endpoint anchors (min/max) for non-percentage mean variables,
   // rendered on the axis itself. Omitted for percentage variables
   // (Platform Use & Experiences, Well-Being).
@@ -209,6 +225,50 @@ const REGULATION_5 = [
   'The same as they are now',
   'A little more than they are now',
   'Much more than they are now',
+];
+
+// Respondent-group breakouts offered by the attitudeByGroup renderer
+// (feeling thermometers + comfort-having-friends). Ideology is the default;
+// the others are demographic. Group values match group_comparisons.json
+// exactly. Party (pol_incl_leaners) is intentionally excluded — it was
+// asked in Waves 1-3 only.
+export const ATTITUDE_GROUPINGS: GroupingDef[] = [
+  {
+    key: 'ideology',
+    label: 'Ideology',
+    groupingVar: 'political_ideology_group',
+    groups: ['Liberal', 'Moderate', 'Conservative'],
+  },
+  { key: 'gender', label: 'Gender', groupingVar: 'gender', groups: ['Men', 'Women'] },
+  {
+    key: 'age',
+    label: 'Age',
+    groupingVar: 'age',
+    groups: ['18-29', '30-44', '45-59', '60+'],
+  },
+  {
+    key: 'education',
+    label: 'Education',
+    groupingVar: 'education',
+    groups: [
+      'Grade School / Some High School',
+      'High School Diploma',
+      'Some College',
+      'College Degree / Post-grad',
+    ],
+  },
+  {
+    key: 'race',
+    label: 'Race',
+    groupingVar: 'race',
+    groups: [
+      'White, non-Hispanic',
+      'Black, non-Hispanic',
+      'Hispanic',
+      'Asian, non-Hispanic',
+      'Other/Multiple races, non-Hispanic',
+    ],
+  },
 ];
 
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
@@ -367,28 +427,29 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
     questions: [
       {
         key: 'thermometers',
-        kind: 'attitudePaired',
-        label: 'Feeling thermometers (liberals vs. conservatives)',
-        title: 'Feeling Thermometers — Liberals vs. Conservatives',
-        pair: ['scim_therm_lib', 'scim_therm_con'],
-        pairLabels: ['Liberals', 'Conservatives'],
-        pairSubtitle:
-          'Average warmth toward liberals and conservatives on a 0–10 feeling thermometer.',
+        kind: 'attitudeByGroup',
+        label: 'Feeling thermometers (by group)',
+        title: 'Warmth Toward Liberals and Conservatives',
+        vars: ['scim_therm_lib', 'scim_therm_con'],
+        panelTitles: ['Warmth toward liberals', 'Warmth toward conservatives'],
+        valueDomain: [0, 10],
         axisAnchors: [
-          { value: 0, label: 'very unfavorable' },
-          { value: 10, label: 'very favorable' },
+          { value: 0, label: 'very cold' },
+          { value: 10, label: 'very warm' },
         ],
         filenameBase: 'strata_trends_thermometers',
       },
       {
         key: 'friends',
-        kind: 'attitudePaired',
-        label: 'Comfort having friends (liberal vs. conservative)',
-        title: 'Comfort Having Friends — Liberal vs. Conservative',
-        pair: ['scim_friends_lib', 'scim_friends_con'],
-        pairLabels: ['Liberal friends', 'Conservative friends'],
-        pairSubtitle:
-          'Average comfort having liberal vs. conservative friends on a 0–10 scale.',
+        kind: 'attitudeByGroup',
+        label: 'Comfort having friends (by group)',
+        title: 'Comfort Having Liberal and Conservative Friends',
+        vars: ['scim_friends_lib', 'scim_friends_con'],
+        panelTitles: [
+          'Comfort with liberal friends',
+          'Comfort with conservative friends',
+        ],
+        valueDomain: [0, 10],
         axisAnchors: [
           { value: 0, label: 'not comfortable at all' },
           { value: 10, label: 'extremely comfortable' },

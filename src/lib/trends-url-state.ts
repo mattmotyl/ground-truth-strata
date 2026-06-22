@@ -10,11 +10,19 @@
 // slice. Platform-fan renderers carry `platforms`; attitude renderers do
 // not. Y-axis zoom (`y` + optional `ymin`/`ymax`) applies to all.
 
-import { TRENDS_CATEGORIES, getTrendsCategory } from './trends-categories';
+import {
+  ATTITUDE_GROUPINGS,
+  TRENDS_CATEGORIES,
+  getTrendsCategory,
+} from './trends-categories';
 import {
   DEFAULT_CHART_PLATFORMS,
   MAX_CHART_PLATFORMS,
 } from './platform-constants';
+
+// Default respondent grouping for the attitudeByGroup renderer; omitted
+// from the URL so a plain link lands on the ideology breakout.
+const DEFAULT_GROUP_BY = 'ideology';
 
 export type TrendsYMode = 'full' | 'fit' | 'custom';
 
@@ -28,6 +36,10 @@ export interface ResolvedTrendsState {
   // bounds, so each renderer keeps its own natural default otherwise.
   customMin?: number;
   customMax?: number;
+  // Respondent grouping for the attitudeByGroup renderer (e.g. 'gender').
+  // Undefined unless the URL specified a non-default grouping; the renderer
+  // falls back to ideology.
+  groupBy?: string;
 }
 
 type SearchParamsLike = Record<string, string | string[] | undefined>;
@@ -52,6 +64,7 @@ function defaultState(): ResolvedTrendsState {
     yMode: 'full',
     customMin: undefined,
     customMax: undefined,
+    groupBy: undefined,
   };
 }
 
@@ -90,6 +103,13 @@ export function decodeTrendsState(sp: SearchParamsLike): ResolvedTrendsState {
     if (Number.isFinite(hi)) out.customMax = hi;
   }
 
+  // group-by (attitudeByGroup only; harmless otherwise) — must be a known
+  // grouping key, else left undefined so the renderer defaults to ideology.
+  const gRaw = one(sp, 'g');
+  if (gRaw && ATTITUDE_GROUPINGS.some((x) => x.key === gRaw)) {
+    out.groupBy = gRaw;
+  }
+
   return out;
 }
 
@@ -117,6 +137,11 @@ export function encodeTrendsState(state: ResolvedTrendsState): string {
       if (state.customMin != null) p.set('ymin', String(state.customMin));
       if (state.customMax != null) p.set('ymax', String(state.customMax));
     }
+  }
+
+  // group-by omitted when it's the default ideology breakout.
+  if (state.groupBy && state.groupBy !== DEFAULT_GROUP_BY) {
+    p.set('g', state.groupBy);
   }
 
   return p.toString();
@@ -155,6 +180,27 @@ export function encodeTrendsAttitudeState(
     yMode,
     customMin,
     customMax,
+  });
+}
+
+// attitudeByGroup renderer: category + question + Y-zoom + the selected
+// respondent grouping (g=).
+export function encodeTrendsByGroupState(
+  category: string,
+  questionKey: string,
+  groupBy: string,
+  yMode: TrendsYMode,
+  customMin: number,
+  customMax: number,
+): string {
+  return encodeTrendsState({
+    category,
+    questionKey,
+    platforms: [],
+    yMode,
+    customMin,
+    customMax,
+    groupBy,
   });
 }
 

@@ -14,6 +14,7 @@ import type {
   TrendRow,
 } from '@/lib/strata-types';
 import {
+  ATTITUDE_GROUPINGS,
   TRENDS_CATEGORIES,
   getTrendsCategory,
 } from '@/lib/trends-categories';
@@ -26,6 +27,7 @@ import {
   RespondentTrend,
 } from './trends-variable-trend';
 import { AttitudeDistributionBar } from './attitude-distribution-bar';
+import { AttitudeByGroupTrend } from './attitude-by-group-trend';
 import { WellbeingPlatformTrend } from './trends-wellbeing-trend';
 import { TrendsCategoryPicker } from './trends-category-picker';
 
@@ -251,6 +253,29 @@ export function TrendsExplorer({
           filenameBase={question.filenameBase}
           category={categoryId}
           questionKey={questionKey}
+        />
+      );
+      break;
+    case 'attitudeByGroup':
+      body = (
+        <AttitudeByGroupTrend
+          key={question.key}
+          meta={meta}
+          vars={question.vars!}
+          panelTitles={question.panelTitles!}
+          valueDomain={question.valueDomain!}
+          groupings={ATTITUDE_GROUPINGS}
+          title={question.title ?? questionLabels[question.key]}
+          axisAnchors={question.axisAnchors}
+          interpretation={question.interpretation}
+          furtherReading={question.furtherReading}
+          filenameBase={question.filenameBase}
+          category={categoryId}
+          questionKey={questionKey}
+          initialGroupBy={initialSlice?.groupBy}
+          initialYMode={initialSlice?.yMode}
+          initialCustomMin={initialSlice?.customMin}
+          initialCustomMax={initialSlice?.customMax}
         />
       );
       break;
