@@ -25,6 +25,7 @@ import {
   PlatformMetricTrend,
   RespondentTrend,
 } from './trends-variable-trend';
+import { AttitudeDistributionBar } from './attitude-distribution-bar';
 import { WellbeingPlatformTrend } from './trends-wellbeing-trend';
 import { TrendsCategoryPicker } from './trends-category-picker';
 
@@ -234,6 +235,22 @@ export function TrendsExplorer({
           initialYMode={initialSlice?.yMode}
           initialCustomMin={initialSlice?.customMin}
           initialCustomMax={initialSlice?.customMax}
+        />
+      );
+      break;
+    case 'attitudeDistribution':
+      body = (
+        <AttitudeDistributionBar
+          key={question.key}
+          meta={meta}
+          variable={question.variable!}
+          title={question.title ?? questionLabels[question.key]}
+          optionLabels={question.optionLabels!}
+          interpretation={question.interpretation}
+          furtherReading={question.furtherReading}
+          filenameBase={question.filenameBase}
+          category={categoryId}
+          questionKey={questionKey}
         />
       );
       break;

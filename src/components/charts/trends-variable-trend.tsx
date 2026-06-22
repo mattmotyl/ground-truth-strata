@@ -83,12 +83,16 @@ function clamp01(v: number): number {
 }
 
 // Composes a signed-off interpretation paragraph with an optional
-// "Further reading" links line and a scope footnote (smaller mono, top
-// border). Shared by the Platform-Experiences and Well-Being renderers so
-// the link + footnote styling stays identical across both.
+// "Further reading" links line and an optional scope footnote (smaller
+// mono, top border). Shared by the Platform-Experiences, Well-Being, and
+// Attitudes renderers so the link + footnote styling stays identical.
+// `scopeNote` is optional: Platform-Experiences / Well-Being pass a
+// platform-set footnote; the Attitudes distribution/by-group views have no
+// scope set, so they omit it (passing '' or undefined renders no footnote
+// line rather than an empty bordered paragraph).
 export function renderPlatformInterpretation(
   text: string,
-  scopeNote: string,
+  scopeNote?: string,
   furtherReading?: FurtherReadingLink[],
 ): ReactNode {
   return (
@@ -112,12 +116,14 @@ export function renderPlatformInterpretation(
           ))}
         </p>
       ) : null}
-      <p
-        className="mt-3 pt-3 border-t border-mist text-xs text-slate leading-relaxed"
-        style={{ fontFamily: 'var(--font-mono)' }}
-      >
-        {scopeNote}
-      </p>
+      {scopeNote ? (
+        <p
+          className="mt-3 pt-3 border-t border-mist text-xs text-slate leading-relaxed"
+          style={{ fontFamily: 'var(--font-mono)' }}
+        >
+          {scopeNote}
+        </p>
+      ) : null}
     </>
   );
 }

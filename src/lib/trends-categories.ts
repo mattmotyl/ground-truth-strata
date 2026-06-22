@@ -10,7 +10,8 @@ export type TrendsRendererKind =
   | 'platformMetric' // platform_rates.json fan-out (experience rates)
   | 'wellbeing' // group_comparisons.json platform-split (User rows)
   | 'attitudeSingle' // trends.json single population line
-  | 'attitudePaired'; // trends.json two population lines on one chart
+  | 'attitudePaired' // trends.json two population lines on one chart
+  | 'attitudeDistribution'; // distributions.json diverging Likert bars
 
 // Endpoint anchor shown directly on the Y-axis (slate xs) for
 // non-percentage mean variables — e.g. {value: 10, label: 'very warm'}.
@@ -51,8 +52,12 @@ export interface TrendsQuestion {
   outcome?: string;
   bucket?: LikertBucket | null;
   subtitle?: string; // override (e.g. ex003_lonely has no survey question)
-  // attitudeSingle:
+  // attitudeSingle / attitudeDistribution:
   variable?: string;
+  // attitudeDistribution: the 5 response-category labels, in disagree ->
+  // agree (or much-less -> much-more) order, matching the distributions.json
+  // bin_index order for this item.
+  optionLabels?: string[];
   // attitudePaired:
   pair?: [string, string];
   pairLabels?: [string, string];
@@ -185,6 +190,26 @@ const WELLBEING_REPORT: FurtherReadingLink = {
   label: 'Well-being across social media platforms',
   href: `https://psychoftech.substack.com/p/well-being-across-social-media-platforms${REPORT_UTM}`,
 };
+
+// Response-category labels for the attitudeDistribution (diverging Likert)
+// items, in distributions.json bin_index order (disagree -> agree). The
+// social-media-belief battery (sc001a-f) uses a standard 5-point
+// agree/disagree scale; tech regulation (ex004a) uses its own much-less ->
+// much-more scale, so it carries a distinct label set.
+const AGREE_DISAGREE_5 = [
+  'Strongly disagree',
+  'Disagree',
+  'Neither agree nor disagree',
+  'Agree',
+  'Strongly agree',
+];
+const REGULATION_5 = [
+  'Much less than they are now',
+  'A little less than they are now',
+  'The same as they are now',
+  'A little more than they are now',
+  'Much more than they are now',
+];
 
 export const TRENDS_CATEGORIES: TrendsCategory[] = [
   {
@@ -372,72 +397,52 @@ export const TRENDS_CATEGORIES: TrendsCategory[] = [
       },
       {
         key: 'sc001a',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001a',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001a',
       },
       {
         key: 'sc001b',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001b',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001b',
       },
       {
         key: 'sc001c',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001c',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001c',
       },
       {
         key: 'sc001d',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001d',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001d',
       },
       {
         key: 'sc001e',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001e',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001e',
       },
       {
         key: 'sc001f',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
         variable: 'sc001f',
-        axisAnchors: [
-          { value: 1, label: 'strongly disagree' },
-          { value: 5, label: 'strongly agree' },
-        ],
+        optionLabels: AGREE_DISAGREE_5,
         filenameBase: 'strata_trends_sc001f',
       },
       {
         key: 'ex004a',
-        kind: 'attitudeSingle',
+        kind: 'attitudeDistribution',
+        title: 'How Much Should Major Technology Companies Be Regulated?',
         variable: 'ex004a',
-        axisAnchors: [
-          { value: 1, label: 'much less than now' },
-          { value: 5, label: 'much more than now' },
-        ],
+        optionLabels: REGULATION_5,
         filenameBase: 'strata_trends_ex004a',
       },
       {
