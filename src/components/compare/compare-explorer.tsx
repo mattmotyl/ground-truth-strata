@@ -1461,15 +1461,15 @@ function CompareChart(props: CompareChartProps) {
               ? breakdownNumbers
               : undefined
       }
-      isPlaceholderInterpretation
+      isPlaceholderInterpretation={false}
       interpretation={
         isDrill
-          ? '[WORK IN PROGRESS] Per-platform breakdown of the topics/impacts users reported, for the selected wave. Interpretation copy is intentionally omitted — the heatmap and THE NUMBERS note describe the weighted percentages and caveats.'
+          ? 'This view breaks down, for each platform at the selected wave, the specific topics or impacts that users who had this experience reported, as weighted percentages. Each cell carries its sample size and 95% confidence interval on hover; treat thin cells cautiously, and read percentages whose intervals overlap as indistinguishable. The figures cover only the users who reported the experience and describe a single wave.'
           : isStacked
-            ? '[WORK IN PROGRESS] Demographic composition of each platform’s user base for the selected wave. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the weighted composition with per-segment confidence intervals on hover.'
+            ? 'This view shows the demographic make-up of each platform’s user base at the selected wave: each bar is one platform, divided into the share of its users in each group, summing to 100%. Segments carry 95% confidence intervals on hover. Read this as a description of who uses each platform, not of any effect of the platforms themselves. These differences also help explain other comparisons on this page, because a measure can differ between platforms partly because their users differ (for example, a platform whose users are much younger).'
             : isBreakdown
-              ? '[WORK IN PROGRESS] Per-platform rates broken out by the selected demographic group, with each platform’s Overall rate as the dark baseline bar. Interpretation copy is intentionally omitted — the chart and THE NUMBERS table show the per-group weighted estimates with 95% CIs.'
-              : '[WORK IN PROGRESS] Ranked comparison across platforms for the selected wave. Interpretation copy is intentionally omitted in Part 1 — the chart and THE NUMBERS show the ranked weighted estimates with 95% CIs.'
+              ? 'This view splits each platform’s rate on the selected measure into the chosen demographic groups, with the dark baseline bar showing that platform’s overall rate among its users. Every estimate is weighted and carries a 95% confidence interval, shown on hover; where a group’s interval overlaps the baseline or another group’s, the difference is within the margin of error. Differences between groups can reflect who uses each platform as much as the platform itself, and the view describes a single wave.'
+              : 'This view ranks the platforms by the selected measure at the chosen wave, longest bar at the top. Each estimate is weighted and is taken among that platform’s own users, and the thin line through each bar is its 95% confidence interval, a margin of error around the estimate. When two platforms’ intervals overlap, the difference between them is within that margin and should not be read as a real gap; only clearly separated intervals point to a difference the data can support. Because each estimate covers a platform’s own users, a ranking can reflect who uses each platform as much as the platform itself, and it describes a single wave.'
       }
       methodologyFootnote=""
       csv={{ headers: csvHeaders, rows: csvRows }}
