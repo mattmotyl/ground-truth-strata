@@ -45,7 +45,10 @@ import { useUrlSync } from '@/lib/use-url-sync';
 // =====================================================================
 // /explore — Variable-pair correlation explorer.
 //
-// Pick any two RESPONDENT-LEVEL variables (predictor + outcome). Because
+// Pick any two RESPONDENT-LEVEL variables. The correlation is symmetric, so
+// neither is a predictor or outcome and no direction/causation is implied
+// (Matt's framing; internal state keys predictor/outcome are historical and
+// never surface in user-facing copy). Because
 // correlations.json holds only a precomputed Spearman ρ per pair per wave
 // — no raw data points, no CI — there is nothing to scatter. We instead
 // draw ρ as one horizontal bar PER WAVE the pair was fielded in, colored
@@ -410,7 +413,12 @@ export function CorrelationPairExplorer({
     </>
   );
 
-  // ── Interpretation (placeholder for Matt) ─────────────────────────
+  // ── Interpretation (signed off by Matt 2026-06-22) ────────────────
+  // Magnitude-banded (effectBandOf): |ρ|<0.1 = no relationship, 0.1–0.3
+  // weak, 0.3–0.5 moderate, ≥0.5 strong. correlations.json carries no
+  // p-value or CI, so claims are effect-size only. NEUTRAL framing: the two
+  // measures are symmetric — never "predictor"/"outcome", no implied
+  // direction, no causation (Matt's rule for observational survey data).
   const predLabel = predictorVar?.label ?? predictor;
   const outLabel = outcomeVar?.label ?? outcome;
   const singleWave = chartData.length === 1;
@@ -418,38 +426,51 @@ export function CorrelationPairExplorer({
     (best, d) => (best === null || Math.abs(d.r) > Math.abs(best.r) ? d : best),
     null,
   );
-  const interpretationText =
-    samePair || chartData.length === 0
-      ? `Pick two different respondent-level variables to compare. "${predLabel}" and "${outLabel}" ${
-          samePair
-            ? 'are the same variable.'
-            : 'were not fielded in any common wave, so no correlation exists.'
-        }`
-      : [
-          `Spearman ρ between "${predLabel}" and "${outLabel}"${
-            singleWave
-              ? `, available only at Wave ${chartData[0].wave}.`
-              : `, shown for each wave both were fielded.`
-          }`,
-          strongest
-            ? `The largest association is ρ = ${formatNumber(
-                strongest.r,
-                3,
-              )} at Wave ${strongest.wave} — a ${
-                BAND_LABEL[effectBandOf(strongest.r)]
-              } ${strongest.r >= 0 ? 'positive' : 'negative'} association.`
-            : '',
-          'Treat |ρ| below 0.1 as essentially noise. ρ is bounded by [-1, +1]; this is an observational survey, so associations do not imply causation.',
-        ]
-          .filter(Boolean)
-          .join(' ');
+  const BAND_WORD = {
+    none: 'negligible',
+    weak: 'weak',
+    moderate: 'moderate',
+    strong: 'strong',
+  } as const;
+  const HANDHOLD =
+    'A correlation measures whether two things tend to move together, on a scale from −1 to +1: 0 means no relationship, a positive number means they tend to rise together, and a negative number means one tends to rise as the other falls.';
+  const BAND_RULE =
+    'As a rule of thumb, values below 0.1 indicate essentially no relationship, 0.1 to 0.3 a weak one, 0.3 to 0.5 a moderate one, and 0.5 or above a strong one.';
+  const NO_CAUSE =
+    'Because this is an observational survey, a correlation shows that two things go together, not that one causes the other.';
+  let interpretationText: string;
+  if (samePair || chartData.length === 0) {
+    interpretationText = samePair
+      ? `Choose two different variables to compare; “${predLabel}” is currently selected on both sides.`
+      : `“${predLabel}” and “${outLabel}” were not asked in any of the same waves, so no correlation can be shown. Pick two variables that were fielded together.`;
+  } else {
+    const intro = `${HANDHOLD} This chart shows the weighted Spearman correlation between “${predLabel}” and “${outLabel}” ${
+      singleWave
+        ? `for the one wave both questions were asked (Wave ${chartData[0].wave}).`
+        : 'for each wave both questions were asked.'
+    }`;
+    let strongestSentence = '';
+    if (strongest) {
+      const rTxt = formatNumber(strongest.r, 2);
+      strongestSentence =
+        effectBandOf(strongest.r) === 'none'
+          ? `Even the strongest association (ρ = ${rTxt} at Wave ${strongest.wave}) is below the 0.1 level that would indicate a relationship, so these two measures appear essentially unrelated.`
+          : `The strongest association is ρ = ${rTxt} at Wave ${strongest.wave}, a ${BAND_WORD[effectBandOf(strongest.r)]} ${strongest.r >= 0 ? 'positive' : 'negative'} relationship.`;
+    }
+    const singleWaveCaveat = singleWave
+      ? 'These two questions were asked together in only one wave, so whether the relationship is stable over time cannot be assessed.'
+      : '';
+    interpretationText = [intro, strongestSentence, BAND_RULE, NO_CAUSE, singleWaveCaveat]
+      .filter(Boolean)
+      .join(' ');
+  }
 
   // ── CSV ───────────────────────────────────────────────────────────
   const csvHeaders = [
-    'predictor',
-    'predictor_label',
-    'outcome',
-    'outcome_label',
+    'variable_1',
+    'variable_1_label',
+    'variable_2',
+    'variable_2_label',
     'wave',
     'wave_dates',
     'spearman_rho',
@@ -491,7 +512,7 @@ export function CorrelationPairExplorer({
       chartRef={chartRef}
       controls={controlsAside}
       customNumbers={numbers}
-      isPlaceholderInterpretation
+      isPlaceholderInterpretation={false}
       interpretation={interpretationText}
       methodologyFootnote=""
       sourceNote={

@@ -486,7 +486,7 @@ export function CorrelationHeatmap({
   );
 
   const interpretationText =
-    'Each cell is the weighted Spearman ρ between two respondent-level measures at this wave. Teal cells mark positive associations (the two move together), amber/red cells mark negative ones (one rises as the other falls); paler cells are closer to zero. Most associations in survey data of this kind are small: treat |ρ| below 0.1 as essentially noise, and read 0.1–0.3 as a weak association. ρ is bounded by [-1, +1] and this is an observational survey, so associations do not imply causation. Correlations are per-wave and are not directly comparable across waves with different respondents.';
+    'Each cell shows the weighted Spearman correlation between two survey measures at the selected wave. A correlation runs from −1 to +1: teal cells mark positive associations (the two measures tend to move together), amber and red cells mark negative ones (one tends to rise as the other falls), and paler cells sit closer to zero. Most associations in survey data like this are small: as a rule of thumb, treat values below 0.1 as essentially no relationship, 0.1 to 0.3 as weak, 0.3 to 0.5 as moderate, and 0.5 or above as strong. Because this is an observational survey, these associations show that measures move together, not that one causes the other. Each correlation is estimated separately for one wave, so small differences between waves can reflect ordinary sampling variation rather than real change.';
 
   // CSV — lower triangle, with both labels.
   const csvHeaders = [
@@ -528,7 +528,7 @@ export function CorrelationHeatmap({
       chartRef={chartRef}
       controls={controlsAside}
       customNumbers={numbers}
-      isPlaceholderInterpretation
+      isPlaceholderInterpretation={false}
       interpretation={interpretationText}
       methodologyFootnote=""
       sourceNote={
